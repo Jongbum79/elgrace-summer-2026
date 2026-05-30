@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>주은혜교회 수련회 운영센터</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link
+      rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body class="desktop-mode">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">J</div>
+          <div>
+            <strong>주은혜교회</strong>
+            <span>RETREAT CENTER</span>
+          </div>
+        </div>
+
+        <nav class="main-nav" aria-label="주 메뉴">
+          <a class="nav-item active" href="#" data-view="attendance">
+            <span class="nav-icon">⌂</span><span>전체 현황</span>
+          </a>
+          <a class="nav-item" href="#" data-view="participants">
+            <span class="nav-icon">♙</span><span>참석자 관리</span>
+          </a>
+          <a class="nav-item" href="#" data-view="rooms">
+            <span class="nav-icon">▦</span><span>방 배치</span>
+          </a>
+          <a class="nav-item" href="#" data-view="meals">
+            <span class="nav-icon">♨</span><span>식사 관리</span>
+          </a>
+          <a class="nav-item" href="#" data-view="schedule">
+            <span class="nav-icon">◷</span><span>전체 일정</span>
+          </a>
+          <a class="nav-item" href="#" data-view="chatbot">
+            <span class="nav-icon">✦</span><span>AI 운영 챗봇</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="progress-copy">
+            <span>참석 정보 입력률</span>
+            <b>84%</b>
+          </div>
+          <div class="progress-track"><span></span></div>
+          <button class="nav-help">? <span>도움말 및 문의</span></button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="mobile-brand">J</div>
+          <div>
+            <p class="eyebrow">2026 SUMMER RETREAT</p>
+            <h1>수련회 운영센터</h1>
+          </div>
+          <div class="topbar-actions">
+            <div class="view-mode-switch" aria-label="보기 모드 선택">
+              <button class="view-mode-button active" type="button" data-mode="desktop">PC</button>
+              <button class="view-mode-button" type="button" data-mode="mobile">모바일</button>
+            </div>
+            <button class="icon-button" aria-label="알림">
+              <span>♢</span><i></i>
+            </button>
+            <div class="profile">
+              <div class="avatar">김</div>
+              <div class="profile-copy">
+                <b id="directorName">수련회 디렉터</b>
+                <span>수련회 디렉터</span>
+              </div>
+              <span class="chevron">⌄</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="page-view active" id="attendanceView">
+        <section class="page-heading">
+          <div>
+            <div class="title-line">
+              <h2>참석 현황</h2>
+              <span class="live-badge"><i></i> LIVE</span>
+            </div>
+            <p>날짜와 시간대별 참석 인원을 확인하고 가족 일정을 관리하세요.</p>
+          </div>
+        </section>
+
+        <section class="retreat-switcher">
+          <div class="retreat-meta">
+            <span class="calendar-icon">□</span>
+            <div>
+              <b id="retreatTitle">수련회 정보를 불러오는 중입니다</b>
+              <span id="retreatMeta">일정 및 장소 확인 중</span>
+            </div>
+          </div>
+          <div class="date-tabs" id="dateTabs" aria-label="날짜 선택"></div>
+        </section>
+
+        <section class="stats-grid" id="statsGrid"></section>
+
+        <section class="dashboard-grid">
+          <article class="card attendance-flow">
+            <div class="card-heading">
+              <div>
+                <h3>시간대별 참석 흐름</h3>
+                <p><b id="selectedDateLabel">선택 날짜</b> 입소 및 퇴소에 따른 예상 인원입니다.</p>
+              </div>
+              <div class="legend">
+                <span><i class="legend-dot total"></i>전체 인원</span>
+                <span><i class="legend-dot meal"></i>식사 기준 시간</span>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <svg id="flowChart" role="img" aria-label="시간대별 참석 인원 그래프"></svg>
+            </div>
+            <div class="time-selector" id="timeSelector"></div>
+          </article>
+
+          <article class="card breakdown-card">
+            <div class="card-heading compact">
+              <div>
+                <h3>참석 구성</h3>
+                <p id="breakdownTime">선택 시간 기준</p>
+              </div>
+              <button class="more-button" aria-label="더 보기">···</button>
+            </div>
+            <div class="donut-area">
+              <div class="donut" id="donutChart">
+                <div class="donut-hole">
+                  <b id="donutTotal">318</b>
+                  <span>총 참석</span>
+                </div>
+              </div>
+            </div>
+            <div class="breakdown-list" id="breakdownList"></div>
+          </article>
+        </section>
+
+        </div>
+
+        <div class="page-view" id="participantsView">
+          <section class="page-heading">
+            <div>
+              <div class="title-line">
+                <h2>참석자 관리</h2>
+              </div>
+              <p>가족별 참석 일정을 확인하고 구성원 정보를 관리하세요.</p>
+            </div>
+            <div class="heading-actions">
+              <button class="secondary-button" id="brotherGroupButton">▤ 명단 기반 참석여부 입력 (형제조)</button>
+              <button class="secondary-button" id="sisterGroupButton">▤ 명단 기반 참석여부 입력 (자매조)</button>
+              <button class="secondary-button" id="downloadButton">↓ 명단 다운로드</button>
+              <button class="primary-button" id="addFamilyButton">＋ 가족 추가</button>
+            </div>
+          </section>
+
+          <section class="card family-section">
+          <div class="family-toolbar">
+            <div>
+              <h3>가족별 참석 일정</h3>
+              <p>구성원별 입소와 퇴소 시간이 다른 가족을 확인할 수 있습니다.</p>
+            </div>
+            <div class="table-actions">
+              <label class="search-box">
+                <span>⌕</span>
+                <input id="searchInput" type="search" placeholder="가족 또는 구성원 검색" />
+              </label>
+              <button class="filter-button" id="filterButton">☷ 필터 <span id="filterCount">2</span></button>
+            </div>
+          </div>
+          <div class="family-filter-row">
+            <button class="filter-chip active" data-filter="all">전체 가족</button>
+            <button class="filter-chip" data-filter="partial">부분 참석</button>
+            <button class="filter-chip" data-filter="late">오늘 늦은 입소</button>
+            <span class="table-count" id="familyCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>가족</th>
+                  <th>구성원</th>
+                  <th>참석 날짜</th>
+                  <th>현재 상태</th>
+                  <th>메모</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="familyTableBody"></tbody>
+            </table>
+          </div>
+          <button class="load-more" id="loadMoreButton">더 많은 가족 보기 <span>⌄</span></button>
+        </section>
+        </div>
+
+        <div class="page-view" id="mealsView">
+          <section class="page-heading">
+            <div>
+              <div class="title-line">
+                <h2>식사 관리</h2>
+                <span class="meal-count-badge" id="mealCountBadge">식사 일정 확인 중</span>
+              </div>
+              <p>식사별 준비 인원을 확인하고, 구분별 상세 명단을 열어보세요.</p>
+            </div>
+            <button class="secondary-button" id="mealDownloadButton">↓ 식사 명단 다운로드</button>
+          </section>
+
+          <section class="retreat-switcher meal-summary-bar">
+            <div class="retreat-meta">
+              <span class="calendar-icon">♨</span>
+              <div>
+                <b id="mealRetreatTitle">수련회 식사 일정</b>
+                <span id="mealRetreatMeta">설정 정보를 불러오는 중입니다</span>
+              </div>
+            </div>
+            <div class="meal-summary-numbers" id="mealSummaryNumbers"></div>
+          </section>
+
+          <section class="card meal-chart-card">
+            <div class="card-heading">
+              <div>
+                <h3>끼니별 식사 인원</h3>
+                <p>날짜와 끼니별 총원, 성인, 자녀 인원을 비교합니다.</p>
+              </div>
+              <div class="legend">
+                <span><i class="legend-dot meal-chart-total"></i>총원</span>
+                <span><i class="legend-dot meal-chart-adult"></i>성인</span>
+                <span><i class="legend-dot meal-chart-child"></i>자녀</span>
+              </div>
+            </div>
+            <div class="meal-bar-chart" id="mealBarChart"></div>
+          </section>
+
+          <section class="meal-days" id="mealDays"></section>
+        </div>
+
+        <div class="page-view" id="chatbotView">
+          <section class="page-heading">
+            <div>
+              <div class="title-line">
+                <h2>AI 운영 챗봇</h2>
+                <span class="demo-badge" id="chatModeBadge">연결 확인 중</span>
+              </div>
+              <p>자연어로 참석 현황을 조회하고 가족의 입소 상태를 변경해보세요.</p>
+            </div>
+          </section>
+
+          <section class="chatbot-layout">
+            <article class="card chatbot-card">
+              <div class="chatbot-heading">
+                <div class="chatbot-avatar">✦</div>
+                <div>
+                  <h3>수련회 운영 도우미</h3>
+                  <p id="chatModeCopy">GPT 연결 상태를 확인하고 있습니다.</p>
+                </div>
+              </div>
+              <div class="chatbot-messages" id="chatbotMessages" aria-live="polite"></div>
+              <div class="chatbot-suggestions" id="chatbotSuggestions">
+                <button type="button" data-chat-prompt="입소 예정 가족 알려줘">입소 예정 가족</button>
+                <button type="button" data-chat-prompt="김은혜 가족 현재 상태 알려줘">김은혜 가족 상태</button>
+                <button type="button" data-chat-prompt="이정민 가족 참석 처리해줘">입소 완료 처리</button>
+              </div>
+              <form class="chatbot-form" id="chatbotForm">
+                <input id="chatbotInput" type="text" autocomplete="off" placeholder="예: 이정민 가족 참석 처리해줘" aria-label="챗봇 메시지" />
+                <button type="submit">전송</button>
+              </form>
+            </article>
+
+            <aside class="card chatbot-guide">
+              <span class="chatbot-guide-label">TEST GUIDE</span>
+              <h3>이렇게 물어보세요</h3>
+              <p>GPT와 자연스럽게 대화하고, 가족 상태 조회와 입소 완료 처리를 시험할 수 있습니다.</p>
+              <ul>
+                <li>김은혜 가족 현재 상태 알려줘</li>
+                <li>입소 예정 가족 알려줘</li>
+                <li>이정민 가족 참석 처리해줘</li>
+              </ul>
+              <div class="chatbot-note">
+                현재는 GPT가 요청을 해석하고 로컬 데이터를 사용합니다. 실제 배포에서는 로그인된 운영진의 확인 후 Supabase 데이터를 수정합니다.
+              </div>
+            </aside>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <nav class="mobile-bottom-nav" aria-label="모바일 주 메뉴">
+      <a class="mobile-nav-item active" href="#" data-view="attendance"><span>⌂</span><b>현황</b></a>
+      <a class="mobile-nav-item" href="#" data-view="participants"><span>♙</span><b>참석자</b></a>
+      <a class="mobile-nav-item" href="#" data-view="rooms"><span>▦</span><b>방 배치</b></a>
+      <a class="mobile-nav-item" href="#" data-view="meals"><span>♨</span><b>식사</b></a>
+      <a class="mobile-nav-item" href="#" data-view="schedule"><span>◷</span><b>일정</b></a>
+      <a class="mobile-nav-item" href="#" data-view="chatbot"><span>✦</span><b>챗봇</b></a>
+    </nav>
+
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <aside class="detail-drawer meal-detail-drawer" id="mealDetailDrawer" aria-hidden="true">
+      <button class="drawer-close" id="mealDrawerClose" aria-label="닫기">×</button>
+      <p class="eyebrow">MEAL ATTENDANCE</p>
+      <h2 id="mealDrawerTitle">식사 상세 명단</h2>
+      <p class="drawer-subtitle" id="mealDrawerSubtitle"></p>
+      <div class="meal-detail-list" id="mealDetailList"></div>
+    </aside>
+
+    <aside class="detail-drawer" id="brotherGroupDrawer" aria-hidden="true" style="width: min(100%, 640px);">
+      <button class="drawer-close" id="brotherGroupDrawerClose" aria-label="닫기">×</button>
+      <p class="eyebrow">BROTHER GROUPS</p>
+      <h2>장년부 형제조 명단</h2>
+      <p class="drawer-subtitle">조원 이름을 클릭하면 가족 추가 창이 열리며 이름이 자동 입력됩니다.</p>
+      <div class="brother-group-list" id="brotherGroupList"></div>
+    </aside>
+
+    <aside class="detail-drawer" id="sisterGroupDrawer" aria-hidden="true" style="width: min(100%, 640px);">
+      <button class="drawer-close" id="sisterGroupDrawerClose" aria-label="닫기">×</button>
+      <p class="eyebrow">SISTER GROUPS</p>
+      <h2>장년부 자매조 명단</h2>
+      <p class="drawer-subtitle">조원 이름을 클릭하면 가족 추가 창이 열리며 이름이 자동 입력됩니다.</p>
+      <div class="sister-group-list" id="sisterGroupList"></div>
+    </aside>
+
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <section class="add-modal" id="addModal" aria-hidden="true">
+      <button class="drawer-close" id="modalClose" aria-label="닫기">×</button>
+      <p class="eyebrow" id="familyModalEyebrow">NEW REGISTRATION</p>
+      <h2 id="familyModalTitle">새 가족 추가</h2>
+      <p id="familyModalDescription">구성원별 참석 시간을 선택하세요. 날짜 안의 아침·점심·저녁 칸을 각각 클릭하거나 드래그할 수 있습니다.</p>
+      <div class="family-basic-fields">
+        <label>대표 연락처<input id="newFamilyPhone" type="tel" placeholder="010-0000-0000" /></label>
+        <label>현재 상태
+          <select id="newFamilyStatus">
+            <option value="stay">입소 완료</option>
+            <option value="late">입소 예정</option>
+            <option value="leave">퇴소 완료</option>
+            <option value="absent">전체 불참</option>
+          </select>
+        </label>
+      </div>
+      <div class="member-form-heading">
+        <div class="member-form-copy">
+          <h4>가족 구성원</h4>
+          <span>초록은 참석 및 식사, 보라는 외부 식사 후 참석입니다.</span>
+        </div>
+        <div class="member-attendance-heading">
+          <button type="button" class="family-full-attendance" id="familyFullAttendance">✓ 가족 전원 풀참</button>
+          <div class="date-heading" id="memberDateHeading" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="member-form-list" id="memberFormList"></div>
+      <button class="add-child-button" id="addChildButton">＋ 자녀 추가</button>
+      <label class="memo-label">운영 메모<textarea id="newFamilyMemo" rows="3" placeholder="늦은 입소, 외출 일정 등 운영진이 확인할 내용을 입력하세요."></textarea></label>
+      <div class="modal-actions">
+        <button class="danger-button" id="modalDelete" style="display: none; margin-right: auto;">가족 정보 삭제</button>
+        <button class="absence-button" id="modalAbsence">가족 전체 불참</button>
+        <button class="secondary-button" id="modalCancel">취소</button>
+        <button class="primary-button" id="modalNext">가족 등록</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
