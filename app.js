@@ -1249,7 +1249,7 @@ document.addEventListener("click", (event) => {
         createMemberForm("자매", "성인 여성", false, [sisterName]);
         
         childrenList.forEach((child) => {
-          createMemberForm("자녀", child.group, true, [child.name]);
+          createMemberForm("자녀", child.group, true, [child.name, child.group]);
         });
         showToast(`${name}님의 가족 정보를 시트에서 불러왔습니다.`);
       } else {
