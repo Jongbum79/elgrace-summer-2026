@@ -615,15 +615,16 @@ body.desktop-mode .memo {
 }
 .org-chart-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
   padding-bottom: 30px;
 }
 .org-group-card {
+  max-width: 240px;
   background: #fbfcfb;
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 18px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -655,7 +656,7 @@ body.desktop-mode .memo {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 12px;
+  padding: 8px 10px;
   border: 2px solid var(--sage);
   background-color: #f1f7f4;
   border-radius: 8px;
@@ -688,7 +689,7 @@ body.desktop-mode .memo {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
   background-color: white;
   border-radius: 8px;
