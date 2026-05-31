@@ -490,22 +490,27 @@ body.mobile-mode .remove-child { grid-column: 3; grid-row: 1; }
 body.desktop-mode th:nth-child(1),
 body.desktop-mode td.family-cell {
   width: 170px;
+  min-width: 170px;
 }
 body.desktop-mode th:nth-child(2),
 body.desktop-mode td:nth-child(2) {
   width: 320px;
+  min-width: 320px;
 }
 body.desktop-mode th:nth-child(3),
 body.desktop-mode td.schedule-cell {
   width: 380px;
+  min-width: 380px;
 }
 body.desktop-mode th:nth-child(4),
 body.desktop-mode td:nth-child(4) {
   width: 120px;
+  min-width: 120px;
 }
 body.desktop-mode th:nth-child(5),
 body.desktop-mode td:nth-child(5) {
   width: 90px;
+  min-width: 90px;
 }
 body.desktop-mode .family-schedule-names {
   width: 110px;
