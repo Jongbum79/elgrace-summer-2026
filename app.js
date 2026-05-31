@@ -441,14 +441,16 @@ function renderFamilies() {
         <td class="family-cell" data-label="가족">
           <b>${family.name}</b>
           <span>${family.leader} · ${family.phone}</span>
-          <div style="font-size: 11px; margin-top: 4px; color: #5c7066; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-            💰 회비: <b>${(family.fee || 0).toLocaleString()}원</b> 
-            <span class="fee-badge ${family.feeStatus || 'pending'}">${(family.feeStatus === 'paid' ? '완납' : '납부 예정')}</span>
-            🏠 방: <span style="font-weight: 700; color: #1e5a45;">${family.room || '미배정'}</span>
-          </div>
         </td>
         <td data-label="구성원"><div class="member-stack">${memberPills}</div></td>
         <td class="schedule-cell" data-label="참석 날짜">${renderFamilyAttendance(family)}</td>
+        <td data-label="회비 / 방배정">
+          <div style="font-size: 11px; color: #5c7066; display: flex; flex-direction: column; gap: 4px;">
+            <div>💰 <b>${(family.fee || 0).toLocaleString()}원</b></div>
+            <div><span class="fee-badge ${family.feeStatus || 'pending'}" style="margin: 0;">${(family.feeStatus === 'paid' ? '완납' : '납부 예정')}</span></div>
+            <div>🏠 <span style="font-weight: 700; color: #1e5a45;">${family.room || '미배정'}</span></div>
+          </div>
+        </td>
         <td data-label="현재 상태"><span class="status ${statusClass}">${statusText}</span></td>
         <td class="memo" data-label="메모">${family.memo}</td>
         <td class="table-row-action"><button class="row-menu" data-family-id="${family.id}" aria-label="${family.name} 상세보기">···</button></td>
