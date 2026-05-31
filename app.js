@@ -998,15 +998,42 @@ function updateEstimatedFee() {
   const rows = [...document.querySelectorAll(".member-form-row")];
   const numMembers = rows.length;
   
+  let roomLabel = "";
   let roomRate = 0;
-  if (numMembers === 1) roomRate = 60000;
-  else if (numMembers === 2) roomRate = 70000;
-  else if (numMembers >= 3 && numMembers <= 4) roomRate = 80000;
-  else if (numMembers >= 5) roomRate = 90000;
+  if (numMembers === 1) {
+    roomLabel = "1인실";
+    roomRate = 60000;
+  } else if (numMembers === 2) {
+    roomLabel = "2인실";
+    roomRate = 70000;
+  } else if (numMembers >= 3 && numMembers <= 4) {
+    roomLabel = "4인실";
+    roomRate = 80000;
+  } else if (numMembers >= 5) {
+    roomLabel = "6인실";
+    roomRate = 90000;
+  }
   
-  let minDay = 999;
-  let maxDay = -999;
-  let totalMealCost = 0;
+  let breakfastCount = 0;
+  let lunchCount = 0;
+  let dinnerCount = 0;
+  
+  // Lodging nights calculation:
+  // "만약 28일 저녁은 참석으로 표기 되어 있고, 29일 즉 다음날 아침에 참석 표시가 없으면... 카운트 안해"
+  let nights = 0;
+  for (let d = 0; d < dateLabels.length - 1; d++) {
+    const dayLabel = dateLabels[d];
+    const nextDayLabel = dateLabels[d+1];
+    const hasOvernightMember = rows.some(row => {
+      const selectedSegs = [...row.querySelectorAll(".attendance-segment.selected")].map(seg => 
+        `${dateLabels[Number(seg.dataset.day)]}-${seg.dataset.period}`
+      );
+      return selectedSegs.includes(`${dayLabel}-dinner`) && selectedSegs.includes(`${nextDayLabel}-breakfast`);
+    });
+    if (hasOvernightMember) {
+      nights++;
+    }
+  }
   
   rows.forEach((row) => {
     const groupSelect = row.querySelector(".new-member-group");
@@ -1016,30 +1043,37 @@ function updateEstimatedFee() {
     
     const segments = [...row.querySelectorAll(".attendance-segment.selected")];
     segments.forEach((seg) => {
-      const dayIndex = Number(seg.dataset.day);
-      if (dayIndex < minDay) minDay = dayIndex;
-      if (dayIndex > maxDay) maxDay = dayIndex;
-      
       if (!isPreschool && !seg.classList.contains("external-meal")) {
         const period = seg.dataset.period;
-        if (period === "breakfast") totalMealCost += 4000;
-        else if (period === "lunch" || period === "dinner") totalMealCost += 10000;
+        if (period === "breakfast") {
+          breakfastCount++;
+        } else if (period === "lunch") {
+          lunchCount++;
+        } else if (period === "dinner") {
+          dinnerCount++;
+        }
       }
     });
   });
   
-  let nights = 0;
-  if (minDay <= maxDay && minDay !== 999) {
-    nights = maxDay - minDay;
-  }
-  
+  const lunchDinnerCount = lunchCount + dinnerCount;
   const lodgingCost = roomRate * nights;
-  const totalCost = lodgingCost + totalMealCost;
+  const mealCost = (breakfastCount * 4000) + (lunchDinnerCount * 10000);
+  const totalCost = lodgingCost + mealCost;
   
   const label = document.querySelector("#estimatedFeeLabel");
   const detail = document.querySelector("#estimatedFeeDetail");
   if (label) label.textContent = `${totalCost.toLocaleString()}원`;
-  if (detail) detail.textContent = `(숙박: ${lodgingCost.toLocaleString()}원 · ${nights}박 / 식사: ${totalMealCost.toLocaleString()}원)`;
+  if (detail) {
+    detail.innerHTML = `
+      <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
+      <div>식비: 아침 ${breakfastCount}번 x 4,000원 + 점심,저녁 ${lunchDinnerCount}번 x 10,000원 = ${mealCost.toLocaleString()}원</div>
+      <div style="font-weight: 700; color: #1e5a45; margin-top: 8px; font-size: 11px; display: flex; align-items: center; gap: 10px; border-top: 1px dashed #dfe7e3; padding-top: 6px;">
+        <span>🛏️ 총 숙박수: ${nights}박</span>
+        <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번 (점심/저녁 합계: ${lunchDinnerCount}번)</span>
+      </div>
+    `;
+  }
 }
 
 function getFamilyFromForm(existingFamily = null) {
@@ -1125,19 +1159,27 @@ function getFamilyFromForm(existingFamily = null) {
   else if (numMembers >= 3 && numMembers <= 4) roomRate = 80000;
   else if (numMembers >= 5) roomRate = 90000;
   
-  let minDay = 999;
-  let maxDay = -999;
+  let nights = 0;
+  for (let d = 0; d < dateLabels.length - 1; d++) {
+    const dayLabel = dateLabels[d];
+    const nextDayLabel = dateLabels[d+1];
+    const hasOvernightMember = enteredRows.some(row => {
+      const selectedSegs = [...row.querySelectorAll(".attendance-segment.selected")].map(seg => 
+        `${dateLabels[Number(seg.dataset.day)]}-${seg.dataset.period}`
+      );
+      return selectedSegs.includes(`${dayLabel}-dinner`) && selectedSegs.includes(`${nextDayLabel}-breakfast`);
+    });
+    if (hasOvernightMember) {
+      nights++;
+    }
+  }
+
   let totalMealCost = 0;
-  
   enteredRows.forEach((row) => {
     const group = row.querySelector(".new-member-group").value;
     const isPreschool = ["유치부", "유아"].includes(group);
     const segments = [...row.querySelectorAll(".attendance-segment.selected")];
     segments.forEach((seg) => {
-      const dayIndex = Number(seg.dataset.day);
-      if (dayIndex < minDay) minDay = dayIndex;
-      if (dayIndex > maxDay) maxDay = dayIndex;
-      
       if (!isPreschool && !seg.classList.contains("external-meal")) {
         const period = seg.dataset.period;
         if (period === "breakfast") totalMealCost += 4000;
@@ -1145,11 +1187,7 @@ function getFamilyFromForm(existingFamily = null) {
       }
     });
   });
-  
-  let nights = 0;
-  if (minDay <= maxDay && minDay !== 999) {
-    nights = maxDay - minDay;
-  }
+
   const lodgingCost = roomRate * nights;
   const fee = lodgingCost + totalMealCost;
   
