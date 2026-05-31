@@ -196,6 +196,9 @@ td { padding: 14px 20px; border-bottom: 1px solid var(--soft-line); font-size: 1
 .status.stay { color: #347150; background: #e6f4eb; }
 .status.late { color: #b76c2d; background: #fff2e5; }
 .status.leave { color: #687873; background: #eef2f0; }
+.fee-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-left: 4px; margin-right: 8px; }
+.fee-badge.pending { color: #b76c2d; background: #fff2e5; border: 1px solid #fce3cc; }
+.fee-badge.paid { color: #347150; background: #e6f4eb; border: 1px solid #ccecd8; }
 .memo { max-width: 185px; overflow: hidden; color: #718078; font-size: 11px; text-overflow: ellipsis; }
 .row-menu { color: #87948e; background: transparent; font-size: 18px; }
 .load-more { width: 100%; padding: 13px; color: #65756f; background: white; font-size: 11px; }

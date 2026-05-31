@@ -213,6 +213,24 @@ async function loadFamiliesFromSupabase() {
             return member;
           });
         }
+        
+        family.fee = 0;
+        family.feeStatus = "pending";
+        family.room = "미배정";
+        
+        if (family.memo && family.memo.includes("__FEE_INFO__:")) {
+          const parts = family.memo.split("__FEE_INFO__:");
+          const rawMemo = parts[0].trim();
+          family.memo = rawMemo === "" ? "별도 메모 없음" : rawMemo;
+          try {
+            const info = JSON.parse(parts[1]);
+            family.fee = info.fee || 0;
+            family.feeStatus = info.feeStatus || "pending";
+            family.room = info.room || "미배정";
+          } catch (e) {
+            console.error("FEE_INFO 파싱 에러:", e);
+          }
+        }
         return family;
       });
       console.log("Supabase 가족 데이터 로드 완료", families);
@@ -420,7 +438,15 @@ function renderFamilies() {
     }).join("");
     return `
       <tr>
-        <td class="family-cell" data-label="가족"><b>${family.name}</b><span>${family.leader} · ${family.phone}</span></td>
+        <td class="family-cell" data-label="가족">
+          <b>${family.name}</b>
+          <span>${family.leader} · ${family.phone}</span>
+          <div style="font-size: 11px; margin-top: 4px; color: #5c7066; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+            💰 회비: <b>${(family.fee || 0).toLocaleString()}원</b> 
+            <span class="fee-badge ${family.feeStatus || 'pending'}">${(family.feeStatus === 'paid' ? '완납' : '납부 예정')}</span>
+            🏠 방: <span style="font-weight: 700; color: #1e5a45;">${family.room || '미배정'}</span>
+          </div>
+        </td>
         <td data-label="구성원"><div class="member-stack">${memberPills}</div></td>
         <td class="schedule-cell" data-label="참석 날짜">${renderFamilyAttendance(family)}</td>
         <td data-label="현재 상태"><span class="status ${statusClass}">${statusText}</span></td>
@@ -889,11 +915,13 @@ function createMemberForm(role, group, removable = false, member = null) {
 function resetFamilyForm(family = null) {
   document.querySelector("#newFamilyPhone").value = family?.phone || "";
   document.querySelector("#newFamilyStatus").value = family?.status || "stay";
+  document.querySelector("#newFamilyFeeStatus").value = family?.feeStatus || "pending";
   document.querySelector("#newFamilyMemo").value = family?.memo === "별도 메모 없음" ? "" : family?.memo || "";
   document.querySelector("#memberFormList").innerHTML = "";
   if (!family) {
     createMemberForm("형제", "성인 남성");
     createMemberForm("자매", "성인 여성");
+    updateEstimatedFee();
     return;
   }
   const adults = family.members.filter((member) => member[1].startsWith("성인"));
@@ -903,6 +931,7 @@ function resetFamilyForm(family = null) {
   createMemberForm("형제", "성인 남성", false, brother);
   createMemberForm("자매", "성인 여성", false, sister);
   children.forEach((member) => createMemberForm("자녀", member[1], true, member));
+  updateEstimatedFee();
 }
 
 function setAttendanceSelected(button, selected) {
@@ -938,6 +967,7 @@ function cycleAttendanceSegment(segment) {
     setAttendanceSelected(segment, !segment.classList.contains("selected"));
   }
   normalizeExternalMealStates(row);
+  updateEstimatedFee();
 }
 
 function toggleFullAttendance(scope) {
@@ -948,6 +978,7 @@ function toggleFullAttendance(scope) {
     button.classList.remove("external-meal");
   });
   updateFullAttendanceLabels();
+  updateEstimatedFee();
 }
 
 function updateFullAttendanceLabels() {
@@ -961,6 +992,54 @@ function updateFullAttendanceLabels() {
   familyButton.textContent = familySegments.length && familySegments.every((segment) => segment.classList.contains("selected"))
     ? "✓ 가족 전원 풀참 해제"
     : "✓ 가족 전원 풀참";
+}
+
+function updateEstimatedFee() {
+  const rows = [...document.querySelectorAll(".member-form-row")];
+  const numMembers = rows.length;
+  
+  let roomRate = 0;
+  if (numMembers === 1) roomRate = 60000;
+  else if (numMembers === 2) roomRate = 70000;
+  else if (numMembers >= 3 && numMembers <= 4) roomRate = 80000;
+  else if (numMembers >= 5) roomRate = 90000;
+  
+  let minDay = 999;
+  let maxDay = -999;
+  let totalMealCost = 0;
+  
+  rows.forEach((row) => {
+    const groupSelect = row.querySelector(".new-member-group");
+    if (!groupSelect) return;
+    const group = groupSelect.value;
+    const isPreschool = ["유치부", "유아"].includes(group);
+    
+    const segments = [...row.querySelectorAll(".attendance-segment.selected")];
+    segments.forEach((seg) => {
+      const dayIndex = Number(seg.dataset.day);
+      if (dayIndex < minDay) minDay = dayIndex;
+      if (dayIndex > maxDay) maxDay = dayIndex;
+      
+      if (!isPreschool && !seg.classList.contains("external-meal")) {
+        const period = seg.dataset.period;
+        if (period === "breakfast") totalMealCost += 4000;
+        else if (period === "lunch" || period === "dinner") totalMealCost += 10000;
+      }
+    });
+  });
+  
+  let nights = 0;
+  if (minDay <= maxDay && minDay !== 999) {
+    nights = maxDay - minDay;
+  }
+  
+  const lodgingCost = roomRate * nights;
+  const totalCost = lodgingCost + totalMealCost;
+  
+  const label = document.querySelector("#estimatedFeeLabel");
+  const detail = document.querySelector("#estimatedFeeDetail");
+  if (label) label.textContent = `${totalCost.toLocaleString()}원`;
+  if (detail) detail.textContent = `(숙박: ${lodgingCost.toLocaleString()}원 · ${nights}박 / 식사: ${totalMealCost.toLocaleString()}원)`;
 }
 
 function getFamilyFromForm(existingFamily = null) {
@@ -1037,12 +1116,55 @@ function getFamilyFromForm(existingFamily = null) {
   }
 
   const status = document.querySelector("#newFamilyStatus").value;
+  
+  // Calculate total fee again to save it in DB
+  const numMembers = enteredRows.length;
+  let roomRate = 0;
+  if (numMembers === 1) roomRate = 60000;
+  else if (numMembers === 2) roomRate = 70000;
+  else if (numMembers >= 3 && numMembers <= 4) roomRate = 80000;
+  else if (numMembers >= 5) roomRate = 90000;
+  
+  let minDay = 999;
+  let maxDay = -999;
+  let totalMealCost = 0;
+  
+  enteredRows.forEach((row) => {
+    const group = row.querySelector(".new-member-group").value;
+    const isPreschool = ["유치부", "유아"].includes(group);
+    const segments = [...row.querySelectorAll(".attendance-segment.selected")];
+    segments.forEach((seg) => {
+      const dayIndex = Number(seg.dataset.day);
+      if (dayIndex < minDay) minDay = dayIndex;
+      if (dayIndex > maxDay) maxDay = dayIndex;
+      
+      if (!isPreschool && !seg.classList.contains("external-meal")) {
+        const period = seg.dataset.period;
+        if (period === "breakfast") totalMealCost += 4000;
+        else if (period === "lunch" || period === "dinner") totalMealCost += 10000;
+      }
+    });
+  });
+  
+  let nights = 0;
+  if (minDay <= maxDay && minDay !== 999) {
+    nights = maxDay - minDay;
+  }
+  const lodgingCost = roomRate * nights;
+  const fee = lodgingCost + totalMealCost;
+  
+  const feeStatus = document.querySelector("#newFamilyFeeStatus").value;
+  const room = existingFamily?.room || "미배정";
+
   return {
     id: existingFamily?.id || (families.length ? Math.max(...families.map((family) => family.id)) + 1 : 1),
     name,
     leader,
     phone,
     status,
+    fee,
+    feeStatus,
+    room,
     memo: document.querySelector("#newFamilyMemo").value.trim() || "별도 메모 없음",
     members,
   };
@@ -1120,10 +1242,14 @@ document.addEventListener("click", (event) => {
     renderFamilies();
   }
   if (familyMenu) toggleModal(true, families.find((family) => family.id === Number(familyMenu.dataset.familyId)));
-  if (event.target.closest("#addChildButton")) createMemberForm("자녀", "중고등부", true);
+  if (event.target.closest("#addChildButton")) {
+    createMemberForm("자녀", "중고등부", true);
+    updateEstimatedFee();
+  }
   if (event.target.closest(".remove-child")) {
     event.target.closest(".member-form-row").remove();
     updateFullAttendanceLabels();
+    updateEstimatedFee();
   }
   if (event.target.closest(".member-full-attendance")) toggleFullAttendance(event.target.closest(".member-form-row"));
   if (event.target.closest("#familyFullAttendance")) toggleFullAttendance(document.querySelector("#memberFormList"));
@@ -1293,6 +1419,11 @@ document.addEventListener("pointerup", () => { dateDrag = null; });
 document.addEventListener("pointercancel", () => { dateDrag = null; });
 
 document.querySelector("#searchInput").addEventListener("input", renderFamilies);
+document.querySelector("#memberFormList").addEventListener("change", (event) => {
+  if (event.target.classList.contains("new-member-group")) {
+    updateEstimatedFee();
+  }
+});
 document.querySelector("#mealDrawerClose").addEventListener("click", closeMealDrawer);
 document.querySelector("#drawerBackdrop").addEventListener("click", () => {
   closeMealDrawer();
@@ -1312,8 +1443,21 @@ document.querySelector("#modalNext").addEventListener("click", async () => {
   const family = getFamilyFromForm(existingIndex >= 0 ? families[existingIndex] : null);
   if (!family) return;
   
+  const dbFamily = { ...family };
+  const feeInfo = {
+    fee: family.fee,
+    feeStatus: family.feeStatus,
+    room: family.room
+  };
+  const cleanMemo = family.memo === "별도 메모 없음" ? "" : family.memo;
+  dbFamily.memo = `${cleanMemo}\n__FEE_INFO__:${JSON.stringify(feeInfo)}`;
+  
+  delete dbFamily.fee;
+  delete dbFamily.feeStatus;
+  delete dbFamily.room;
+
   if (supabaseClient) {
-    const { error } = await supabaseClient.from("families").upsert([family]);
+    const { error } = await supabaseClient.from("families").upsert([dbFamily]);
     if (error) {
       console.error("Supabase 저장 에러:", error);
       showToast("데이터 저장에 실패했습니다.");
@@ -1355,6 +1499,7 @@ document.querySelector("#modalAbsence").addEventListener("click", async () => {
   if (!confirm(`${family.name}을 가족 전체 불참으로 등록하시겠습니까?\n(불참으로 등록 시 식사 집계 및 명단 목록에서 제외되며, 등록 현황 체크용으로만 관리됩니다.)`)) return;
 
   family.status = "absent";
+  family.fee = 0;
 
   // Clear all member attendance periods so they definitely don't have active periods!
   if (family.members) {
@@ -1365,8 +1510,21 @@ document.querySelector("#modalAbsence").addEventListener("click", async () => {
     });
   }
 
+  const dbFamily = { ...family };
+  const feeInfo = {
+    fee: family.fee,
+    feeStatus: family.feeStatus,
+    room: family.room
+  };
+  const cleanMemo = family.memo === "별도 메모 없음" ? "" : family.memo;
+  dbFamily.memo = `${cleanMemo}\n__FEE_INFO__:${JSON.stringify(feeInfo)}`;
+  
+  delete dbFamily.fee;
+  delete dbFamily.feeStatus;
+  delete dbFamily.room;
+
   if (supabaseClient) {
-    const { error } = await supabaseClient.from("families").upsert([family]);
+    const { error } = await supabaseClient.from("families").upsert([dbFamily]);
     if (error) {
       console.error("Supabase 저장 에러:", error);
       showToast("데이터 저장에 실패했습니다.");

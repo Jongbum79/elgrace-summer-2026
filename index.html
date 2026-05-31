@@ -343,6 +343,21 @@
           </select>
         </label>
       </div>
+      <div class="family-basic-fields" style="margin-top: 10px;">
+        <label>회비 납부 상태
+          <select id="newFamilyFeeStatus">
+            <option value="pending">납입 예정</option>
+            <option value="paid">완납</option>
+          </select>
+        </label>
+        <div class="fee-estimate-container" style="background: #f4f7f5; border: 1px solid #dfe7e3; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; height: 39px; margin-top: 20px;">
+          <div style="font-size: 10px; font-weight: 700; color: #687872; line-height: 1;">예상 회비 (실시간 계산)</div>
+          <div style="font-size: 15px; font-weight: 800; color: #1e5a45; margin-top: 2px; line-height: 1; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">
+            <span id="estimatedFeeLabel">0원</span>
+            <span style="font-size: 9px; font-weight: 500; color: #8ba79b;" id="estimatedFeeDetail">(숙박: 0원 · 0박 / 식사: 0원)</span>
+          </div>
+        </div>
+      </div>
       <div class="member-form-heading">
         <div class="member-form-copy">
           <h4>가족 구성원</h4>
