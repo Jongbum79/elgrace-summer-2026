@@ -657,11 +657,11 @@ body.desktop-mode .memo {
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  border: 2px solid var(--blue);
-  background-color: #eaf2fa;
+  border: 2px solid #dcdcdc;
+  background-color: #f6f6f6;
   border-radius: 6px;
   font-weight: 700;
-  color: #1a4f80;
+  color: var(--ink);
   cursor: pointer;
   transition: all 0.15s ease;
   font-size: 11px;
@@ -669,9 +669,9 @@ body.desktop-mode .memo {
   gap: 4px;
 }
 .org-leader-node:hover {
-  background-color: #d4e5f7;
+  background-color: #ededed;
   transform: scale(1.015);
-  border-color: #1a4f80;
+  border-color: #bfbfbf;
 }
 .org-connector {
   display: block;
