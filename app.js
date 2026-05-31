@@ -701,7 +701,7 @@ function renderOrgChart(genderMode) {
       
     return `
       <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}">
-        <span><b>${name}</b>${roleLabel ? ` <small style="font-size:11px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}</span>
+        <span><b>${name}</b>${roleLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}</span>
         <span class="org-badge ${badgeClass}">${att.label}</span>
       </div>
     `;

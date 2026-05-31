@@ -615,16 +615,16 @@ body.desktop-mode .memo {
 }
 .org-chart-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
   padding-bottom: 30px;
 }
 .org-group-card {
-  max-width: 240px;
+  max-width: 170px;
   background: #fbfcfb;
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 14px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -637,12 +637,12 @@ body.desktop-mode .memo {
   border-color: var(--sage);
 }
 .org-group-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--forest);
   border-bottom: 2px solid var(--mint);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -656,16 +656,17 @@ body.desktop-mode .memo {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 5px 8px;
   border: 2px solid var(--sage);
   background-color: #f1f7f4;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 700;
   color: var(--forest);
   cursor: pointer;
   transition: all 0.15s ease;
-  font-size: 13px;
+  font-size: 11px;
   box-sizing: border-box;
+  gap: 4px;
 }
 .org-leader-node:hover {
   background-color: var(--mint);
@@ -675,7 +676,7 @@ body.desktop-mode .memo {
 .org-connector {
   display: block;
   width: 2px;
-  height: 14px;
+  height: 10px;
   background-color: var(--line);
   margin: 0 auto;
   position: relative;
@@ -683,21 +684,22 @@ body.desktop-mode .memo {
 .org-member-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .org-member-node {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border: 1px solid var(--line);
   background-color: white;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 6px;
+  font-size: 11px;
   color: var(--ink);
   cursor: pointer;
   transition: all 0.15s ease;
   box-sizing: border-box;
+  gap: 4px;
 }
 .org-member-node:hover {
   background-color: var(--background);
@@ -707,10 +709,10 @@ body.desktop-mode .memo {
 
 /* 실시간 참석 여부 배지 */
 .org-badge {
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 12px;
+  padding: 1px 5px;
+  border-radius: 10px;
   text-align: center;
   white-space: nowrap;
 }
