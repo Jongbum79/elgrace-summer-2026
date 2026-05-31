@@ -1068,11 +1068,14 @@ function updateEstimatedFee() {
   if (label) label.textContent = `${totalCost.toLocaleString()}원`;
   if (detail) {
     detail.innerHTML = `
-      <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
-      <div>식비: 아침 ${breakfastCount}번 x 4,000원 + 점심,저녁 ${lunchDinnerCount}번 x 10,000원 = ${mealCost.toLocaleString()}원</div>
-      <div style="font-weight: 700; color: #1e5a45; margin-top: 8px; font-size: 11px; display: flex; align-items: center; gap: 10px; border-top: 1px dashed #dfe7e3; padding-top: 6px;">
+      <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
         <span>🛏️ 총 숙박수: ${nights}박</span>
+        <span style="color: #cbd5e1;">|</span>
         <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번 (점심/저녁 합계: ${lunchDinnerCount}번)</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
+        <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
+        <div>식비: 아침 ${breakfastCount}번 x 4,000원 + 점심,저녁 ${lunchDinnerCount}번 x 10,000원 = ${mealCost.toLocaleString()}원</div>
       </div>
     `;
   }
