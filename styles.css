@@ -493,7 +493,7 @@ body.desktop-mode td.family-cell {
 }
 body.desktop-mode th:nth-child(2),
 body.desktop-mode td:nth-child(2) {
-  width: 260px;
+  width: 320px;
 }
 body.desktop-mode th:nth-child(3),
 body.desktop-mode td.schedule-cell {

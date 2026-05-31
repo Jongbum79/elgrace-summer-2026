@@ -432,17 +432,30 @@ function renderFamilies() {
   document.querySelector("#familyCount").textContent = `${visibleFamilies.length}가족 표시 중`;
   document.querySelector("#familyTableBody").innerHTML = visibleFamilies.map((family) => {
     const [statusText, statusClass] = statusMap[family.status];
-    const memberPills = family.members.map((member) => {
-      const role = member[1] === "성인 남성" ? "brother" : member[1] === "성인 여성" ? "sister" : "child";
+    const brotherAndSister = family.members.filter(m => m[1] === "성인 남성" || m[1] === "성인 여성");
+    const children = family.members.filter(m => m[1] !== "성인 남성" && m[1] !== "성인 여성");
+
+    const adultPills = brotherAndSister.map((member) => {
+      const role = member[1] === "성인 남성" ? "brother" : "sister";
       return `<span class="member-pill ${role}" title="${member[1]}">${member[0]}</span>`;
     }).join("");
+
+    const childPills = children.map((member) => {
+      return `<span class="member-pill child" title="${member[1]}">${member[0]}</span>`;
+    }).join("");
+
     return `
       <tr>
         <td class="family-cell" data-label="가족">
           <b>${family.name}</b>
           <span>${family.leader} · ${family.phone}</span>
         </td>
-        <td data-label="구성원"><div class="member-stack">${memberPills}</div></td>
+        <td data-label="구성원">
+          <div class="member-stack" style="display: flex; flex-direction: column; gap: 5px; max-width: none;">
+            ${adultPills ? `<div style="display: flex; flex-wrap: wrap; gap: 5px;">${adultPills}</div>` : ""}
+            ${childPills ? `<div style="display: flex; flex-wrap: wrap; gap: 5px;">${childPills}</div>` : ""}
+          </div>
+        </td>
         <td class="schedule-cell" data-label="참석 날짜">${renderFamilyAttendance(family)}</td>
         <td data-label="회비 / 방배정">
           <div style="font-size: 11px; color: #5c7066; display: flex; flex-direction: column; gap: 4px;">
