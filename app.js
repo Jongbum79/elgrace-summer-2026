@@ -46,6 +46,7 @@ const SUPABASE_KEY = "sb_publishable_syIASoSn0ogksocj5Pnpvg_DupHv4cG";
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 let families = [];
+let currentOrgMode = "family";
 
 const sisterGroupsData = [
   { id: "1조", leader: "장세연", members: ["최찬미", "정래윤", "원지희", "이주영"] },
@@ -609,6 +610,138 @@ function isNameRegistered(name) {
   return getNameRegistrationStatus(name) !== null;
 }
 
+function getFamilyByMemberName(name) {
+  const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
+  const target = normalizeName(name);
+  return families.find((family) => 
+    family.members && Array.isArray(family.members) && family.members.some((member) => member && normalizeName(member[0]) === target)
+  );
+}
+
+function getMemberAttendanceStatus(name) {
+  const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
+  const target = normalizeName(name);
+  const foundFamily = getFamilyByMemberName(name);
+  
+  if (!foundFamily) {
+    return { status: "unregistered", label: "미등록" };
+  }
+  if (foundFamily.status === "absent") {
+    return { status: "absent", label: "불참" };
+  }
+  
+  const member = foundFamily.members.find((m) => normalizeName(m[0]) === target);
+  if (!member) {
+    return { status: "unregistered", label: "미등록" };
+  }
+  const periods = getMemberAttendancePeriods(member);
+  if (periods.length === 0) {
+    return { status: "absent", label: "불참" };
+  }
+  
+  const availablePeriods = getAvailableAttendancePeriods();
+  const isFull = availablePeriods.every((period) => periods.includes(period));
+  return isFull ? { status: "full", label: "풀참" } : { status: "partial", label: "부분참석" };
+}
+
+function renderOrgChart(genderMode) {
+  const isSister = genderMode === "sister";
+  const groupsData = isSister ? sisterGroupsData : brotherGroupsData;
+  const staffData = isSister ? sisterStaffData : brotherStaffData;
+  
+  const container = document.querySelector("#orgChartContainer");
+  const statsBar = document.querySelector("#orgStatsBar");
+  
+  // Title & Subtitle
+  document.querySelector("#orgTitle").textContent = isSister ? "🌸 자매조 조직도" : "🌲 형제조 조직도";
+  document.querySelector("#orgSubtitle").textContent = isSister 
+    ? "전체 자매조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다."
+    : "전체 형제조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다.";
+    
+  let totalCount = 0;
+  let fullCount = 0;
+  let partialCount = 0;
+  let absentCount = 0;
+  let unregisteredCount = 0;
+  
+  function updateStats(name) {
+    totalCount++;
+    const att = getMemberAttendanceStatus(name);
+    if (att.status === "full") fullCount++;
+    else if (att.status === "partial") partialCount++;
+    else if (att.status === "absent") absentCount++;
+    else if (att.status === "unregistered") unregisteredCount++;
+  }
+  
+  groupsData.forEach((group) => {
+    updateStats(group.leader);
+    group.members.forEach((m) => updateStats(m));
+  });
+  staffData.coordinators.forEach((c) => updateStats(c.name));
+  staffData.otherGroups.forEach((m) => updateStats(m));
+  
+  statsBar.innerHTML = `
+    <div class="org-stats-item"><span>전체 인원:</span><b>${totalCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-full">풀참:</span><b>${fullCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-partial">부분참석:</span><b>${partialCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-absent">불참:</span><b>${absentCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-unregistered">미등록:</span><b>${unregisteredCount}명</b></div>
+  `;
+  
+  let html = "";
+  
+  function makeNodeHtml(name, roleLabel, btnClassPrefix) {
+    const att = getMemberAttendanceStatus(name);
+    const badgeClass = `badge-${att.status}`;
+    const btnClass = `${btnClassPrefix}-member-btn`;
+    const isLeader = roleLabel ? "leader" : "";
+    const regClass = att.status !== "unregistered" 
+      ? `registered ${att.status === "absent" ? "absent" : "present"}` 
+      : "";
+      
+    return `
+      <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}">
+        <span><b>${name}</b>${roleLabel ? ` <small style="font-size:11px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}</span>
+        <span class="org-badge ${badgeClass}">${att.label}</span>
+      </div>
+    `;
+  }
+  
+  groupsData.forEach((group) => {
+    html += `
+      <div class="org-group-card">
+        <div class="org-group-name">
+          <span>${isSister ? "🌸" : "🌲"} ${group.id}</span>
+        </div>
+        <div class="org-leader-box">
+          ${makeNodeHtml(group.leader, "조장", isSister ? "sister" : "brother")}
+          <div class="org-connector"></div>
+        </div>
+        <div class="org-member-list">
+          ${group.members.map((m) => makeNodeHtml(m, null, isSister ? "sister" : "brother")).join("")}
+        </div>
+      </div>
+    `;
+  });
+  
+  html += `
+    <div class="org-group-card">
+      <div class="org-group-name">
+        <span>👑 코디 및 기타 스태프</span>
+      </div>
+      <div class="org-leader-box">
+        ${staffData.coordinators.map((c) => makeNodeHtml(c.name, c.role, isSister ? "sister" : "brother")).join("")}
+        ${staffData.coordinators.length && staffData.otherGroups.length ? '<div class="org-connector"></div>' : ""}
+      </div>
+      <div class="org-member-list">
+        ${staffData.otherGroups.map((m) => makeNodeHtml(m, "기타", isSister ? "sister" : "brother")).join("")}
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+
 function renderSisterGroups() {
   const list = document.querySelector("#sisterGroupList");
   let html = `
@@ -876,6 +1009,9 @@ function renderAll() {
   renderBreakdown();
   renderFamilies();
   renderMeals();
+  if (currentOrgMode && currentOrgMode !== "family") {
+    renderOrgChart(currentOrgMode);
+  }
 }
 
 function getMemberSelectedPeriods(member) {
@@ -1285,10 +1421,28 @@ document.addEventListener("click", (event) => {
   const navItem = event.target.closest("[data-view]");
   const modeButton = event.target.closest(".view-mode-button");
   const mealGroup = event.target.closest(".meal-group-button");
+  const modeTab = event.target.closest(".mode-tab");
   if (modeButton) setViewMode(modeButton.dataset.mode);
   if (navItem) {
     event.preventDefault();
     openPage(navItem.dataset.view);
+  }
+  if (modeTab) {
+    document.querySelectorAll(".mode-tab").forEach((t) => t.classList.toggle("active", t === modeTab));
+    const mode = modeTab.dataset.mode;
+    currentOrgMode = mode;
+    
+    const familySec = document.querySelector("#familyViewSection");
+    const orgSec = document.querySelector("#orgChartViewSection");
+    
+    if (mode === "family") {
+      familySec.style.display = "block";
+      orgSec.style.display = "none";
+    } else {
+      familySec.style.display = "none";
+      orgSec.style.display = "block";
+      renderOrgChart(mode);
+    }
   }
   if (dateTab) {
     selectedDate = dateTab.dataset.date;
@@ -1323,10 +1477,9 @@ document.addEventListener("click", (event) => {
     const isBrother = clickedBtn.classList.contains("brother-member-btn");
     const name = clickedBtn.dataset.name;
 
-    const status = getNameRegistrationStatus(name);
-    if (status) {
-      const statusText = status === "present" ? "참석" : "불참";
-      showToast(`${name}님은 이미 [${statusText}]으로 입력 완료된 대상입니다.`);
+    const registeredFamily = getFamilyByMemberName(name);
+    if (registeredFamily) {
+      toggleModal(true, registeredFamily);
       return;
     }
 
@@ -1493,9 +1646,15 @@ document.querySelector("#drawerBackdrop").addEventListener("click", () => {
   closeSisterGroupDrawer();
   closeBrotherGroupDrawer();
 });
-document.querySelector("#sisterGroupButton").addEventListener("click", openSisterGroupDrawer);
+document.querySelector("#sisterGroupButton").addEventListener("click", () => {
+  const tab = document.querySelector(".mode-tab[data-mode='sister']");
+  if (tab) tab.click();
+});
 document.querySelector("#sisterGroupDrawerClose").addEventListener("click", closeSisterGroupDrawer);
-document.querySelector("#brotherGroupButton").addEventListener("click", openBrotherGroupDrawer);
+document.querySelector("#brotherGroupButton").addEventListener("click", () => {
+  const tab = document.querySelector(".mode-tab[data-mode='brother']");
+  if (tab) tab.click();
+});
 document.querySelector("#brotherGroupDrawerClose").addEventListener("click", closeBrotherGroupDrawer);
 document.querySelector("#addFamilyButton").addEventListener("click", () => toggleModal(true));
 document.querySelector("#modalClose").addEventListener("click", () => toggleModal(false));

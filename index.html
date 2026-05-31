@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260531_1220" />
+    <link rel="stylesheet" href="./styles.css?v=20260531_1230" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="desktop-mode">
@@ -162,7 +162,14 @@
             </div>
           </section>
 
-          <section class="card family-section">
+          <!-- 모드 선택 탭 스위처 -->
+          <div class="participants-mode-tabs">
+            <button class="mode-tab active" data-mode="family">👪 가족별 정보</button>
+            <button class="mode-tab" data-mode="sister">🌸 자매조 조직도</button>
+            <button class="mode-tab" data-mode="brother">🌲 형제조 조직도</button>
+          </div>
+
+          <section class="card family-section" id="familyViewSection">
           <div class="family-toolbar">
             <div>
               <h3>가족별 참석 일정</h3>
@@ -199,6 +206,24 @@
             </table>
           </div>
           <button class="load-more" id="loadMoreButton">더 많은 가족 보기 <span>⌄</span></button>
+        </section>
+
+        <!-- 조직도 뷰 섹션 -->
+        <section class="card org-chart-section" id="orgChartViewSection" style="display: none;">
+          <div class="org-header">
+            <div class="org-title-area">
+              <h3 id="orgTitle">자매조 조직도</h3>
+              <p id="orgSubtitle">전체 조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다.</p>
+            </div>
+            <div class="legend" style="display: flex; gap: 8px;">
+              <span><i class="org-badge badge-full" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">풀참</i></span>
+              <span><i class="org-badge badge-partial" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">부분참석</i></span>
+              <span><i class="org-badge badge-absent" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">불참</i></span>
+              <span><i class="org-badge badge-unregistered" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">미등록</i></span>
+            </div>
+          </div>
+          <div class="org-stats-bar" id="orgStatsBar"></div>
+          <div class="org-chart-grid" id="orgChartContainer"></div>
         </section>
         </div>
 
@@ -389,6 +414,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260531_1220"></script>
+    <script src="./app.js?v=20260531_1230"></script>
   </body>
 </html>

@@ -532,3 +532,227 @@ body.desktop-mode .memo {
   min-width: 200px;
   width: auto;
 }
+
+/* 참석자 관리 모드 탭 스위처 */
+.participants-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: white;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+.mode-tab:hover {
+  color: var(--forest);
+  background: var(--soft-line);
+  border-color: var(--sage);
+}
+.mode-tab.active {
+  color: white;
+  background: var(--forest);
+  border-color: var(--forest);
+  box-shadow: 0 4px 12px rgba(30, 90, 69, 0.15);
+}
+
+/* 조직도 뷰 레이아웃 */
+.org-chart-section {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.org-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--soft-line);
+  padding-bottom: 14px;
+}
+.org-title-area h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--ink);
+  font-weight: 800;
+}
+.org-title-area p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.org-stats-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--soft-line);
+  font-size: 13px;
+  color: var(--ink);
+}
+.org-stats-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.org-stats-item span {
+  color: var(--muted);
+}
+.org-stats-item b {
+  font-weight: 800;
+  color: var(--forest);
+}
+.org-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding-bottom: 30px;
+}
+.org-group-card {
+  background: #fbfcfb;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(33, 67, 53, 0.015);
+}
+.org-group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(33, 67, 53, 0.06);
+  border-color: var(--sage);
+}
+.org-group-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--forest);
+  border-bottom: 2px solid var(--mint);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.org-leader-box {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.org-leader-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border: 2px solid var(--sage);
+  background-color: #f1f7f4;
+  border-radius: 8px;
+  font-weight: 700;
+  color: var(--forest);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.org-leader-node:hover {
+  background-color: var(--mint);
+  transform: scale(1.015);
+  border-color: var(--forest);
+}
+.org-connector {
+  display: block;
+  width: 2px;
+  height: 14px;
+  background-color: var(--line);
+  margin: 0 auto;
+  position: relative;
+}
+.org-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.org-member-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  background-color: white;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+.org-member-node:hover {
+  background-color: var(--background);
+  transform: scale(1.015);
+  border-color: var(--sage);
+}
+
+/* 실시간 참석 여부 배지 */
+.org-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+.org-badge.badge-full {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+.org-badge.badge-partial {
+  background-color: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffe0b2;
+}
+.org-badge.badge-absent {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+.org-badge.badge-unregistered {
+  background-color: #f5f5f5;
+  color: #757575;
+  border: 1px solid #e0e0e0;
+}
+
+/* 모바일 뷰 최적화 */
+body.mobile-mode .participants-mode-tabs {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  gap: 6px;
+}
+body.mobile-mode .mode-tab {
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+body.mobile-mode .org-chart-grid {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+body.mobile-mode .org-stats-bar {
+  padding: 10px 12px;
+  font-size: 11px;
+  gap: 10px;
+}
+
