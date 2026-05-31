@@ -466,7 +466,6 @@ function renderFamilies() {
           </div>
         </td>
         <td data-label="현재 상태"><span class="status ${statusClass}">${statusText}</span></td>
-        <td class="memo" data-label="메모">${family.memo}</td>
         <td class="table-row-action"><button class="row-menu" data-family-id="${family.id}" aria-label="${family.name} 상세보기">···</button></td>
       </tr>`;
   }).join("");
