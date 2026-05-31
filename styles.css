@@ -489,26 +489,35 @@ body.mobile-mode .remove-child { grid-column: 3; grid-row: 1; }
 /* PC 모드에서 테이블 컬럼 간격 최적화 */
 body.desktop-mode th:nth-child(1),
 body.desktop-mode td.family-cell {
-  width: 220px;
+  width: 170px;
 }
 body.desktop-mode th:nth-child(2),
 body.desktop-mode td:nth-child(2) {
-  width: 260px;
+  width: 200px;
 }
 body.desktop-mode th:nth-child(3),
 body.desktop-mode td.schedule-cell {
-  width: 450px;
+  width: 380px;
 }
 body.desktop-mode th:nth-child(4),
 body.desktop-mode td:nth-child(4) {
-  width: 130px;
+  width: 120px;
 }
 body.desktop-mode th:nth-child(5),
 body.desktop-mode td:nth-child(5) {
-  width: 100px;
+  width: 90px;
+}
+body.desktop-mode .family-schedule-names {
+  width: 110px;
+  flex: 0 0 110px;
+}
+body.desktop-mode .family-schedule-group {
+  grid-template-columns: 195px 110px;
 }
 body.desktop-mode .memo {
   max-width: none;
   white-space: normal;
   word-break: break-all;
+  min-width: 250px;
+  width: auto;
 }
