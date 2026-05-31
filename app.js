@@ -1648,16 +1648,16 @@ document.querySelector("#drawerBackdrop").addEventListener("click", () => {
   closeSisterGroupDrawer();
   closeBrotherGroupDrawer();
 });
-document.querySelector("#sisterGroupButton").addEventListener("click", () => {
+document.querySelector("#sisterGroupButton")?.addEventListener("click", () => {
   const tab = document.querySelector(".mode-tab[data-mode='sister']");
   if (tab) tab.click();
 });
-document.querySelector("#sisterGroupDrawerClose").addEventListener("click", closeSisterGroupDrawer);
-document.querySelector("#brotherGroupButton").addEventListener("click", () => {
+document.querySelector("#sisterGroupDrawerClose")?.addEventListener("click", closeSisterGroupDrawer);
+document.querySelector("#brotherGroupButton")?.addEventListener("click", () => {
   const tab = document.querySelector(".mode-tab[data-mode='brother']");
   if (tab) tab.click();
 });
-document.querySelector("#brotherGroupDrawerClose").addEventListener("click", closeBrotherGroupDrawer);
+document.querySelector("#brotherGroupDrawerClose")?.addEventListener("click", closeBrotherGroupDrawer);
 document.querySelector("#addFamilyButton").addEventListener("click", () => toggleModal(true));
 document.querySelector("#modalClose").addEventListener("click", () => toggleModal(false));
 document.querySelector("#modalCancel").addEventListener("click", () => toggleModal(false));
