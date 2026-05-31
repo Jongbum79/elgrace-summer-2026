@@ -487,12 +487,15 @@ function getMealPeople(meal) {
       .filter((member) => member[5]
         ? getMemberChargeableMealPeriods(member).includes(`${mealDate}-${mealPeriod}`)
         : parseMemberDate(member[2]) <= mealTime && parseMemberDate(member[3]) > mealTime)
-      .map((member) => ({
-        name: member[0],
-        group: member[1],
-        family: family.name,
-        type: member[1].startsWith("성인") ? "adult" : "child",
-      })));
+      .map((member) => {
+        const isPreschool = ["유치부", "유아"].includes(member[1]);
+        return {
+          name: member[0],
+          group: member[1],
+          family: family.name,
+          type: isPreschool ? "preschool" : "standard",
+        };
+      }));
 }
 
 function renderMeals() {
@@ -503,12 +506,14 @@ function renderMeals() {
   }, {});
   const mealPeople = mealSchedule.map(getMealPeople);
   const totalServings = mealPeople.reduce((sum, people) => sum + people.length, 0);
-  const adultServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "adult").length, 0);
+  const standardServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "standard").length, 0);
+  const preschoolServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "preschool").length, 0);
+  
   document.querySelector("#mealCountBadge").textContent = `총 ${mealSchedule.length}회 식사`;
   document.querySelector("#mealSummaryNumbers").innerHTML = `
     <div class="meal-summary-number"><span>전체 식수</span><b>${totalServings}명분</b></div>
-    <div class="meal-summary-number"><span>성인 식수</span><b>${adultServings}명분</b></div>
-    <div class="meal-summary-number"><span>자녀 식수</span><b>${totalServings - adultServings}명분</b></div>`;
+    <div class="meal-summary-number"><span>성인/취학자녀</span><b>${standardServings}명분</b></div>
+    <div class="meal-summary-number"><span>미취학 아동</span><b>${preschoolServings}명분</b></div>`;
   renderMealBarChart();
   document.querySelector("#mealDays").innerHTML = Object.entries(mealsByDate).map(([date, meals]) => {
     const dateInfo = retreatDates.find((item) => item.shortLabel === `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`);
@@ -528,12 +533,13 @@ function renderMeals() {
 function renderMealBarChart() {
   const rows = mealSchedule.map((meal) => {
     const people = getMealPeople(meal);
-    const adults = people.filter((person) => person.type === "adult").length;
-    return { meal, total: people.length, adults, children: people.length - adults };
+    const standards = people.filter((person) => person.type === "standard").length;
+    const preschools = people.filter((person) => person.type === "preschool").length;
+    return { meal, total: people.length, standards, preschools };
   });
   const max = Math.max(...rows.map((row) => row.total), 1);
   const height = (value) => Math.max(3, Math.round(value / max * 154));
-  document.querySelector("#mealBarChart").innerHTML = rows.map(({ meal, total, adults, children }) => {
+  document.querySelector("#mealBarChart").innerHTML = rows.map(({ meal, total, standards, preschools }) => {
     const parts = meal.label.split(" ");
     const date = parts.slice(0, -1).join(" ");
     const mealType = parts.at(-1);
@@ -541,8 +547,8 @@ function renderMealBarChart() {
       <div class="meal-chart-column">
         <div class="meal-chart-bars">
           <div class="meal-chart-bar total" style="height:${height(total)}px"><span>${total}</span></div>
-          <div class="meal-chart-bar adult" style="height:${height(adults)}px"><span>${adults}</span></div>
-          <div class="meal-chart-bar child" style="height:${height(children)}px"><span>${children}</span></div>
+          <div class="meal-chart-bar adult" style="height:${height(standards)}px" title="성인/취학자녀"><span>${standards}</span></div>
+          <div class="meal-chart-bar child" style="height:${height(preschools)}px" title="미취학"><span>${preschools}</span></div>
         </div>
         <div class="meal-chart-label"><b>${date}</b><span class="meal-label-badge ${mealType}">${mealType}</span></div>
       </div>`;
@@ -551,8 +557,8 @@ function renderMealBarChart() {
 
 function renderMealCard(meal) {
   const people = getMealPeople(meal);
-  const adultCount = people.filter((person) => person.type === "adult").length;
-  const childCount = people.length - adultCount;
+  const standardCount = people.filter((person) => person.type === "standard").length;
+  const preschoolCount = people.filter((person) => person.type === "preschool").length;
   const mealType = meal.label.split(" ").at(-1);
   const time = meal.time.slice(11, 16);
   return `
@@ -561,14 +567,15 @@ function renderMealCard(meal) {
       <div class="meal-total"><b>${people.length}</b><span>명 준비 예정</span></div>
       <div class="meal-groups">
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="all"><span>총 인원</span><b>${people.length}명</b></button>
-        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="adult"><span>성인</span><b>${adultCount}명</b></button>
-        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="child"><span>자녀</span><b>${childCount}명</b></button>
+        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="standard"><span>성인/취학자녀</span><b>${standardCount}명</b></button>
+        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="preschool"><span>미취학</span><b>${preschoolCount}명</b></button>
       </div>
+      <div class="meal-action"><button class="view-meal-detail" data-meal-id="${meal.id}">상세 명단 보기 <span>→</span></button></div>
     </div>`;
 }
 
 function openMealDrawer(meal, group) {
-  const labels = { all: "총 인원", adult: "성인", child: "자녀" };
+  const labels = { all: "총 인원", standard: "성인/취학자녀", preschool: "미취학" };
   const people = getMealPeople(meal).filter((person) => group === "all" || person.type === group);
   document.querySelector("#mealDrawerTitle").textContent = `${meal.label} · ${labels[group]}`;
   document.querySelector("#mealDrawerSubtitle").textContent = `${meal.time.slice(11, 16)} 기준 ${people.length}명 · 구성원별 입퇴소 일정 반영`;
