@@ -653,7 +653,7 @@ function renderOrgChart(genderMode) {
   const statsBar = document.querySelector("#orgStatsBar");
   
   // Title & Subtitle
-  document.querySelector("#orgTitle").textContent = isSister ? "🌸 자매조 조직도" : "🌲 형제조 조직도";
+  document.querySelector("#orgTitle").textContent = isSister ? "👩 자매조 조직도" : "👨 형제조 조직도";
   document.querySelector("#orgSubtitle").textContent = isSister 
     ? "전체 자매조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다."
     : "전체 형제조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다.";
@@ -711,7 +711,7 @@ function renderOrgChart(genderMode) {
     html += `
       <div class="org-group-card">
         <div class="org-group-name">
-          <span>${isSister ? "🌸" : "🌲"} ${group.id}</span>
+          <span>${isSister ? "👩" : "👨"} ${group.id}</span>
         </div>
         <div class="org-leader-box">
           ${makeNodeHtml(group.leader, "조장", isSister ? "sister" : "brother")}
@@ -1690,8 +1690,7 @@ document.querySelector("#modalNext").addEventListener("click", async () => {
   if (existingIndex >= 0) families[existingIndex] = family;
   else families.push(family);
   
-  renderFamilies();
-  renderMeals();
+  renderAll();
   toggleModal(false);
   showToast(existingIndex >= 0 ? `${family.name} 정보가 저장되었습니다.` : `${family.name}이 등록되었습니다.`);
 });
