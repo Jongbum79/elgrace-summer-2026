@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260531_1255" />
+    <link rel="stylesheet" href="./styles.css?v=20260531_1300" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="desktop-mode">
@@ -219,6 +219,14 @@
               <span><i class="org-badge badge-unregistered" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">미등록</i></span>
             </div>
           </div>
+          <div class="org-filter-row">
+            <button class="filter-chip active" data-org-filter="all">🔍 전체 보기</button>
+            <button class="filter-chip" data-org-filter="registered">✅ 참석자만 보기</button>
+            <button class="filter-chip" data-org-filter="unregistered">❓ 미등록자 보기</button>
+            <button class="filter-chip" data-org-filter="absent">❌ 불참자 보기</button>
+            <button class="filter-chip" data-org-filter="full">🟢 풀참만 보기</button>
+            <button class="filter-chip" data-org-filter="partial">🟡 부분 참석만 보기</button>
+          </div>
           <div class="org-stats-bar" id="orgStatsBar"></div>
           <div class="org-chart-grid" id="orgChartContainer"></div>
         </section>
@@ -411,6 +419,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260531_1255"></script>
+    <script src="./app.js?v=20260531_1300"></script>
   </body>
 </html>

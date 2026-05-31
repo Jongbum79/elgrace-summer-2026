@@ -47,6 +47,7 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 
 let families = [];
 let currentOrgMode = "family";
+let orgActiveFilter = "all";
 
 const sisterGroupsData = [
   { id: "1조", leader: "장세연", members: ["최찬미", "정래윤", "원지희", "이주영"] },
@@ -643,6 +644,17 @@ function getMemberAttendanceStatus(name) {
   return isFull ? { status: "full", label: "풀참" } : { status: "partial", label: "부분참석" };
 }
 
+function matchesOrgFilter(name, filter) {
+  if (filter === "all") return true;
+  const att = getMemberAttendanceStatus(name);
+  if (filter === "registered") return att.status === "full" || att.status === "partial";
+  if (filter === "unregistered") return att.status === "unregistered";
+  if (filter === "absent") return att.status === "absent";
+  if (filter === "full") return att.status === "full";
+  if (filter === "partial") return att.status === "partial";
+  return true;
+}
+
 function renderOrgChart(genderMode) {
   const isSister = genderMode === "sister";
   const groupsData = isSister ? sisterGroupsData : brotherGroupsData;
@@ -699,9 +711,13 @@ function renderOrgChart(genderMode) {
       : "";
       
     const showLabel = roleLabel && roleLabel !== "조장";
+    
+    // Check if this node matches the active filter
+    const visible = matchesOrgFilter(name, orgActiveFilter);
+    const displayStyle = visible ? "" : "display: none !important;";
       
     return `
-      <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}">
+      <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}" style="${displayStyle}">
         <span><b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}</span>
         <span class="org-badge ${badgeClass}">${att.label}</span>
       </div>
@@ -709,14 +725,23 @@ function renderOrgChart(genderMode) {
   }
   
   groupsData.forEach((group) => {
+    const leaderVisible = matchesOrgFilter(group.leader, orgActiveFilter);
+    const visibleMembers = group.members.filter((m) => matchesOrgFilter(m, orgActiveFilter));
+    
+    if (!leaderVisible && visibleMembers.length === 0) {
+      return; // Skip rendering this group card completely if no one matches!
+    }
+    
+    const showConnector = leaderVisible && visibleMembers.length > 0;
+    
     html += `
       <div class="org-group-card">
         <div class="org-group-name">
-          <span>${isSister ? "👩" : "👨"} ${group.id}</span>
+          <span>${isSister ? "👩" : "👨"} ${group.id} (${group.leader})</span>
         </div>
         <div class="org-leader-box">
           ${makeNodeHtml(group.leader, "조장", isSister ? "sister" : "brother")}
-          <div class="org-connector"></div>
+          ${showConnector ? '<div class="org-connector"></div>' : ""}
         </div>
         <div class="org-member-list">
           ${group.members.map((m) => makeNodeHtml(m, null, isSister ? "sister" : "brother")).join("")}
@@ -725,20 +750,37 @@ function renderOrgChart(genderMode) {
     `;
   });
   
-  html += `
-    <div class="org-group-card">
-      <div class="org-group-name">
-        <span>👑 코디 및 기타 스태프</span>
+  const visibleCoordinators = staffData.coordinators.filter((c) => matchesOrgFilter(c.name, orgActiveFilter));
+  const visibleOtherGroups = staffData.otherGroups.filter((m) => matchesOrgFilter(m, orgActiveFilter));
+  
+  if (visibleCoordinators.length > 0 || visibleOtherGroups.length > 0) {
+    const showConnector = visibleCoordinators.length > 0 && visibleOtherGroups.length > 0;
+    
+    html += `
+      <div class="org-group-card">
+        <div class="org-group-name">
+          <span>👑 코디 및 기타 스태프</span>
+        </div>
+        <div class="org-leader-box">
+          ${staffData.coordinators.map((c) => makeNodeHtml(c.name, c.role, isSister ? "sister" : "brother")).join("")}
+          ${showConnector ? '<div class="org-connector"></div>' : ""}
+        </div>
+        <div class="org-member-list">
+          ${staffData.otherGroups.map((m) => makeNodeHtml(m, "기타", isSister ? "sister" : "brother")).join("")}
+        </div>
       </div>
-      <div class="org-leader-box">
-        ${staffData.coordinators.map((c) => makeNodeHtml(c.name, c.role, isSister ? "sister" : "brother")).join("")}
-        ${staffData.coordinators.length && staffData.otherGroups.length ? '<div class="org-connector"></div>' : ""}
+    `;
+  }
+  
+  if (!html) {
+    html = `
+      <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; background: #fafafa; border-radius: 8px; border: 1px dashed #dcdcdc;">
+        <span style="font-size: 32px; margin-bottom: 12px;">🔍</span>
+        <p style="font-size: 13px; font-weight: 600; color: #555; margin: 0;">필터 조건에 맞는 조원이 없습니다.</p>
+        <p style="font-size: 11px; color: #888; margin: 4px 0 0 0;">다른 필터 조건을 선택해 주세요.</p>
       </div>
-      <div class="org-member-list">
-        ${staffData.otherGroups.map((m) => makeNodeHtml(m, "기타", isSister ? "sister" : "brother")).join("")}
-      </div>
-    </div>
-  `;
+    `;
+  }
   
   container.innerHTML = html;
 }
@@ -1455,9 +1497,16 @@ document.addEventListener("click", (event) => {
     renderAll();
   }
   if (filterChip) {
-    activeFilter = filterChip.dataset.filter;
-    document.querySelectorAll(".filter-chip").forEach((chip) => chip.classList.toggle("active", chip === filterChip));
-    renderFamilies();
+    const orgFilter = filterChip.dataset.orgFilter;
+    if (orgFilter) {
+      orgActiveFilter = orgFilter;
+      document.querySelectorAll(".org-filter-row .filter-chip").forEach((chip) => chip.classList.toggle("active", chip === filterChip));
+      renderOrgChart(currentOrgMode);
+    } else {
+      activeFilter = filterChip.dataset.filter;
+      document.querySelectorAll(".family-filter-row .filter-chip").forEach((chip) => chip.classList.toggle("active", chip === filterChip));
+      renderFamilies();
+    }
   }
   if (familyMenu) toggleModal(true, families.find((family) => family.id === Number(familyMenu.dataset.familyId)));
   if (event.target.closest("#addChildButton")) {

@@ -759,3 +759,41 @@ body.mobile-mode .org-stats-bar {
   gap: 10px;
 }
 
+/* 조직도 전용 필터 바 및 칩 스타일 */
+.org-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  background-color: #f7f9f8;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8e5;
+  align-items: center;
+}
+.org-filter-row .filter-chip {
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.org-filter-row .filter-chip:hover {
+  background-color: #e6ede9;
+  color: var(--forest);
+}
+.org-filter-row .filter-chip.active {
+  background-color: var(--mint);
+  border-color: var(--sage);
+  color: var(--forest);
+  font-weight: 700;
+}
+body.mobile-mode .org-filter-row {
+  padding: 8px 10px;
+  gap: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+body.mobile-mode .org-filter-row .filter-chip {
+  flex: 0 0 auto;
+}
+
