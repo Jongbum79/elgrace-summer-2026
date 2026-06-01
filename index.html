@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260531_1300" />
+    <link rel="stylesheet" href="./styles.css?v=20260601_1305" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="desktop-mode">
@@ -217,12 +217,14 @@
               <span><i class="org-badge badge-partial" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">부분참석</i></span>
               <span><i class="org-badge badge-absent" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">불참</i></span>
               <span><i class="org-badge badge-unregistered" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">미등록</i></span>
+              <span><i class="org-badge badge-not_in_db" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal;">미입력</i></span>
             </div>
           </div>
           <div class="org-filter-row">
             <button class="filter-chip active" data-org-filter="all">🔍 전체 보기</button>
             <button class="filter-chip" data-org-filter="registered">✅ 참석자만 보기</button>
             <button class="filter-chip" data-org-filter="unregistered">❓ 미등록자 보기</button>
+            <button class="filter-chip" data-org-filter="not_in_db">📝 미입력자 보기</button>
             <button class="filter-chip" data-org-filter="absent">❌ 불참자 보기</button>
             <button class="filter-chip" data-org-filter="full">🟢 풀참만 보기</button>
             <button class="filter-chip" data-org-filter="partial">🟡 부분 참석만 보기</button>
@@ -419,6 +421,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260531_1300"></script>
+    <script src="./app.js?v=20260601_1305"></script>
   </body>
 </html>

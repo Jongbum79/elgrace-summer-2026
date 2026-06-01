@@ -624,7 +624,12 @@ function getMemberAttendanceStatus(name) {
   const foundFamily = getFamilyByMemberName(name);
   
   if (!foundFamily) {
-    return { status: "unregistered", label: "미등록" };
+    const isInDb = churchFamilyDb.some((row) =>
+      Object.values(row).some((val) => normalizeName(val) === target)
+    );
+    return isInDb 
+      ? { status: "unregistered", label: "미등록" }
+      : { status: "not_in_db", label: "미입력" };
   }
   if (foundFamily.status === "absent") {
     return { status: "absent", label: "불참" };
@@ -632,7 +637,12 @@ function getMemberAttendanceStatus(name) {
   
   const member = foundFamily.members.find((m) => normalizeName(m[0]) === target);
   if (!member) {
-    return { status: "unregistered", label: "미등록" };
+    const isInDb = churchFamilyDb.some((row) =>
+      Object.values(row).some((val) => normalizeName(val) === target)
+    );
+    return isInDb 
+      ? { status: "unregistered", label: "미등록" }
+      : { status: "not_in_db", label: "미입력" };
   }
   const periods = getMemberAttendancePeriods(member);
   if (periods.length === 0) {
@@ -649,6 +659,7 @@ function matchesOrgFilter(name, filter) {
   const att = getMemberAttendanceStatus(name);
   if (filter === "registered") return att.status === "full" || att.status === "partial";
   if (filter === "unregistered") return att.status === "unregistered";
+  if (filter === "not_in_db") return att.status === "not_in_db";
   if (filter === "absent") return att.status === "absent";
   if (filter === "full") return att.status === "full";
   if (filter === "partial") return att.status === "partial";
@@ -674,6 +685,7 @@ function renderOrgChart(genderMode) {
   let partialCount = 0;
   let absentCount = 0;
   let unregisteredCount = 0;
+  let notInDbCount = 0;
   
   function updateStats(name) {
     totalCount++;
@@ -682,6 +694,7 @@ function renderOrgChart(genderMode) {
     else if (att.status === "partial") partialCount++;
     else if (att.status === "absent") absentCount++;
     else if (att.status === "unregistered") unregisteredCount++;
+    else if (att.status === "not_in_db") notInDbCount++;
   }
   
   groupsData.forEach((group) => {
@@ -697,6 +710,7 @@ function renderOrgChart(genderMode) {
     <div class="org-stats-item"><span class="org-badge badge-partial">부분참석:</span><b>${partialCount}명</b></div>
     <div class="org-stats-item"><span class="org-badge badge-absent">불참:</span><b>${absentCount}명</b></div>
     <div class="org-stats-item"><span class="org-badge badge-unregistered">미등록:</span><b>${unregisteredCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-not_in_db">미입력:</span><b>${notInDbCount}명</b></div>
   `;
   
   let html = "";
@@ -706,7 +720,7 @@ function renderOrgChart(genderMode) {
     const badgeClass = `badge-${att.status}`;
     const btnClass = `${btnClassPrefix}-member-btn`;
     const isLeader = roleLabel ? "leader" : "";
-    const regClass = att.status !== "unregistered" 
+    const regClass = att.status !== "unregistered" && att.status !== "not_in_db"
       ? `registered ${att.status === "absent" ? "absent" : "present"}` 
       : "";
       
