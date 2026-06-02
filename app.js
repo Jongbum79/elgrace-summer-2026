@@ -2310,8 +2310,25 @@ ${JSON.stringify(families.map(f => ({
         if (act && act.type === "update_status" && act.params) {
           const { familyId, status } = act.params;
           
-          // Match by ID first, then fallback to matching name or leader to be extremely robust!
-          const existingIndex = families.findIndex(f => f.id === familyId || f.name === familyId || f.leader === familyId);
+          // Match by ID, name, or leader robustly with loose types and suffix-cleansing (e.g., "가족", spaces)
+          const existingIndex = families.findIndex(f => {
+            const cleanId = String(familyId || "").toLowerCase().replace(/\s+/g, "").replace("가족", "");
+            const cleanName = String(f.name || "").toLowerCase().replace(/\s+/g, "").replace("가족", "");
+            const cleanLeader = String(f.leader || "").toLowerCase().replace(/\s+/g, "").replace("가족", "");
+            return (
+              f.id == familyId ||
+              f.name === familyId ||
+              f.leader === familyId ||
+              (cleanId && (
+                cleanName === cleanId ||
+                cleanLeader === cleanId ||
+                cleanName.includes(cleanId) ||
+                cleanId.includes(cleanName) ||
+                cleanLeader.includes(cleanId) ||
+                cleanId.includes(cleanLeader)
+              ))
+            );
+          });
           
           if (existingIndex >= 0) {
             const family = families[existingIndex];
