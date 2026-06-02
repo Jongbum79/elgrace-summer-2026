@@ -3,6 +3,8 @@ let retreatConfig = null;
 let mealSchedule = [];
 let churchFamilyDb = [];
 
+const normalizeName = (str) => String(str || "").replace(/\s+/g, "").replace(/\((온|오프|온라인|오프라인)\)/g, "");
+
 const slots = ["08:00", "12:00", "18:00", "22:00"];
 const categories = [
   { key: "adultM", label: "성인 남성", color: "#1e5a45" },
@@ -597,7 +599,6 @@ function closeMealDrawer() {
 }
 
 function getNameRegistrationStatus(name) {
-  const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
   const target = normalizeName(name);
   const registeredFamily = families.find((family) => 
     family.members && Array.isArray(family.members) && family.members.some((member) => member && normalizeName(member[0]) === target)
@@ -611,7 +612,6 @@ function isNameRegistered(name) {
 }
 
 function getFamilyByMemberName(name) {
-  const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
   const target = normalizeName(name);
   return families.find((family) => 
     family.members && Array.isArray(family.members) && family.members.some((member) => member && normalizeName(member[0]) === target)
@@ -619,7 +619,6 @@ function getFamilyByMemberName(name) {
 }
 
 function getMemberAttendanceStatus(name) {
-  const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
   const target = normalizeName(name);
   const foundFamily = getFamilyByMemberName(name);
   
@@ -1346,7 +1345,6 @@ function getFamilyFromForm(existingFamily = null) {
   
   if (brotherName && sisterName && phone) {
     const cleanPhone = phone.replace(/\D/g, "");
-    const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
     const familyRow = churchFamilyDb.find((row) =>
       Object.values(row).some((val) => normalizeName(val) === normalizeName(brotherName) || normalizeName(val) === normalizeName(sisterName))
     );
@@ -1578,7 +1576,6 @@ document.addEventListener("click", (event) => {
     }
 
     // 공백을 제거하여 비교 (예: "김 은 혜" -> "김은혜")
-    const normalizeName = (str) => String(str || "").replace(/\s+/g, "");
     const searchName = normalizeName(name);
     const isDbEmpty = !churchFamilyDb || churchFamilyDb.length === 0;
 
