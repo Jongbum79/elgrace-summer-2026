@@ -255,7 +255,10 @@ function applyRetreatConfig(config) {
   const nights = Math.max(0, retreatDates.length - 1);
   document.querySelector("#retreatTitle").textContent = config.title;
   document.querySelector("#retreatMeta").textContent = `${start.label.replace("요일", "")} - ${end.label.replace("요일", "")} · ${nights}박 ${retreatDates.length}일 · ${config.location}`;
-  document.querySelector("#directorName").textContent = config.director;
+  const directorEl = document.querySelector("#directorName");
+  if (directorEl) {
+    directorEl.textContent = config.director;
+  }
   document.querySelector("#memberDateHeading").innerHTML = retreatDates.map((date) => `<span>${date.shortLabel}<small>${date.day}</small></span>`).join("");
   document.querySelector("#mealRetreatTitle").textContent = config.title;
   document.querySelector("#mealRetreatMeta").textContent = `${config.location} · ${retreatDates[0].shortLabel} 점심부터 ${retreatDates.at(-1).shortLabel} 아침까지`;
