@@ -1068,7 +1068,61 @@ var closeBrotherGroupDrawer = function() {
   document.querySelector("#brotherGroupDrawer").setAttribute("aria-hidden", "true");
 };
 
+function getCategoryKey(group) {
+  if (group === "성인 남성" || group === "성인남성") return "adultM";
+  if (group === "성인 여성" || group === "성인여성") return "adultF";
+  if (["중·고등부", "중고등부", "청소년"].includes(group)) return "youth";
+  if (["초등부", "유년부", "어린이"].includes(group)) return "elementary";
+  if (["유치부", "유아", "미취학"].includes(group)) return "preschool";
+  return "adultM"; // 폴백
+}
+
+function updateAttendanceFromFamilies() {
+  if (!retreatConfig || !retreatDates.length) return;
+
+  const newAttendance = {};
+  
+  retreatDates.forEach((date) => {
+    newAttendance[date.key] = slots.map((slotTime) => {
+      return {
+        time: slotTime,
+        adultM: 0,
+        adultF: 0,
+        youth: 0,
+        elementary: 0,
+        preschool: 0
+      };
+    });
+  });
+  
+  if (families && families.length) {
+    retreatDates.forEach((date) => {
+      slots.forEach((slotTime, slotIndex) => {
+        const slotDateTime = parseMemberDate(`${date.shortLabel} ${slotTime}`);
+        
+        families.forEach((family) => {
+          if (family.status === "absent") return;
+          
+          family.members.forEach((member) => {
+            if (!member[2] || !member[3]) return;
+            const arrival = parseMemberDate(member[2]);
+            const departure = parseMemberDate(member[3]);
+            
+            if (arrival <= slotDateTime && slotDateTime < departure) {
+              const key = getCategoryKey(member[1]);
+              newAttendance[date.key][slotIndex][key]++;
+            }
+          });
+        });
+      });
+    });
+  }
+  
+  attendance = newAttendance;
+}
+
 function renderAll() {
+  updateAttendanceFromFamilies();
   renderDateTabs();
   document.querySelector("#selectedDateLabel").textContent = retreatDates.find((date) => date.key === selectedDate).label;
   renderStats();
