@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260602_1444" />
+    <link rel="stylesheet" href="./styles.css?v=20260602_1448" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="desktop-mode">
@@ -151,12 +151,6 @@
             <div>
               <div class="title-line">
                 <h2>참석자 관리</h2>
-                <button class="refresh-button" id="refreshParticipantsButton" title="새로고침" aria-label="참석자 정보 새로고침">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                  </svg>
-                </button>
               </div>
               <p>가족별 참석 일정을 확인하고 구성원 정보를 관리하세요.</p>
             </div>
@@ -171,6 +165,12 @@
             <button class="mode-tab active" data-mode="family">👪 가족별 정보</button>
             <button class="mode-tab" data-mode="sister">👩 자매조 조직도</button>
             <button class="mode-tab" data-mode="brother">👨 형제조 조직도</button>
+            <button class="refresh-button" id="refreshParticipantsButton" title="새로고침" aria-label="참석자 정보 새로고침">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
           </div>
 
           <section class="card family-section" id="familyViewSection">
@@ -449,6 +449,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260602_1444"></script>
+    <script src="./app.js?v=20260602_1448"></script>
   </body>
 </html>

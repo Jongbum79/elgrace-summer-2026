@@ -567,6 +567,7 @@ body.desktop-mode .memo {
 /* 참석자 관리 모드 탭 스위처 */
 .participants-mode-tabs {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-bottom: 16px;
 }
