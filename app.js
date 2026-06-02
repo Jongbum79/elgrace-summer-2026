@@ -292,12 +292,10 @@ function renderStats() {
         const arrival = parseMemberDate(member[2]);
         const departure = parseMemberDate(member[3]);
         
-        const arrivalDateStr = arrival.getFullYear() + "-" + 
-          String(arrival.getMonth() + 1).padStart(2, "0") + "-" + 
+        const arrivalDateStr = String(arrival.getMonth() + 1).padStart(2, "0") + "-" + 
           String(arrival.getDate()).padStart(2, "0");
           
-        const departureDateStr = departure.getFullYear() + "-" + 
-          String(departure.getMonth() + 1).padStart(2, "0") + "-" + 
+        const departureDateStr = String(departure.getMonth() + 1).padStart(2, "0") + "-" + 
           String(departure.getDate()).padStart(2, "0");
           
         if (arrivalDateStr === targetDateStr) {
