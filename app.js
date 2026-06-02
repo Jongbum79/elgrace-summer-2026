@@ -1880,6 +1880,17 @@ function initChatbotView() {
 
   if (!badge) return;
 
+  // Handle Settings Toggle
+  const toggleBtn = document.querySelector("#chatSettingsToggle");
+  const settingsPanel = document.querySelector("#chatbotSettingsPanel");
+  if (toggleBtn && settingsPanel) {
+    toggleBtn.onclick = () => {
+      const isHidden = settingsPanel.style.display === "none";
+      settingsPanel.style.display = isHidden ? "block" : "none";
+      toggleBtn.style.transform = isHidden ? "rotate(90deg)" : "rotate(0deg)";
+    };
+  }
+
   // Load configuration
   const savedProvider = localStorage.getItem("ai-provider") || "mock";
   const savedKey = localStorage.getItem("ai-api-key") || "";

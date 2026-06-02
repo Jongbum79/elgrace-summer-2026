@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260602_1448" />
+    <link rel="stylesheet" href="./styles.css?v=20260602_1452" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="desktop-mode">
@@ -300,7 +300,31 @@
                   <h3>수련회 운영 도우미</h3>
                   <p id="chatModeCopy">GPT 연결 상태를 확인하고 있습니다.</p>
                 </div>
+                <button class="chat-settings-toggle" id="chatSettingsToggle" title="AI 설정 열기/닫기" aria-label="AI 설정 토글" style="margin-left: auto; font-size: 16px; background: transparent; color: var(--muted); cursor: pointer; transition: transform 0.2s ease; padding: 4px;">⚙️</button>
               </div>
+              
+              <!-- Collapsible AI API Key Config -->
+              <div class="chatbot-settings-panel" id="chatbotSettingsPanel" style="display: none; padding: 12px 18px; background: #f6f8f7; border-bottom: 1px solid var(--line);">
+                <h4 style="margin: 0 0 8px; font-size: 11px; font-weight: 800; color: var(--forest); display: flex; align-items: center; gap: 4px;">
+                  <span>🔑</span> AI API 연동 설정
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end;">
+                  <div style="display: grid; gap: 4px;">
+                    <label style="font-size: 9px; font-weight: 700; color: var(--muted); margin: 0;">엔진 선택</label>
+                    <select id="aiProviderSelect" style="height: 32px; padding: 0 6px; font-size: 11px; border-radius: 6px; border: 1px solid var(--line); width: 100%;">
+                      <option value="mock">데모 모드 (기본 내장)</option>
+                      <option value="gemini">Google Gemini (추천)</option>
+                      <option value="openai">OpenAI GPT-4o</option>
+                    </select>
+                  </div>
+                  <div id="apiKeyInputWrapper" style="display: none; grid-template-columns: 1fr; gap: 4px;">
+                    <label style="font-size: 9px; font-weight: 700; color: var(--muted); margin: 0;">API Key 입력</label>
+                    <input id="aiApiKeyInput" type="password" placeholder="Key 입력 (브라우저 로컬 저장)" style="height: 32px; padding: 0 8px; font-size: 11px; border-radius: 6px; border: 1px solid var(--line); width: 100%;" />
+                  </div>
+                  <button id="saveApiKeyButton" class="primary-button" style="min-height: 32px; padding: 0 12px; font-size: 11px; border-radius: 6px; font-weight: 700; height: 32px;">설정 저장</button>
+                </div>
+              </div>
+
               <div class="chatbot-messages" id="chatbotMessages" aria-live="polite"></div>
               <div class="chatbot-suggestions" id="chatbotSuggestions">
                 <button type="button" data-chat-prompt="입소 예정 가족 알려줘">입소 예정 가족</button>
@@ -324,28 +348,6 @@
               </ul>
               <div class="chatbot-note">
                 현재는 GPT가 요청을 해석하고 로컬 데이터를 사용합니다. 실제 배포에서는 로그인된 운영진의 확인 후 Supabase 데이터를 수정합니다.
-              </div>
-              
-              <!-- AI API Key Config -->
-              <div class="api-key-config" style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line);">
-                <h4 style="margin: 0 0 8px; font-size: 11px; font-weight: 800; color: var(--forest); display: flex; align-items: center; gap: 4px;">
-                  <span>🔑</span> AI API 연동 설정
-                </h4>
-                <div style="display: grid; gap: 8px;">
-                  <div style="display: grid; grid-template-columns: 1fr; gap: 4px;">
-                    <label style="font-size: 9px; font-weight: 700; color: var(--muted);">엔진 선택</label>
-                    <select id="aiProviderSelect" style="height: 32px; padding: 0 6px; font-size: 11px; border-radius: 6px; border: 1px solid var(--line); width: 100%;">
-                      <option value="mock">데모 모드 (기본 내장)</option>
-                      <option value="gemini">Google Gemini (추천)</option>
-                      <option value="openai">OpenAI GPT-4o</option>
-                    </select>
-                  </div>
-                  <div id="apiKeyInputWrapper" style="display: none; grid-template-columns: 1fr; gap: 4px;">
-                    <label style="font-size: 9px; font-weight: 700; color: var(--muted);">API Key 입력</label>
-                    <input id="aiApiKeyInput" type="password" placeholder="Key 입력 (브라우저 로컬 저장)" style="height: 32px; padding: 0 8px; font-size: 11px; border-radius: 6px; border: 1px solid var(--line); width: 100%;" />
-                  </div>
-                  <button id="saveApiKeyButton" class="primary-button" style="min-height: 32px; padding: 0; font-size: 11px; border-radius: 6px; font-weight: 700; width: 100%;">설정 완료</button>
-                </div>
               </div>
             </aside>
           </section>
@@ -449,6 +451,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260602_1448"></script>
+    <script src="./app.js?v=20260602_1452"></script>
   </body>
 </html>
