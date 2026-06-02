@@ -276,13 +276,55 @@ function renderStats() {
   const data = attendance[selectedDate];
   const record = currentRecord();
   const peak = Math.max(...data.map(total));
-  const dayIndex = retreatDates.findIndex((date) => date.key === selectedDate);
-  const enter = [318, 47, 22, 0][dayIndex] || 0;
-  const exit = [0, 4, 7, 376][dayIndex] || 0;
+  
+  let enter = 0;
+  let exit = 0;
+  let lateArrivals = 0;
+  
+  const targetDateStr = selectedDate;
+  
+  if (families && families.length) {
+    families.forEach((family) => {
+      if (family.status === "absent") return;
+      
+      family.members.forEach((member) => {
+        if (!member[2] || !member[3]) return;
+        const arrival = parseMemberDate(member[2]);
+        const departure = parseMemberDate(member[3]);
+        
+        const arrivalDateStr = arrival.getFullYear() + "-" + 
+          String(arrival.getMonth() + 1).padStart(2, "0") + "-" + 
+          String(arrival.getDate()).padStart(2, "0");
+          
+        const departureDateStr = departure.getFullYear() + "-" + 
+          String(departure.getMonth() + 1).padStart(2, "0") + "-" + 
+          String(departure.getDate()).padStart(2, "0");
+          
+        if (arrivalDateStr === targetDateStr) {
+          enter++;
+          if (arrival.getHours() >= 18) {
+            lateArrivals++;
+          }
+        }
+        if (departureDateStr === targetDateStr) {
+          exit++;
+        }
+      });
+    });
+  }
+  
+  const enterCaption = enter === 0 
+    ? "입소 예정인 구성원 없음" 
+    : (lateArrivals > 0 ? `오후 6시 이후 입소: ${lateArrivals}명 포함` : "일정표에 따른 입소 완료 예정");
+    
+  const exitCaption = exit === 0 
+    ? "퇴소 예정인 구성원 없음" 
+    : "일정표에 따른 퇴소 완료 예정";
+
   const stats = [
     ["현재 참석 인원", total(record), "명", `선택 시간 ${record.time}`, "♙"],
-    ["오늘 입소 예정", enter, "명", dayIndex === 0 ? "오후 6시 이후 29명" : "추가 입소 포함", "↘"],
-    ["오늘 퇴소 예정", exit, "명", exit ? "퇴소 시간 확인 필요" : "예정 없음", "↗"],
+    ["오늘 입소 예정", enter, "명", enterCaption, "↘"],
+    ["오늘 퇴소 예정", exit, "명", exitCaption, "↗"],
     ["오늘 최대 인원", peak, "명", `${data.find((item) => total(item) === peak).time} 예상`, "◷"],
   ];
   document.querySelector("#statsGrid").innerHTML = stats.map(([label, value, unit, caption, icon]) => `
