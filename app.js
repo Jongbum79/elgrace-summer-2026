@@ -1460,6 +1460,25 @@ function setViewMode(mode, remember = true) {
   if (remember) localStorage.setItem("retreat-view-mode", mode);
 }
 
+async function refreshParticipantsData() {
+  const refreshBtn = document.querySelector("#refreshParticipantsButton");
+  if (refreshBtn) refreshBtn.classList.add("spinning");
+  try {
+    await loadFamiliesFromSupabase();
+    renderAll();
+    showToast("최신 정보로 업데이트되었습니다.");
+  } catch (error) {
+    console.error("데이터 로드 에러:", error);
+    showToast("데이터를 가져오는 중 에러가 발생했습니다.");
+  } finally {
+    if (refreshBtn) {
+      setTimeout(() => {
+        refreshBtn.classList.remove("spinning");
+      }, 500);
+    }
+  }
+}
+
 function openPage(view) {
   if (!["attendance", "participants", "meals"].includes(view)) {
     showToast("이 메뉴는 다음 단계에서 연결합니다.");
@@ -1468,6 +1487,9 @@ function openPage(view) {
   document.querySelectorAll("[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   document.querySelectorAll(".page-view").forEach((page) => page.classList.remove("active"));
   document.querySelector(`#${view}View`).classList.add("active");
+  if (view === "participants") {
+    refreshParticipantsData();
+  }
 }
 
 document.addEventListener("click", (event) => {
@@ -1479,10 +1501,15 @@ document.addEventListener("click", (event) => {
   const modeButton = event.target.closest(".view-mode-button");
   const mealGroup = event.target.closest(".meal-group-button");
   const modeTab = event.target.closest(".mode-tab");
+  const refreshBtn = event.target.closest("#refreshParticipantsButton");
+  
   if (modeButton) setViewMode(modeButton.dataset.mode);
   if (navItem) {
     event.preventDefault();
     openPage(navItem.dataset.view);
+  }
+  if (refreshBtn) {
+    refreshParticipantsData();
   }
   if (modeTab) {
     document.querySelectorAll(".mode-tab").forEach((t) => t.classList.toggle("active", t === modeTab));
