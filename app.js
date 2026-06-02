@@ -7,8 +7,7 @@ const normalizeName = (str) => String(str || "").replace(/\s+/g, "").replace(/\(
 
 const slots = ["08:00", "12:00", "18:00", "22:00"];
 const categories = [
-  { key: "adultM", label: "성인 남성", color: "#1e5a45" },
-  { key: "adultF", label: "성인 여성", color: "#81a98e" },
+  { key: "adult", label: "장년부", color: "#1e5a45" },
   { key: "youth", label: "중·고등부", color: "#6c9ecf" },
   { key: "elementary", label: "초등부", color: "#e3bf62" },
   { key: "preschool", label: "유치부 이하", color: "#d9879f" },
@@ -16,28 +15,28 @@ const categories = [
 
 const attendanceSeries = [
   [
-    { time: "08:00", adultM: 18, adultF: 21, youth: 9, elementary: 8, preschool: 6 },
-    { time: "12:00", adultM: 66, adultF: 79, youth: 34, elementary: 31, preschool: 22 },
-    { time: "18:00", adultM: 91, adultF: 106, youth: 49, elementary: 42, preschool: 30 },
-    { time: "22:00", adultM: 98, adultF: 116, youth: 54, elementary: 47, preschool: 33 },
+    { time: "08:00", adult: 39, youth: 9, elementary: 8, preschool: 6 },
+    { time: "12:00", adult: 145, youth: 34, elementary: 31, preschool: 22 },
+    { time: "18:00", adult: 197, youth: 49, elementary: 42, preschool: 30 },
+    { time: "22:00", adult: 214, youth: 54, elementary: 47, preschool: 33 },
   ],
   [
-    { time: "08:00", adultM: 98, adultF: 116, youth: 54, elementary: 47, preschool: 33 },
-    { time: "12:00", adultM: 106, adultF: 124, youth: 59, elementary: 51, preschool: 35 },
-    { time: "18:00", adultM: 121, adultF: 136, youth: 64, elementary: 56, preschool: 38 },
-    { time: "22:00", adultM: 125, adultF: 141, youth: 66, elementary: 58, preschool: 39 },
+    { time: "08:00", adult: 214, youth: 54, elementary: 47, preschool: 33 },
+    { time: "12:00", adult: 230, youth: 59, elementary: 51, preschool: 35 },
+    { time: "18:00", adult: 257, youth: 64, elementary: 56, preschool: 38 },
+    { time: "22:00", adult: 266, youth: 66, elementary: 58, preschool: 39 },
   ],
   [
-    { time: "08:00", adultM: 124, adultF: 140, youth: 66, elementary: 58, preschool: 39 },
-    { time: "12:00", adultM: 132, adultF: 147, youth: 69, elementary: 62, preschool: 41 },
-    { time: "18:00", adultM: 129, adultF: 144, youth: 68, elementary: 61, preschool: 40 },
-    { time: "22:00", adultM: 126, adultF: 141, youth: 67, elementary: 59, preschool: 38 },
+    { time: "08:00", adult: 264, youth: 66, elementary: 58, preschool: 39 },
+    { time: "12:00", adult: 279, youth: 69, elementary: 62, preschool: 41 },
+    { time: "18:00", adult: 273, youth: 68, elementary: 61, preschool: 40 },
+    { time: "22:00", adult: 267, youth: 67, elementary: 59, preschool: 38 },
   ],
   [
-    { time: "08:00", adultM: 124, adultF: 139, youth: 66, elementary: 58, preschool: 38 },
-    { time: "12:00", adultM: 119, adultF: 135, youth: 62, elementary: 54, preschool: 36 },
-    { time: "18:00", adultM: 21, adultF: 24, youth: 7, elementary: 5, preschool: 3 },
-    { time: "22:00", adultM: 0, adultF: 0, youth: 0, elementary: 0, preschool: 0 },
+    { time: "08:00", adult: 263, youth: 66, elementary: 58, preschool: 38 },
+    { time: "12:00", adult: 254, youth: 62, elementary: 54, preschool: 36 },
+    { time: "18:00", adult: 45, youth: 7, elementary: 5, preschool: 3 },
+    { time: "22:00", adult: 0, youth: 0, elementary: 0, preschool: 0 },
   ],
 ];
 let attendance = {};
@@ -1109,12 +1108,11 @@ var closeBrotherGroupDrawer = function() {
 };
 
 function getCategoryKey(group) {
-  if (group === "성인 남성" || group === "성인남성") return "adultM";
-  if (group === "성인 여성" || group === "성인여성") return "adultF";
+  if (["성인 남성", "성인남성", "성인 여성", "성인여성", "장년부", "장년"].includes(group)) return "adult";
   if (["중·고등부", "중고등부", "청소년"].includes(group)) return "youth";
   if (["초등부", "유년부", "어린이"].includes(group)) return "elementary";
   if (["유치부", "유아", "미취학"].includes(group)) return "preschool";
-  return "adultM"; // 폴백
+  return "adult"; // 폴백
 }
 
 function updateAttendanceFromFamilies() {
@@ -1126,8 +1124,7 @@ function updateAttendanceFromFamilies() {
     newAttendance[date.key] = slots.map((slotTime) => {
       return {
         time: slotTime,
-        adultM: 0,
-        adultF: 0,
+        adult: 0,
         youth: 0,
         elementary: 0,
         preschool: 0
