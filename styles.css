@@ -422,6 +422,7 @@ body.mobile-mode tbody { display: grid; gap: 9px; padding: 10px; background: var
 body.mobile-mode tr { position: relative; padding: 13px; border-radius: 9px; background: white; border: 1px solid var(--line); }
 body.mobile-mode td { display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 7px; align-items: start; padding: 7px 0; border: 0; white-space: normal; }
 body.mobile-mode td::before { color: #87948f; content: attr(data-label); font-size: 10px; font-weight: 700; }
+body.mobile-mode .status { justify-self: start; }
 body.mobile-mode .family-cell { display: block; padding: 0 30px 8px 0; border-bottom: 1px solid var(--soft-line); }
 body.mobile-mode .family-cell::before { display: none; }
 body.mobile-mode .member-stack { max-width: none; }
