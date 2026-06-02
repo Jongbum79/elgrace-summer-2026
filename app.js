@@ -419,9 +419,9 @@ function getMemberChargeableMealPeriods(member) {
 
 function getFamilyAttendanceStatus(family) {
   const availablePeriods = getAvailableAttendancePeriods();
-  const allDaysSelected = family.members.every((member) =>
+  const hasFullMember = family.members.some((member) =>
     availablePeriods.every((period) => getMemberAttendancePeriods(member).includes(period)));
-  return allDaysSelected ? "full" : "partial";
+  return hasFullMember ? "full" : "partial";
 }
 
 function renderDaySquares(periods, externalMeals = [], titlePrefix = "") {
