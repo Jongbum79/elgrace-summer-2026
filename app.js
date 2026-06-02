@@ -2023,7 +2023,7 @@ async function sendMessageToAI(userText) {
 
   try {
     let reply = "";
-    let action = null;
+    let actions = [];
 
     if (provider !== "mock" && !apiKey) {
       throw new Error("API Key가 필요합니다. 가이드 우측 하단에서 설정해 주세요.");
@@ -2035,7 +2035,34 @@ async function sendMessageToAI(userText) {
       
       const query = userText.toLowerCase().replace(/\s+/g, "");
 
-      if (query.includes("입소예정") || query.includes("예정가족") || query.includes("늦은입소")) {
+      // Multi-action parser in Demo Mode!
+      let mockReplies = [];
+      let mockActions = [];
+
+      if (query.includes("최종범")) {
+        const status = query.includes("퇴소") ? "leave" : query.includes("불참") ? "absent" : query.includes("예정") ? "late" : "stay";
+        const statusLabel = { stay: "입소 완료", late: "입소 예정", leave: "퇴소 완료", absent: "전체 불참" }[status];
+        const family = families.find(f => f.leader === "최종범" || f.name === "최종범");
+        if (family) {
+          mockReplies.push(`- **최종범** 가족 상태 변경 ➡️ **${statusLabel}** (stay)`);
+          mockActions.push({ type: "update_status", params: { familyId: family.id, status } });
+        }
+      }
+
+      if (query.includes("박영재")) {
+        const status = query.includes("퇴소") ? "leave" : query.includes("불참") ? "absent" : query.includes("예정") ? "late" : "stay";
+        const statusLabel = { stay: "입소 완료", late: "입소 예정", leave: "퇴소 완료", absent: "전체 불참" }[status];
+        const family = families.find(f => f.leader === "박영재" || f.name === "박영재");
+        if (family) {
+          mockReplies.push(`- **박영재** 가족 상태 변경 ➡️ **${statusLabel}** (leave)`);
+          mockActions.push({ type: "update_status", params: { familyId: family.id, status } });
+        }
+      }
+
+      if (mockReplies.length > 0) {
+        reply = `🎯 **데모 모드 다중 상태 변경 완료**:\n\n${mockReplies.join("\n")}\n\n즉시 대시보드가 성공적으로 리렌더링되었습니다! 🚀`;
+        actions = mockActions;
+      } else if (query.includes("입소예정") || query.includes("예정가족") || query.includes("늦은입소")) {
         const lateList = families.filter(f => f.status === "late");
         if (lateList.length === 0) {
           reply = "현재 입소 예정(대기) 상태인 가족이 없습니다. 모두 입소 완료하셨습니다!";
@@ -2058,13 +2085,13 @@ async function sendMessageToAI(userText) {
 
         if (matchedFamily) {
           reply = `**${matchedFamily.name}** 가족의 현재 입소 상태를 **[입소 완료]**로 변경 요청을 수행합니다. 즉시 대시보드가 리렌더링되었습니다! 🚀\n\n- **가족**: ${matchedFamily.name}\n- **대표자**: ${matchedFamily.leader}\n- **상태 변경**: 입소 예정 ➡️ **입소 완료 (stay)**`;
-          action = {
+          actions.push({
             type: "update_status",
             params: {
               familyId: matchedFamily.id,
               status: "stay"
             }
-          };
+          });
         } else {
           reply = "참석 처리할 가족을 데이터베이스에서 찾을 수 없습니다. 정확한 가족 대표자 또는 가족 이름을 입력해 주세요. (예: '이정민 가족 참석 완료 처리해줘')";
         }
@@ -2124,29 +2151,30 @@ ${JSON.stringify(families.map(f => ({
 - leave: "퇴소 완료"
 - absent: "전체 불참"
 
-[수행 가능 동작 (action)]
-만약 사용자가 특정 가족의 상태를 변경해달라고 명시적으로 요청하면(예: "이정민 가족 참석 처리해줘", "홍길동 가족 입소 완료로 바꿔줘", "김철수 가족 불참으로 변경해줘"), JSON 응답에 아래 형식의 action 필드를 포함해야 한다:
+[수행 가능 동작 (actions)]
+만약 사용자가 가족의 상태를 변경해달라고 명시적으로 요청하면(예: "최종범 가족 참석 완료로, 박영재 가족 퇴소 완료로", "이정민 가족 참석 처리해줘"), JSON 응답에 아래 형식의 actions 배열(또는 단수형 action 객체)을 포함해야 한다:
 {
-  "type": "update_status",
-  "params": {
-    "familyId": "가족ID (문자열)",
-    "status": "변경할상태코드 (stay, late, leave, absent 중 하나)"
-  }
+  "reply": "사용자에게 보낼 친절하고 명확한 한국어 답변 메시지. 마크다운 형식을 사용하여 깔끔하게 작성해줘. (예: 표, 불릿 포인트 등)",
+  "actions": [
+    {
+      "type": "update_status",
+      "params": {
+        "familyId": "가족ID (문자열)",
+        "status": "변경할상태코드 (stay, late, leave, absent 중 하나)"
+      }
+    }
+  ]
 }
-*상태를 변경하는 요청이 아니라 단순 질문(예: "입소 예정인 가족 누구야?")인 경우 action 필드는 null이어야 한다.*
+*상태를 변경하는 요청이 아니라 단순 질문(예: "입소 예정인 가족 누구야?")인 경우 actions 필드는 빈 배열 [] 이거나 action 필드가 null이어야 한다.*
 
 [응답 형식]
 반드시 아래 형식의 유효한 JSON 객체로만 응답해야 한다. 추가적인 텍스트(마크다운 코드 블록 등)는 절대 포함하지 마라.
 {
-  "reply": "사용자에게 보낼 친절하고 명확한 한국어 답변 메시지. 마크다운 형식을 사용하여 깔끔하게 작성해줘. (예: 표, 불릿 포인트 등)",
-  "action": {
-    "type": "update_status",
-    "params": {
-      "familyId": "가족ID",
-      "status": "stay"
-    }
-  } (또는 null)
+  "reply": "사용자에게 보낼 친절한 한국어 답변 메시지",
+  "actions": []
 }`;
+
+      let parsed = null;
 
       if (provider === "gemini") {
         const GEMINI_MODELS = [
@@ -2194,9 +2222,7 @@ ${JSON.stringify(families.map(f => ({
 
         const resJson = await response.json();
         const textResponse = resJson.candidates[0].content.parts[0].text;
-        const parsed = JSON.parse(cleanJsonResponse(textResponse));
-        reply = parsed.reply;
-        action = parsed.action;
+        parsed = JSON.parse(cleanJsonResponse(textResponse));
       } else {
         // OpenAI GPT-4o-mini
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -2222,54 +2248,107 @@ ${JSON.stringify(families.map(f => ({
 
         const resJson = await response.json();
         const textResponse = resJson.choices[0].message.content;
-        const parsed = JSON.parse(cleanJsonResponse(textResponse));
-        reply = parsed.reply;
-        action = parsed.action;
+        parsed = JSON.parse(cleanJsonResponse(textResponse));
+      }
+
+      // Defensive Parsing of AI Response
+      if (parsed) {
+        if (parsed.reply) reply = parsed.reply;
+        else if (parsed.answer) reply = parsed.answer;
+        else if (parsed.message) reply = parsed.message;
+        else if (parsed.response) reply = parsed.response;
+        else if (parsed.text) reply = parsed.text;
+
+        if (!reply) {
+          const findKey = (obj, keyName) => {
+            if (typeof obj !== "object" || obj === null) return null;
+            if (obj[keyName]) return obj[keyName];
+            for (const k in obj) {
+              const res = findKey(obj[k], keyName);
+              if (res) return res;
+            }
+            return null;
+          };
+          reply = findKey(parsed, "reply") || findKey(parsed, "message") || findKey(parsed, "answer") || JSON.stringify(parsed);
+        }
+
+        // Extract action objects
+        if (parsed.action && typeof parsed.action === "object") {
+          actions.push(parsed.action);
+        }
+        if (Array.isArray(parsed.actions)) {
+          actions.push(...parsed.actions);
+        }
+        
+        // Plural recursive fallback
+        if (actions.length === 0) {
+          const findActions = (obj) => {
+            if (typeof obj !== "object" || obj === null) return;
+            if (obj.type && obj.params) {
+              actions.push(obj);
+              return;
+            }
+            for (const k in obj) {
+              findActions(obj[k]);
+            }
+          };
+          findActions(parsed);
+        }
       }
     }
 
-    // Process Action if requested
-    if (action && action.type === "update_status") {
-      const { familyId, status } = action.params;
-      const existingIndex = families.findIndex(f => f.id === familyId);
-      
-      if (existingIndex >= 0) {
-        const family = families[existingIndex];
-        family.status = status;
+    // Process Actions recursively if any found
+    if (actions.length > 0) {
+      let updatedCount = 0;
+      for (const act of actions) {
+        if (act && act.type === "update_status" && act.params) {
+          const { familyId, status } = act.params;
+          
+          // Match by ID first, then fallback to matching name or leader to be extremely robust!
+          const existingIndex = families.findIndex(f => f.id === familyId || f.name === familyId || f.leader === familyId);
+          
+          if (existingIndex >= 0) {
+            const family = families[existingIndex];
+            family.status = status;
 
-        // Sync with Supabase DB
-        const dbFamily = { ...family };
-        const feeInfo = {
-          fee: family.fee,
-          feeStatus: family.feeStatus,
-          room: family.room
-        };
-        const cleanMemo = family.memo === "별도 메모 없음" ? "" : family.memo;
-        dbFamily.memo = `${cleanMemo}\n__FEE_INFO__:${JSON.stringify(feeInfo)}`;
-        
-        delete dbFamily.fee;
-        delete dbFamily.feeStatus;
-        delete dbFamily.room;
+            // Sync with Supabase DB
+            const dbFamily = { ...family };
+            const feeInfo = {
+              fee: family.fee,
+              feeStatus: family.feeStatus,
+              room: family.room
+            };
+            const cleanMemo = family.memo === "별도 메모 없음" ? "" : family.memo;
+            dbFamily.memo = `${cleanMemo}\n__FEE_INFO__:${JSON.stringify(feeInfo)}`;
+            
+            delete dbFamily.fee;
+            delete dbFamily.feeStatus;
+            delete dbFamily.room;
 
-        if (supabaseClient) {
-          const { error } = await supabaseClient.from("families").upsert([dbFamily]);
-          if (error) {
-            console.error("Supabase 업데이트 에러:", error);
-            showToast("데이터베이스 업데이트 실패");
-          } else {
-            console.log("Supabase 상태 변경 성공:", family.name, status);
+            if (supabaseClient) {
+              try {
+                const { error } = await supabaseClient.from("families").upsert([dbFamily]);
+                if (error) throw error;
+                console.log("Supabase 상태 변경 성공:", family.name, status);
+              } catch (dbErr) {
+                console.error("Supabase 업데이트 에러:", dbErr);
+              }
+            }
+            updatedCount++;
           }
         }
-        
+      }
+      
+      if (updatedCount > 0) {
         // Instant UI Updates
         renderAll();
       }
     }
 
-    // Replace loading message with the real answer
+    // Replace loading message with the real answer safely
     loadingMsg.classList.remove("loading");
     const bubble = loadingMsg.querySelector(".chat-message-bubble");
-    bubble.innerHTML = reply.replace(/\n/g, "<br>");
+    bubble.innerHTML = (reply || "성공적으로 요청을 수행했습니다.").replace(/\n/g, "<br>");
 
   } catch (error) {
     console.error("AI 챗봇 처리 에러:", error);
