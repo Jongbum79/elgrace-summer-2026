@@ -252,6 +252,7 @@ td { padding: 14px 20px; border-bottom: 1px solid var(--soft-line); font-size: 1
 .meal-chart-bar.total { background: var(--forest); }
 .meal-chart-bar.adult { background: var(--sage); }
 .meal-chart-bar.child { background: var(--orange); }
+.meal-chart-bar.preschool { background: #d9879f; }
 .meal-chart-bar span { position: absolute; top: -17px; left: 50%; color: #5f6f69; font-size: 9px; font-weight: 700; transform: translateX(-50%); }
 .meal-chart-label { text-align: center; }
 .meal-chart-label b, .meal-chart-label span { display: block; }
@@ -276,7 +277,7 @@ td { padding: 14px 20px; border-bottom: 1px solid var(--soft-line); font-size: 1
 .meal-total { display: flex; align-items: end; gap: 5px; margin: 15px 0 12px; }
 .meal-total b { font-size: 29px; line-height: 1; letter-spacing: -1px; }
 .meal-total span { color: var(--muted); font-size: 11px; }
-.meal-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.meal-groups { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .meal-group-button { padding: 9px 5px; border-radius: 7px; color: #62726c; background: #f6f8f7; text-align: left; font-size: 10px; transition: .15s ease; }
 .meal-group-button:hover { color: var(--forest); background: #e8f3ed; }
 .meal-group-button span, .meal-group-button b { display: block; }

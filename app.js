@@ -491,12 +491,18 @@ function getMealPeople(meal) {
         ? getMemberChargeableMealPeriods(member).includes(`${mealDate}-${mealPeriod}`)
         : parseMemberDate(member[2]) <= mealTime && parseMemberDate(member[3]) > mealTime)
       .map((member) => {
-        const isPreschool = ["유치부", "유아"].includes(member[1]);
+        const group = member[1];
+        let type = "adult";
+        if (["유치부", "유아"].includes(group)) {
+          type = "preschool";
+        } else if (["초등부", "유년부"].includes(group)) {
+          type = "child";
+        }
         return {
           name: member[0],
-          group: member[1],
+          group: group,
           family: family.name,
-          type: isPreschool ? "preschool" : "standard",
+          type: type,
         };
       }));
 }
@@ -509,13 +515,15 @@ function renderMeals() {
   }, {});
   const mealPeople = mealSchedule.map(getMealPeople);
   const totalServings = mealPeople.reduce((sum, people) => sum + people.length, 0);
-  const standardServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "standard").length, 0);
+  const adultServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "adult").length, 0);
+  const childServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "child").length, 0);
   const preschoolServings = mealPeople.reduce((sum, people) => sum + people.filter((person) => person.type === "preschool").length, 0);
   
   document.querySelector("#mealCountBadge").textContent = `총 ${mealSchedule.length}회 식사`;
   document.querySelector("#mealSummaryNumbers").innerHTML = `
     <div class="meal-summary-number"><span>전체 식수</span><b>${totalServings}명분</b></div>
-    <div class="meal-summary-number"><span>성인/취학자녀</span><b>${standardServings}명분</b></div>
+    <div class="meal-summary-number"><span>성인(중고등포함)</span><b>${adultServings}명분</b></div>
+    <div class="meal-summary-number"><span>어린이(초등/유년)</span><b>${childServings}명분</b></div>
     <div class="meal-summary-number"><span>미취학 아동</span><b>${preschoolServings}명분</b></div>`;
   renderMealBarChart();
   document.querySelector("#mealDays").innerHTML = Object.entries(mealsByDate).map(([date, meals]) => {
@@ -536,22 +544,24 @@ function renderMeals() {
 function renderMealBarChart() {
   const rows = mealSchedule.map((meal) => {
     const people = getMealPeople(meal);
-    const standards = people.filter((person) => person.type === "standard").length;
+    const adults = people.filter((person) => person.type === "adult").length;
+    const children = people.filter((person) => person.type === "child").length;
     const preschools = people.filter((person) => person.type === "preschool").length;
-    return { meal, total: people.length, standards, preschools };
+    return { meal, total: people.length, adults, children, preschools };
   });
   const max = Math.max(...rows.map((row) => row.total), 1);
   const height = (value) => Math.max(3, Math.round(value / max * 154));
-  document.querySelector("#mealBarChart").innerHTML = rows.map(({ meal, total, standards, preschools }) => {
+  document.querySelector("#mealBarChart").innerHTML = rows.map(({ meal, total, adults, children, preschools }) => {
     const parts = meal.label.split(" ");
     const date = parts.slice(0, -1).join(" ");
     const mealType = parts.at(-1);
     return `
       <div class="meal-chart-column">
         <div class="meal-chart-bars">
-          <div class="meal-chart-bar total" style="height:${height(total)}px"><span>${total}</span></div>
-          <div class="meal-chart-bar adult" style="height:${height(standards)}px" title="성인/취학자녀"><span>${standards}</span></div>
-          <div class="meal-chart-bar child" style="height:${height(preschools)}px" title="미취학"><span>${preschools}</span></div>
+          <div class="meal-chart-bar total" style="height:${height(total)}px" title="전체"><span>${total}</span></div>
+          <div class="meal-chart-bar adult" style="height:${height(adults)}px" title="성인/청소년"><span>${adults}</span></div>
+          <div class="meal-chart-bar child" style="height:${height(children)}px" title="어린이(초등/유년)"><span>${children}</span></div>
+          <div class="meal-chart-bar preschool" style="height:${height(preschools)}px" title="미취학"><span>${preschools}</span></div>
         </div>
         <div class="meal-chart-label"><b>${date}</b><span class="meal-label-badge ${mealType}">${mealType}</span></div>
       </div>`;
@@ -560,7 +570,8 @@ function renderMealBarChart() {
 
 function renderMealCard(meal) {
   const people = getMealPeople(meal);
-  const standardCount = people.filter((person) => person.type === "standard").length;
+  const adultCount = people.filter((person) => person.type === "adult").length;
+  const childCount = people.filter((person) => person.type === "child").length;
   const preschoolCount = people.filter((person) => person.type === "preschool").length;
   const mealType = meal.label.split(" ").at(-1);
   const time = meal.time.slice(11, 16);
@@ -570,7 +581,8 @@ function renderMealCard(meal) {
       <div class="meal-total"><b>${people.length}</b><span>명 준비 예정</span></div>
       <div class="meal-groups">
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="all"><span>총 인원</span><b>${people.length}명</b></button>
-        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="standard"><span>성인/취학자녀</span><b>${standardCount}명</b></button>
+        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="adult"><span>성인/청소년</span><b>${adultCount}명</b></button>
+        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="child"><span>어린이</span><b>${childCount}명</b></button>
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="preschool"><span>미취학</span><b>${preschoolCount}명</b></button>
       </div>
       <div class="meal-action"><button class="view-meal-detail" data-meal-id="${meal.id}">상세 명단 보기 <span>→</span></button></div>
@@ -578,7 +590,7 @@ function renderMealCard(meal) {
 }
 
 function openMealDrawer(meal, group) {
-  const labels = { all: "총 인원", standard: "성인/취학자녀", preschool: "미취학" };
+  const labels = { all: "총 인원", adult: "성인/청소년", child: "어린이(초등/유년)", preschool: "미취학" };
   const people = getMealPeople(meal).filter((person) => group === "all" || person.type === group);
   document.querySelector("#mealDrawerTitle").textContent = `${meal.label} · ${labels[group]}`;
   document.querySelector("#mealDrawerSubtitle").textContent = `${meal.time.slice(11, 16)} 기준 ${people.length}명 · 구성원별 입퇴소 일정 반영`;
@@ -1225,15 +1237,9 @@ function updateEstimatedFee() {
     roomRate = 80000;
   } else if (numMembers >= 5) {
     roomLabel = "6인실";
-    roomRate = 90000;
+    roomRate = 100000;
   }
   
-  let breakfastCount = 0;
-  let lunchCount = 0;
-  let dinnerCount = 0;
-  
-  // Lodging nights calculation:
-  // "만약 28일 저녁은 참석으로 표기 되어 있고, 29일 즉 다음날 아침에 참석 표시가 없으면... 카운트 안해"
   let nights = 0;
   for (let d = 0; d < dateLabels.length - 1; d++) {
     const dayLabel = dateLabels[d];
@@ -1249,45 +1255,77 @@ function updateEstimatedFee() {
     }
   }
   
+  let adultBreakfast = 0;
+  let adultLunchDinner = 0;
+  
+  let childBreakfast = 0;
+  let childLunchDinner = 0;
+  
+  let preschoolBreakfast = 0;
+  let preschoolLunchDinner = 0;
+  
   rows.forEach((row) => {
     const groupSelect = row.querySelector(".new-member-group");
     if (!groupSelect) return;
     const group = groupSelect.value;
-    const isPreschool = ["유치부", "유아"].includes(group);
+    
+    let type = "adult";
+    if (["유치부", "유아"].includes(group)) {
+      type = "preschool";
+    } else if (["초등부", "유년부"].includes(group)) {
+      type = "child";
+    }
     
     const segments = [...row.querySelectorAll(".attendance-segment.selected")];
     segments.forEach((seg) => {
-      if (!isPreschool && !seg.classList.contains("external-meal")) {
+      if (!seg.classList.contains("external-meal")) {
         const period = seg.dataset.period;
-        if (period === "breakfast") {
-          breakfastCount++;
-        } else if (period === "lunch") {
-          lunchCount++;
-        } else if (period === "dinner") {
-          dinnerCount++;
+        if (type === "adult") {
+          if (period === "breakfast") adultBreakfast++;
+          else if (period === "lunch" || period === "dinner") adultLunchDinner++;
+        } else if (type === "child") {
+          if (period === "breakfast") childBreakfast++;
+          else if (period === "lunch" || period === "dinner") childLunchDinner++;
+        } else if (type === "preschool") {
+          if (period === "breakfast") preschoolBreakfast++;
+          else if (period === "lunch" || period === "dinner") preschoolLunchDinner++;
         }
       }
     });
   });
   
-  const lunchDinnerCount = lunchCount + dinnerCount;
   const lodgingCost = roomRate * nights;
-  const mealCost = (breakfastCount * 4000) + (lunchDinnerCount * 10000);
+  const mealCost = 
+    (adultBreakfast * 4000 + adultLunchDinner * 9000) +
+    (childBreakfast * 4000 + childLunchDinner * 8000) +
+    (preschoolBreakfast * 0 + preschoolLunchDinner * 6000);
   const totalCost = lodgingCost + mealCost;
   
   const label = document.querySelector("#estimatedFeeLabel");
   const detail = document.querySelector("#estimatedFeeDetail");
   if (label) label.textContent = `${totalCost.toLocaleString()}원`;
   if (detail) {
+    const breakfastCount = adultBreakfast + childBreakfast + preschoolBreakfast;
+    const lunchCount = rows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "lunch" && !seg.classList.contains("external-meal")).length, 0);
+    const dinnerCount = rows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "dinner" && !seg.classList.contains("external-meal")).length, 0);
+    
     detail.innerHTML = `
       <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
         <span>🛏️ 총 숙박수: ${nights}박</span>
         <span style="color: #cbd5e1;">|</span>
-        <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번 (점심/저녁 합계: ${lunchDinnerCount}번)</span>
+        <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
-        <div>식비: 아침 ${breakfastCount}번 x 4,000원 + 점심,저녁 ${lunchDinnerCount}번 x 10,000원 = ${mealCost.toLocaleString()}원</div>
+        <div>식비 세부내역:</div>
+        <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
+          • 성인/청소년: 아침 ${adultBreakfast}회 x 4,000원 + 중/석식 ${adultLunchDinner}회 x 9,000원 = ${(adultBreakfast * 4000 + adultLunchDinner * 9000).toLocaleString()}원<br/>
+          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 4,000원 + 중/석식 ${childLunchDinner}회 x 8,000원 = ${(childBreakfast * 4000 + childLunchDinner * 8000).toLocaleString()}원<br/>
+          • 미취학 아동: 아침 ${preschoolBreakfast}회 x 0원 + 중/석식 ${preschoolLunchDinner}회 x 6,000원 = ${(preschoolLunchDinner * 6000).toLocaleString()}원
+        </div>
+        <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px;">
+          식비 합계: ${mealCost.toLocaleString()}원
+        </div>
       </div>
     `;
   }
@@ -1373,7 +1411,7 @@ function getFamilyFromForm(existingFamily = null) {
   if (numMembers === 1) roomRate = 60000;
   else if (numMembers === 2) roomRate = 70000;
   else if (numMembers >= 3 && numMembers <= 4) roomRate = 80000;
-  else if (numMembers >= 5) roomRate = 90000;
+  else if (numMembers >= 5) roomRate = 100000;
   
   let nights = 0;
   for (let d = 0; d < dateLabels.length - 1; d++) {
@@ -1393,13 +1431,28 @@ function getFamilyFromForm(existingFamily = null) {
   let totalMealCost = 0;
   enteredRows.forEach((row) => {
     const group = row.querySelector(".new-member-group").value;
-    const isPreschool = ["유치부", "유아"].includes(group);
+    
+    let type = "adult";
+    if (["유치부", "유아"].includes(group)) {
+      type = "preschool";
+    } else if (["초등부", "유년부"].includes(group)) {
+      type = "child";
+    }
+    
     const segments = [...row.querySelectorAll(".attendance-segment.selected")];
     segments.forEach((seg) => {
-      if (!isPreschool && !seg.classList.contains("external-meal")) {
+      if (!seg.classList.contains("external-meal")) {
         const period = seg.dataset.period;
-        if (period === "breakfast") totalMealCost += 4000;
-        else if (period === "lunch" || period === "dinner") totalMealCost += 10000;
+        if (type === "adult") {
+          if (period === "breakfast") totalMealCost += 4000;
+          else if (period === "lunch" || period === "dinner") totalMealCost += 9000;
+        } else if (type === "child") {
+          if (period === "breakfast") totalMealCost += 4000;
+          else if (period === "lunch" || period === "dinner") totalMealCost += 8000;
+        } else if (type === "preschool") {
+          if (period === "breakfast") totalMealCost += 0;
+          else if (period === "lunch" || period === "dinner") totalMealCost += 6000;
+        }
       }
     });
   });
