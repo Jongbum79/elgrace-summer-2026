@@ -1480,7 +1480,7 @@ async function refreshParticipantsData() {
 }
 
 function openPage(view) {
-  if (!["attendance", "participants", "meals"].includes(view)) {
+  if (!["attendance", "participants", "meals", "chatbot"].includes(view)) {
     showToast("이 메뉴는 다음 단계에서 연결합니다.");
     return;
   }
@@ -1489,6 +1489,9 @@ function openPage(view) {
   document.querySelector(`#${view}View`).classList.add("active");
   if (view === "participants") {
     refreshParticipantsData();
+  }
+  if (view === "chatbot") {
+    initChatbotView();
   }
 }
 
@@ -1857,6 +1860,404 @@ document.querySelector("#downloadButton").addEventListener("click", () => showTo
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
 document.querySelector("#mealDownloadButton").addEventListener("click", () => showToast("식사별 명단 다운로드를 준비했습니다."));
+
+// ==========================================
+// AI CHATBOT FUNCTIONALITY
+// ==========================================
+let isChatbotInitialized = false;
+
+function initChatbotView() {
+  const badge = document.querySelector("#chatModeBadge");
+  const copy = document.querySelector("#chatModeCopy");
+  const providerSelect = document.querySelector("#aiProviderSelect");
+  const apiKeyWrapper = document.querySelector("#apiKeyInputWrapper");
+  const apiKeyInput = document.querySelector("#aiApiKeyInput");
+  const saveBtn = document.querySelector("#saveApiKeyButton");
+  const chatForm = document.querySelector("#chatbotForm");
+  const chatInput = document.querySelector("#chatbotInput");
+  const suggestions = document.querySelector("#chatbotSuggestions");
+  const messagesContainer = document.querySelector("#chatbotMessages");
+
+  if (!badge) return;
+
+  // Load configuration
+  const savedProvider = localStorage.getItem("ai-provider") || "mock";
+  const savedKey = localStorage.getItem("ai-api-key") || "";
+
+  providerSelect.value = savedProvider;
+  apiKeyInput.value = savedKey;
+
+  // Show/Hide Key Input based on provider selection
+  const toggleKeyWrapper = () => {
+    if (providerSelect.value === "mock") {
+      apiKeyWrapper.style.display = "none";
+    } else {
+      apiKeyWrapper.style.display = "grid";
+    }
+  };
+  toggleKeyWrapper();
+
+  providerSelect.onchange = toggleKeyWrapper;
+
+  // Save Settings
+  saveBtn.onclick = () => {
+    const provider = providerSelect.value;
+    const key = apiKeyInput.value.trim();
+
+    if (provider !== "mock" && !key) {
+      showToast("API Key를 입력해주세요.");
+      return;
+    }
+
+    localStorage.setItem("ai-provider", provider);
+    localStorage.setItem("ai-api-key", key);
+
+    updateConnectionStatus();
+    showToast("AI 설정이 저장되었습니다.");
+  };
+
+  // Update Status Display
+  function updateConnectionStatus() {
+    const provider = localStorage.getItem("ai-provider") || "mock";
+    const key = localStorage.getItem("ai-api-key") || "";
+
+    if (provider === "mock") {
+      badge.textContent = "데모 모드";
+      badge.className = "demo-badge connected";
+      copy.textContent = "기본 내장된 데모 시나리오로 대화 중입니다.";
+    } else {
+      if (key) {
+        badge.textContent = provider === "gemini" ? "Gemini 연결됨" : "OpenAI 연결됨";
+        badge.className = "demo-badge connected";
+        copy.textContent = `${provider === "gemini" ? "Google Gemini" : "OpenAI GPT"} 모델과 실시간 연결되어 있습니다.`;
+      } else {
+        badge.textContent = "연결 안됨";
+        badge.className = "demo-badge not-configured";
+        copy.textContent = "API Key 설정이 필요합니다.";
+      }
+    }
+  }
+  updateConnectionStatus();
+
+  // Initialize Welcome Message if empty
+  if (messagesContainer.children.length === 0) {
+    appendChatMessage("assistant", `안녕하세요! 주은혜교회 수련회 운영 도우미입니다. ✦\n자연어로 참석 현황을 조회하거나 가족의 입소 완료 상태 등을 변경해 드립니다.\n\n**[테스트할 수 있는 예시 명령어]**\n1. "오늘 입소 예정인 가족 알려줘"\n2. "이정민 가족의 현재 상태 알려줘"\n3. "이정민 가족 참석 완료 처리해줘"`);
+  }
+
+  // Handle Form Submission
+  if (!isChatbotInitialized) {
+    chatForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+      chatInput.value = "";
+      await sendMessageToAI(text);
+    };
+
+    // Handle Suggestions clicking
+    suggestions.onclick = async (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const prompt = btn.dataset.chatPrompt;
+      if (prompt) {
+        await sendMessageToAI(prompt);
+      }
+    };
+
+    isChatbotInitialized = true;
+  }
+}
+
+function appendChatMessage(sender, text) {
+  const container = document.querySelector("#chatbotMessages");
+  if (!container) return;
+
+  const msgDiv = document.createElement("div");
+  msgDiv.className = `chat-message ${sender === "user" ? "user" : "assistant"}`;
+
+  const formattedText = text.replace(/\n/g, "<br>");
+
+  if (sender === "user") {
+    msgDiv.innerHTML = `
+      <div class="chat-message-bubble">${text}</div>
+    `;
+  } else {
+    msgDiv.innerHTML = `
+      <div class="chat-message-avatar">✦</div>
+      <div class="chat-message-bubble">${formattedText}</div>
+    `;
+  }
+
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+  return msgDiv;
+}
+
+function cleanJsonResponse(rawText) {
+  let clean = rawText.trim();
+  if (clean.startsWith("```json")) {
+    clean = clean.substring(7);
+  } else if (clean.startsWith("```")) {
+    clean = clean.substring(3);
+  }
+  if (clean.endsWith("```")) {
+    clean = clean.substring(0, clean.length - 3);
+  }
+  return clean.trim();
+}
+
+async function sendMessageToAI(userText) {
+  const chatInput = document.querySelector("#chatbotInput");
+  const sendBtn = document.querySelector("#chatbotForm button[type='submit']");
+  
+  if (chatInput) chatInput.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
+
+  appendChatMessage("user", userText);
+
+  const loadingMsg = appendChatMessage("assistant", "AI 비서가 답변을 생각하는 중입니다...");
+  loadingMsg.classList.add("loading");
+
+  const provider = localStorage.getItem("ai-provider") || "mock";
+  const apiKey = localStorage.getItem("ai-api-key") || "";
+
+  try {
+    let reply = "";
+    let action = null;
+
+    if (provider !== "mock" && !apiKey) {
+      throw new Error("API Key가 필요합니다. 가이드 우측 하단에서 설정해 주세요.");
+    }
+
+    if (provider === "mock") {
+      // MOCK Scenario Generator
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulating network lag
+      
+      const query = userText.toLowerCase().replace(/\s+/g, "");
+
+      if (query.includes("입소예정") || query.includes("예정가족") || query.includes("늦은입소")) {
+        const lateList = families.filter(f => f.status === "late");
+        if (lateList.length === 0) {
+          reply = "현재 입소 예정(대기) 상태인 가족이 없습니다. 모두 입소 완료하셨습니다!";
+        } else {
+          reply = `현재 **입소 예정(대기)** 상태인 가족은 총 **${lateList.length}가족**입니다:\n\n` + 
+            lateList.map(f => `- **${f.name}** 가족 (대표: ${f.leader}, 연락처: ${f.phone})`).join("\n") +
+            `\n\n특정 가족을 참석 처리하려면 \`"[가족이름] 가족 참석 처리해줘"\` 라고 입력해 보세요.`;
+        }
+      } else if (query.includes("참석") || query.includes("완료") || query.includes("입소완료")) {
+        // Find family name
+        let matchedFamily = null;
+        for (const f of families) {
+          const nameClean = f.name.toLowerCase().replace(/\s+/g, "");
+          const leaderClean = f.leader.toLowerCase().replace(/\s+/g, "");
+          if (query.includes(nameClean) || query.includes(leaderClean)) {
+            matchedFamily = f;
+            break;
+          }
+        }
+
+        if (matchedFamily) {
+          reply = `**${matchedFamily.name}** 가족의 현재 입소 상태를 **[입소 완료]**로 변경 요청을 수행합니다. 즉시 대시보드가 리렌더링되었습니다! 🚀\n\n- **가족**: ${matchedFamily.name}\n- **대표자**: ${matchedFamily.leader}\n- **상태 변경**: 입소 예정 ➡️ **입소 완료 (stay)**`;
+          action = {
+            type: "update_status",
+            params: {
+              familyId: matchedFamily.id,
+              status: "stay"
+            }
+          };
+        } else {
+          reply = "참석 처리할 가족을 데이터베이스에서 찾을 수 없습니다. 정확한 가족 대표자 또는 가족 이름을 입력해 주세요. (예: '이정민 가족 참석 완료 처리해줘')";
+        }
+      } else if (query.includes("상태") || query.includes("현황")) {
+        // Find if they are asking about a specific family
+        let matchedFamily = null;
+        for (const f of families) {
+          const nameClean = f.name.toLowerCase().replace(/\s+/g, "");
+          const leaderClean = f.leader.toLowerCase().replace(/\s+/g, "");
+          if (query.includes(nameClean) || query.includes(leaderClean)) {
+            matchedFamily = f;
+            break;
+          }
+        }
+
+        if (matchedFamily) {
+          const statusK = { stay: "입소 완료 (stay)", late: "입소 예정 (late)", leave: "퇴소 완료 (leave)", absent: "전체 불참 (absent)" }[matchedFamily.status];
+          reply = `🔍 **${matchedFamily.name}** 가족의 실시간 데이터 조회 결과입니다:\n\n- **가족명**: ${matchedFamily.name}\n- **대표자**: ${matchedFamily.leader} (${matchedFamily.phone})\n- **인원수**: 성인 ${matchedFamily.members.filter(m => m[1] === "성인 남성" || m[1] === "성인 여성").length}명, 자녀 ${matchedFamily.members.filter(m => m[1] !== "성인 남성" && m[1] !== "성인 여성").length}명\n- **현재 상태**: **${statusK}**\n- **회비 완납 여부**: ${matchedFamily.feeStatus === "paid" ? "완납 🟢" : "미납 🟡"}\n- **방 배정**: ${matchedFamily.room}`;
+        } else {
+          // General status
+          const total = families.length;
+          const stay = families.filter(f => f.status === "stay").length;
+          const late = families.filter(f => f.status === "late").length;
+          const leave = families.filter(f => f.status === "leave").length;
+          const absent = families.filter(f => f.status === "absent").length;
+          
+          reply = `📊 **실시간 수련회 대시보드 요약 정보**입니다:\n\n- **총 등록 가족**: ${total}가족\n- **입소 완료 (stay)**: ${stay}가족 🟢\n- **입소 예정 (late)**: ${late}가족 🟡\n- **퇴소 완료 (leave)**: ${leave}가족 ⚪\n- **전체 불참 (absent)**: ${absent}가족 🔴\n\n특정 가족의 자세한 개별 상태나 상태 변경은 자연어로 질문해 주시면 조치해 드립니다.`;
+        }
+      } else {
+        reply = `죄송합니다. 데모 모드에서는 지정된 시나리오에 대해서만 대응합니다.\nGemini 또는 OpenAI API 키를 우측 가이드 하단에서 입력해 주시면, 자연어 질문에 무한한 실시간 맞춤형 분석 답변을 드릴 수 있습니다! 🙌\n\n**[질문 가능한 예시]**\n- "입소 예정 가족 알려줘"\n- "이정민 가족 현재 상태 알려줘"\n- "이정민 가족 참석 완료 처리해줘"`;
+      }
+    } else {
+      // REAL LLM API CALL
+      const systemPrompt = `너는 주은혜교회 수련회 운영을 돕는 AI 운영 도우미 비서이다.
+현재 등록된 가족 데이터와 수련회 메타 데이터를 기반으로 사용자의 자연어 질문에 답변하고, 필요 시 가족의 상태를 변경할 수 있다.
+
+[현재 수련회 정보]
+- 수련회명: ${retreatConfig ? retreatConfig.title : "주은혜교회 수련회"}
+- 장소 및 일정: ${retreatConfig ? retreatConfig.location : "확인 중"}
+
+[가족 데이터 JSON]
+${JSON.stringify(families.map(f => ({
+  id: f.id,
+  name: f.name,
+  leader: f.leader,
+  phone: f.phone,
+  status: f.status, // stay: 입소 완료, late: 입소 예정, leave: 퇴소 완료, absent: 전체 불참
+  members: f.members.map(m => ({ name: m[0], role: m[1] })),
+  fee: f.fee,
+  feeStatus: f.feeStatus, // pending: 납입 예정, paid: 완납
+  room: f.room || "미배정"
+})))}
+
+[가족 상태 값 정의]
+- stay: "입소 완료"
+- late: "입소 예정"
+- leave: "퇴소 완료"
+- absent: "전체 불참"
+
+[수행 가능 동작 (action)]
+만약 사용자가 특정 가족의 상태를 변경해달라고 명시적으로 요청하면(예: "이정민 가족 참석 처리해줘", "홍길동 가족 입소 완료로 바꿔줘", "김철수 가족 불참으로 변경해줘"), JSON 응답에 아래 형식의 action 필드를 포함해야 한다:
+{
+  "type": "update_status",
+  "params": {
+    "familyId": "가족ID (문자열)",
+    "status": "변경할상태코드 (stay, late, leave, absent 중 하나)"
+  }
+}
+*상태를 변경하는 요청이 아니라 단순 질문(예: "입소 예정인 가족 누구야?")인 경우 action 필드는 null이어야 한다.*
+
+[응답 형식]
+반드시 아래 형식의 유효한 JSON 객체로만 응답해야 한다. 추가적인 텍스트(마크다운 코드 블록 등)는 절대 포함하지 마라.
+{
+  "reply": "사용자에게 보낼 친절하고 명확한 한국어 답변 메시지. 마크다운 형식을 사용하여 깔끔하게 작성해줘. (예: 표, 불릿 포인트 등)",
+  "action": {
+    "type": "update_status",
+    "params": {
+      "familyId": "가족ID",
+      "status": "stay"
+    }
+  } (또는 null)
+}`;
+
+      if (provider === "gemini") {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              { parts: [{ text: systemPrompt + `\n\n사용자 질문: ${userText}` }] }
+            ],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Gemini API 통신 실패: ${response.status}. ${errText}`);
+        }
+
+        const resJson = await response.json();
+        const textResponse = resJson.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(cleanJsonResponse(textResponse));
+        reply = parsed.reply;
+        action = parsed.action;
+      } else {
+        // OpenAI GPT-4o-mini
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userText }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`OpenAI API 통신 실패: ${response.status}. ${errText}`);
+        }
+
+        const resJson = await response.json();
+        const textResponse = resJson.choices[0].message.content;
+        const parsed = JSON.parse(cleanJsonResponse(textResponse));
+        reply = parsed.reply;
+        action = parsed.action;
+      }
+    }
+
+    // Process Action if requested
+    if (action && action.type === "update_status") {
+      const { familyId, status } = action.params;
+      const existingIndex = families.findIndex(f => f.id === familyId);
+      
+      if (existingIndex >= 0) {
+        const family = families[existingIndex];
+        family.status = status;
+
+        // Sync with Supabase DB
+        const dbFamily = { ...family };
+        const feeInfo = {
+          fee: family.fee,
+          feeStatus: family.feeStatus,
+          room: family.room
+        };
+        const cleanMemo = family.memo === "별도 메모 없음" ? "" : family.memo;
+        dbFamily.memo = `${cleanMemo}\n__FEE_INFO__:${JSON.stringify(feeInfo)}`;
+        
+        delete dbFamily.fee;
+        delete dbFamily.feeStatus;
+        delete dbFamily.room;
+
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from("families").upsert([dbFamily]);
+          if (error) {
+            console.error("Supabase 업데이트 에러:", error);
+            showToast("데이터베이스 업데이트 실패");
+          } else {
+            console.log("Supabase 상태 변경 성공:", family.name, status);
+          }
+        }
+        
+        // Instant UI Updates
+        renderAll();
+      }
+    }
+
+    // Replace loading message with the real answer
+    loadingMsg.classList.remove("loading");
+    const bubble = loadingMsg.querySelector(".chat-message-bubble");
+    bubble.innerHTML = reply.replace(/\n/g, "<br>");
+
+  } catch (error) {
+    console.error("AI 챗봇 처리 에러:", error);
+    loadingMsg.classList.remove("loading");
+    const bubble = loadingMsg.querySelector(".chat-message-bubble");
+    bubble.textContent = `❌ 오류 발생: ${error.message}`;
+  } finally {
+    if (chatInput) chatInput.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (chatInput) chatInput.focus();
+  }
+}
 
 setViewMode(localStorage.getItem("retreat-view-mode") || (window.matchMedia("(max-width: 800px)").matches ? "mobile" : "desktop"), false);
 
