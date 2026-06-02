@@ -2149,23 +2149,47 @@ ${JSON.stringify(families.map(f => ({
 }`;
 
       if (provider === "gemini") {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              { parts: [{ text: systemPrompt + `\n\n사용자 질문: ${userText}` }] }
-            ],
-            generationConfig: {
-              responseMimeType: "application/json"
+        const GEMINI_MODELS = [
+          "gemini-3.5-flash",
+          "gemini-3.1-flash-lite",
+          "gemini-3.1-pro"
+        ];
+        
+        let response = null;
+        let lastError = null;
+        
+        for (const modelId of GEMINI_MODELS) {
+          try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+            response = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  { parts: [{ text: systemPrompt + `\n\n사용자 질문: ${userText}` }] }
+                ],
+                generationConfig: {
+                  responseMimeType: "application/json"
+                }
+              })
+            });
+            
+            if (response.ok) {
+              lastError = null;
+              break;
+            } else {
+              const errText = await response.text();
+              lastError = new Error(`Gemini API 통신 실패 (${modelId}): ${response.status}. ${errText}`);
+              console.warn(lastError.message);
             }
-          })
-        });
-
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`Gemini API 통신 실패: ${response.status}. ${errText}`);
+          } catch (e) {
+            lastError = e;
+            console.warn(`Gemini API 연결 실패 (${modelId}):`, e);
+          }
+        }
+        
+        if (lastError) {
+          throw lastError;
         }
 
         const resJson = await response.json();
