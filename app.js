@@ -1224,8 +1224,12 @@ function normalizeExternalMealStates(row) {
     const day = segment.closest(".attendance-day");
     const breakfast = day.querySelector('[data-period="breakfast"]');
     const lunch = day.querySelector('[data-period="lunch"]');
+    
+    const isBreakfastUnavailable = !breakfast || breakfast.disabled || breakfast.classList.contains("unavailable");
+    const isBreakfastSelected = breakfast?.classList.contains("selected");
+    
     const isValidDinnerPattern = segment.dataset.period === "dinner" &&
-      breakfast?.classList.contains("selected") &&
+      (isBreakfastSelected || isBreakfastUnavailable) &&
       !lunch?.classList.contains("selected");
     if (!isValidDinnerPattern) segment.classList.remove("external-meal");
   });
@@ -1236,8 +1240,12 @@ function cycleAttendanceSegment(segment) {
   const day = segment.closest(".attendance-day");
   const breakfast = day.querySelector('[data-period="breakfast"]');
   const lunch = day.querySelector('[data-period="lunch"]');
+  
+  const isBreakfastUnavailable = !breakfast || breakfast.disabled || breakfast.classList.contains("unavailable");
+  const isBreakfastSelected = breakfast?.classList.contains("selected");
+  
   const canUseExternalMeal = segment.dataset.period === "dinner" &&
-    breakfast?.classList.contains("selected") &&
+    (isBreakfastSelected || isBreakfastUnavailable) &&
     !lunch?.classList.contains("selected");
   if (segment.classList.contains("external-meal")) {
     setAttendanceSelected(segment, false);
