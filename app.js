@@ -899,31 +899,31 @@ function matchesOrgFilter(name, filter, groupFilter = null) {
 }
 
 function renderOrgTimeFilter() {
-  const container = document.querySelector("#orgTimeFilterSlots");
-  if (!container) return;
+  const dateSelect = document.querySelector("#orgTimeFilterDate");
+  const periodSelect = document.querySelector("#orgTimeFilterPeriod");
   
-  const availablePeriods = getAvailableAttendancePeriods();
+  if (!dateSelect || !periodSelect) return;
   
-  container.innerHTML = retreatDates.map((date) => {
-    return `
-      <div class="org-time-date-group" style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; padding: 6px; border-radius: 6px; border: 1px solid #f1f5f9; min-width: 90px; align-items: center;">
-        <span style="font-size: 10px; font-weight: 800; color: #64748b;">${date.shortLabel}</span>
-        <div style="display: flex; gap: 3px;">
-          ${attendancePeriods.map(period => {
-            const slotKey = `${date.shortLabel}-${period.key}`;
-            const active = selectedOrgTimeSlot === slotKey;
-            const disabled = !availablePeriods.includes(slotKey);
-            
-            const btnStyle = active 
-              ? "background: #1e5a45; color: #ffffff;" 
-              : (disabled ? "background: #f1f5f9; color: #cbd5e1; cursor: not-allowed;" : "background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; cursor: pointer;");
-              
-            return `<button type="button" class="org-time-segment-btn ${active ? 'active' : ''}" data-slot="${slotKey}" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; border: none; font-weight: 800; ${btnStyle}" ${disabled ? 'disabled' : ''}>${period.label}</button>`;
-          }).join("")}
-        </div>
-      </div>
-    `;
-  }).join("");
+  // 날짜 옵션 채우기 (이미 채워져 있지 않다면)
+  if (dateSelect.options.length <= 1) {
+    let optionsHtml = `<option value="">날짜 선택</option>`;
+    retreatDates.forEach(date => {
+      const match = date.label.match(/(\d+월\s*\d+일)\s*([일월화수목금토])요일/);
+      const optionText = match ? `${match[1]}(${match[2]})` : date.label;
+      optionsHtml += `<option value="${date.shortLabel}">${optionText}</option>`;
+    });
+    dateSelect.innerHTML = optionsHtml;
+  }
+  
+  // 현재 선택된 값 반영
+  if (selectedOrgTimeSlot) {
+    const [selDate, selPeriod] = selectedOrgTimeSlot.split("-");
+    dateSelect.value = selDate;
+    periodSelect.value = selPeriod;
+  } else {
+    dateSelect.value = "";
+    periodSelect.value = "";
+  }
 }
 
 function renderOrgChart(genderMode) {
@@ -2016,15 +2016,6 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("#familyFullAttendance")) toggleFullAttendance(document.querySelector("#memberFormList"));
   if (mealGroup) openMealDrawer(mealSchedule.find((meal) => meal.id === mealGroup.dataset.mealId), mealGroup.dataset.mealGroup);
   
-  if (orgTimeBtn) {
-    const slot = orgTimeBtn.dataset.slot;
-    if (selectedOrgTimeSlot === slot) {
-      selectedOrgTimeSlot = null;
-    } else {
-      selectedOrgTimeSlot = slot;
-    }
-    renderOrgChart(currentOrgMode);
-  }
   if (clearOrgTimeFilter) {
     selectedOrgTimeSlot = null;
     renderOrgChart(currentOrgMode);
@@ -2391,6 +2382,21 @@ document.querySelector("#downloadButton").addEventListener("click", downloadList
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
 document.querySelector("#mealDownloadButton").addEventListener("click", () => showToast("식사별 명단 다운로드를 준비했습니다."));
+
+document.querySelector("#orgTimeFilterDate")?.addEventListener("change", handleOrgTimeFilterChange);
+document.querySelector("#orgTimeFilterPeriod")?.addEventListener("change", handleOrgTimeFilterChange);
+
+function handleOrgTimeFilterChange() {
+  const dateVal = document.querySelector("#orgTimeFilterDate")?.value;
+  const periodVal = document.querySelector("#orgTimeFilterPeriod")?.value;
+  
+  if (dateVal && periodVal) {
+    selectedOrgTimeSlot = `${dateVal}-${periodVal}`;
+  } else {
+    selectedOrgTimeSlot = null;
+  }
+  renderOrgChart(currentOrgMode);
+}
 
 // ==========================================
 // AI CHATBOT FUNCTIONALITY
@@ -3358,7 +3364,24 @@ function downloadOrgList(genderMode) {
     partial: "부분참석만"
   };
   const filterLabel = filterLabels[orgActiveFilter] || "전체";
-  const fileName = `${tabName}_${filterLabel}_명단.xlsx`;
+  
+  let timeLabel = "";
+  if (selectedOrgTimeSlot) {
+    const [datePart, periodPart] = selectedOrgTimeSlot.split("-");
+    const dateObj = retreatDates.find(d => d.shortLabel === datePart);
+    const periodMap = { breakfast: "아침", lunch: "점심", dinner: "저녁" };
+    const periodKo = periodMap[periodPart] || periodPart;
+    
+    if (dateObj) {
+      const match = dateObj.label.match(/(\d+월\s*\d+일)\s*([일월화수목금토])요일/);
+      const dateKo = match ? `${match[1].replace(/\s+/g, "")}(${match[2]})` : dateObj.label;
+      timeLabel = `_${dateKo} ${periodKo} 참석자`;
+    } else {
+      timeLabel = `_${datePart} ${periodKo} 참석자`;
+    }
+  }
+  
+  const fileName = `${tabName}_${filterLabel}${timeLabel}_명단.xlsx`;
   
   const data = [];
   

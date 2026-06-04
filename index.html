@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260605_0150" />
+    <link rel="stylesheet" href="./styles.css?v=20260605_0170" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
@@ -222,14 +222,18 @@
           </div>
           
           <!-- 조직도 전용 시간대 필터 -->
-          <div class="org-time-filter-wrapper" id="orgTimeFilterContainer" style="margin-bottom: 12px; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569; display: flex; justify-content: space-between; align-items: center;">
-              <span>⏳ 특정 시간대별 참석자 필터 (선택 시 해당 시간 참석 조원만 노출)</span>
-              <button id="clearOrgTimeFilter" style="background: none; border: none; color: #ef4444; font-size: 10px; font-weight: 800; cursor: pointer; padding: 2px 6px;">❌ 필터 해제</button>
-            </div>
-            <div class="org-time-slots" id="orgTimeFilterSlots" style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <div class="org-time-filter-wrapper" id="orgTimeFilterContainer" style="margin-bottom: 12px; background: #fafafa; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px;">
+            <span style="font-weight: 800; color: #475569;">⏳ 시간대별 참석자 필터:</span>
+            <select id="orgTimeFilterDate" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff; font-size: 11px; font-weight: 800; color: #334155; cursor: pointer;">
               <!-- Populated dynamically via JS -->
-            </div>
+            </select>
+            <select id="orgTimeFilterPeriod" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff; font-size: 11px; font-weight: 800; color: #334155; cursor: pointer;">
+              <option value="">시간대 선택</option>
+              <option value="breakfast">아침</option>
+              <option value="lunch">점심</option>
+              <option value="dinner">저녁</option>
+            </select>
+            <button id="clearOrgTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 10px; font-weight: 800; cursor: pointer; padding: 4px 8px; border-radius: 4px;">❌ 필터 해제</button>
           </div>
 
           <div class="org-filter-row">
@@ -474,6 +478,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260605_0150"></script>
+    <script src="./app.js?v=20260605_0170"></script>
   </body>
 </html>
