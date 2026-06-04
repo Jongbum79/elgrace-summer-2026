@@ -123,6 +123,7 @@ const statusMap = {
   late: ["입소 예정", "late"],
   leave: ["퇴소 완료", "leave"],
   absent: ["전체 불참", "absent"],
+  undecided: ["미정", "undecided"],
 };
 
 let selectedDate = "";
@@ -389,16 +390,19 @@ function getFilteredFamilies() {
   const keyword = document.querySelector("#searchInput").value.trim().toLowerCase();
   return families.filter((family) => {
     if (family.status === "absent") return false;
+    const isUndecidedFamily = family.status === "undecided" || family.members.some(member => member[7] === "undecided");
     const filterMatches =
       activeFilter === "all" ||
-      (activeFilter === "partial" && getFamilyAttendanceStatus(family) === "partial") ||
-      (activeFilter === "late" && family.status === "late");
+      (activeFilter === "partial" && getFamilyAttendanceStatus(family) === "partial" && family.status !== "undecided") ||
+      (activeFilter === "late" && family.status === "late") ||
+      (activeFilter === "undecided" && isUndecidedFamily);
     const keywordMatches = !keyword || [family.name, family.leader, family.memo, ...family.members.flat()].join(" ").toLowerCase().includes(keyword);
     return filterMatches && keywordMatches;
   });
 }
 
 function getMemberAttendancePeriods(member) {
+  if (member[7] === "undecided") return [];
   if (member[5]) return member[5];
   if (!member[2] || !member[3]) return [];
   const arrival = parseMemberDate(member[2]);
@@ -436,11 +440,15 @@ function isMemberFullAttendance(member) {
 }
 
 function getFamilyAttendanceStatus(family) {
+  const allUndecided = family.members.every(member => member[7] === "undecided");
+  if (family.status === "undecided" || allUndecided) {
+    return "undecided";
+  }
   const hasFullMember = family.members.some((member) => isMemberFullAttendance(member));
   return hasFullMember ? "full" : "partial";
 }
 
-function renderDaySquares(periods, externalMeals = [], titlePrefix = "") {
+function renderDaySquares(periods, externalMeals = [], titlePrefix = "", isUndecided = false) {
   const availablePeriods = getAvailableAttendancePeriods();
   return retreatDates.map((date) => {
     const dayPeriodKeys = attendancePeriods.map((period) => `${date.shortLabel}-${period.key}`);
@@ -448,6 +456,9 @@ function renderDaySquares(periods, externalMeals = [], titlePrefix = "") {
     const hasExternalMeal = availableDayPeriods.some((periodKey) => externalMeals.includes(periodKey));
     const isFullDay = availableDayPeriods.length && !hasExternalMeal && availableDayPeriods.every((periodKey) => periods.includes(periodKey));
     const isEmptyDay = availableDayPeriods.length && availableDayPeriods.every((periodKey) => !periods.includes(periodKey));
+    if (isUndecided) {
+      return `<span class="family-day-square undecided-day" title="${titlePrefix}${date.shortLabel} · 미정"><b>${date.date}</b><span class="family-undecided-day">미정</span></span>`;
+    }
     if (isFullDay) {
       return `<span class="family-day-square full-day" title="${titlePrefix}${date.shortLabel} · 전체 참석"><b>${date.date}</b><span class="family-full-day">참석</span></span>`;
     }
@@ -469,8 +480,24 @@ function renderDaySquares(periods, externalMeals = [], titlePrefix = "") {
 
 function renderFamilyAttendance(family) {
   const status = getFamilyAttendanceStatus(family);
-  const statusLabel = status === "full" ? "풀참" : "부분참석";
-  const attendingMembers = family.members.filter(member => getMemberAttendancePeriods(member).length > 0);
+  let statusLabel = "부분참석";
+  if (status === "full") statusLabel = "풀참";
+  else if (status === "undecided") statusLabel = "미정";
+
+  const attendingMembers = family.members.filter(member => 
+    member[7] !== "undecided" && getMemberAttendancePeriods(member).length > 0
+  );
+
+  if (attendingMembers.length === 0) {
+    const emptyPeriods = [];
+    const emptyExternal = [];
+    const schedules = `
+      <div class="family-schedule-group">
+        <div class="family-day-squares">${renderDaySquares(emptyPeriods, emptyExternal, "", status === "undecided")}</div>
+      </div>`;
+    return `<div class="family-attendance-summary"><span class="attendance-badge ${status}">${statusLabel}</span><div class="family-schedule-groups">${schedules}</div></div>`;
+  }
+
   const groups = Object.values(attendingMembers.reduce((result, member) => {
     const periods = getMemberAttendancePeriods(member);
     const externalMeals = getMemberExternalMealPeriods(member);
@@ -482,7 +509,7 @@ function renderFamilyAttendance(family) {
   const showNames = groups.length > 1;
   const schedules = groups.map((group) => `
     <div class="family-schedule-group">
-      <div class="family-day-squares">${renderDaySquares(group.periods, group.externalMeals, showNames ? `${group.members.map((member) => member.name).join(", ")} · ` : "")}</div>
+      <div class="family-day-squares">${renderDaySquares(group.periods, group.externalMeals, showNames ? `${group.members.map((member) => member.name).join(", ")} · ` : "", status === "undecided")}</div>
       <div class="family-schedule-names">${showNames ? group.members.map((member) => `<span class="family-schedule-name ${member.role}">${member.name}</span>`).join("") : ""}</div>
     </div>`).join("");
   return `<div class="family-attendance-summary"><span class="attendance-badge ${status}">${statusLabel}</span><div class="family-schedule-groups">${schedules}</div></div>`;
@@ -725,6 +752,9 @@ function getMemberAttendanceStatus(name) {
       ? { status: "unregistered", label: "미등록" }
       : { status: "not_in_db", label: "미입력" };
   }
+  if (member[7] === "undecided") {
+    return { status: "undecided", label: "미정" };
+  }
   const periods = getMemberAttendancePeriods(member);
   if (periods.length === 0) {
     return { status: "absent", label: "불참" };
@@ -741,6 +771,7 @@ function matchesOrgFilter(name, filter) {
   if (filter === "unregistered") return att.status === "unregistered";
   if (filter === "not_in_db") return att.status === "not_in_db";
   if (filter === "absent") return att.status === "absent";
+  if (filter === "undecided") return att.status === "undecided";
   if (filter === "full") return att.status === "full";
   if (filter === "partial") return att.status === "partial";
   return true;
@@ -764,15 +795,24 @@ function renderOrgChart(genderMode) {
   let fullCount = 0;
   let partialCount = 0;
   let absentCount = 0;
+  let undecidedCount = 0;
   let unregisteredCount = 0;
   let notInDbCount = 0;
   
+  const orgFamilies = new Set();
+  function collectFamily(name) {
+    const f = getFamilyByMemberName(name);
+    if (f) orgFamilies.add(f);
+  }
+  
   function updateStats(name) {
     totalCount++;
+    collectFamily(name);
     const att = getMemberAttendanceStatus(name);
     if (att.status === "full") fullCount++;
     else if (att.status === "partial") partialCount++;
     else if (att.status === "absent") absentCount++;
+    else if (att.status === "undecided") undecidedCount++;
     else if (att.status === "unregistered") unregisteredCount++;
     else if (att.status === "not_in_db") notInDbCount++;
   }
@@ -784,11 +824,21 @@ function renderOrgChart(genderMode) {
   staffData.coordinators.forEach((c) => updateStats(c.name));
   staffData.otherGroups.forEach((m) => updateStats(m));
   
+  let undecidedFamiliesCount = 0;
+  orgFamilies.forEach((family) => {
+    const isUndecided = family.status === "undecided" || family.members.some(member => member[7] === "undecided");
+    if (isUndecided) {
+      undecidedFamiliesCount++;
+    }
+  });
+  
   statsBar.innerHTML = `
     <div class="org-stats-item"><span>전체 인원:</span><b>${totalCount}명</b></div>
     <div class="org-stats-item"><span class="org-badge badge-full">풀참:</span><b>${fullCount}명</b></div>
     <div class="org-stats-item"><span class="org-badge badge-partial">부분참석:</span><b>${partialCount}명</b></div>
     <div class="org-stats-item"><span class="org-badge badge-absent">불참:</span><b>${absentCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-undecided">미정 인원:</span><b>${undecidedCount}명</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-undecided-family" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal; color: #505f5a; background: #e8ecea; border: 1px solid #cbd5e1;">미정 가정:</span><b>${undecidedFamiliesCount}가족</b></div>
     <div class="org-stats-item"><span class="org-badge badge-unregistered">미등록:</span><b>${unregisteredCount}명</b></div>
     <div class="org-stats-item"><span class="org-badge badge-not_in_db">미입력:</span><b>${notInDbCount}명</b></div>
   `;
@@ -801,7 +851,7 @@ function renderOrgChart(genderMode) {
     const btnClass = `${btnClassPrefix}-member-btn`;
     const isLeader = roleLabel ? "leader" : "";
     const regClass = att.status !== "unregistered" && att.status !== "not_in_db"
-      ? `registered ${att.status === "absent" ? "absent" : "present"}` 
+      ? `registered ${att.status === "absent" ? "absent" : att.status === "undecided" ? "undecided" : "present"}` 
       : "";
       
     const showLabel = roleLabel && roleLabel !== "조장";
@@ -1254,6 +1304,7 @@ function createMemberForm(role, group, removable = false, member = null) {
         </div>`).join("")}
     </div>
     <button type="button" class="member-full-attendance" aria-label="${role} 풀참">풀참</button>
+    <button type="button" class="member-undecided-attendance ${member?.[7] === "undecided" ? "active" : ""}" aria-label="${role} 미정">미정</button>
     ${removable ? `<button type="button" class="remove-child" aria-label="자녀 삭제">삭제</button>` : "<span></span>"}`;
   document.querySelector("#memberFormList").append(row);
   updateFullAttendanceLabels();
@@ -1304,6 +1355,8 @@ function normalizeExternalMealStates(row) {
 
 function cycleAttendanceSegment(segment) {
   const row = segment.closest(".member-form-row");
+  const btn = row.querySelector(".member-undecided-attendance");
+  if (btn) btn.classList.remove("active");
   const day = segment.closest(".attendance-day");
   const breakfast = day.querySelector('[data-period="breakfast"]');
   const lunch = day.querySelector('[data-period="lunch"]');
@@ -1332,6 +1385,32 @@ function toggleFullAttendance(scope) {
     setAttendanceSelected(button, shouldSelect);
     button.classList.remove("external-meal");
   });
+
+  if (scope.classList.contains("member-form-row")) {
+    const btn = scope.querySelector(".member-undecided-attendance");
+    if (btn && shouldSelect) btn.classList.remove("active");
+  } else {
+    scope.querySelectorAll(".member-form-row").forEach(row => {
+      const btn = row.querySelector(".member-undecided-attendance");
+      if (btn && shouldSelect) btn.classList.remove("active");
+    });
+  }
+
+  updateFullAttendanceLabels();
+  updateEstimatedFee();
+}
+
+function toggleMemberUndecided(row) {
+  const btn = row.querySelector(".member-undecided-attendance");
+  const isActive = btn.classList.contains("active");
+  if (!isActive) {
+    row.querySelectorAll(".attendance-segment.selected").forEach((seg) => {
+      setAttendanceSelected(seg, false);
+    });
+    btn.classList.add("active");
+  } else {
+    btn.classList.remove("active");
+  }
   updateFullAttendanceLabels();
   updateEstimatedFee();
 }
@@ -1351,7 +1430,10 @@ function updateFullAttendanceLabels() {
 
 function updateEstimatedFee() {
   const rows = [...document.querySelectorAll(".member-form-row")];
-  const attendingRows = rows.filter((row) => row.querySelectorAll(".attendance-segment.selected").length > 0);
+  const attendingRows = rows.filter((row) => {
+    const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active");
+    return !isUndecided && row.querySelectorAll(".attendance-segment.selected").length > 0;
+  });
   const numMembers = attendingRows.length;
   
   let roomLabel = "없음";
@@ -1488,6 +1570,7 @@ function getFamilyFromForm(existingFamily = null) {
       departureStr = `${lastDay} 15:00`;
     }
     
+    const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active") ? "undecided" : "";
     members.push([
       row.querySelector(".new-member-name").value.trim(),
       row.querySelector(".new-member-group").value,
@@ -1496,6 +1579,7 @@ function getFamilyFromForm(existingFamily = null) {
       selectedDays.map((index) => dateLabels[index]),
       selectedSegments.map((button) => `${dateLabels[Number(button.dataset.day)]}-${button.dataset.period}`),
       externalMealSegments.map((button) => `${dateLabels[Number(button.dataset.day)]}-${button.dataset.period}`),
+      isUndecided,
     ]);
   }
   const parentNames = rows
@@ -1541,7 +1625,8 @@ function getFamilyFromForm(existingFamily = null) {
   
   // Calculate total fee again to save it in DB
   const attendingRows = enteredRows.filter(row => {
-    return row.querySelectorAll(".attendance-segment.selected").length > 0;
+    const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active");
+    return !isUndecided && row.querySelectorAll(".attendance-segment.selected").length > 0;
   });
   const numMembers = attendingRows.length;
   let roomRate = 0;
@@ -1751,6 +1836,7 @@ document.addEventListener("click", (event) => {
     updateEstimatedFee();
   }
   if (event.target.closest(".member-full-attendance")) toggleFullAttendance(event.target.closest(".member-form-row"));
+  if (event.target.closest(".member-undecided-attendance")) toggleMemberUndecided(event.target.closest(".member-form-row"));
   if (event.target.closest("#familyFullAttendance")) toggleFullAttendance(document.querySelector("#memberFormList"));
   if (mealGroup) openMealDrawer(mealSchedule.find((meal) => meal.id === mealGroup.dataset.mealId), mealGroup.dataset.mealGroup);
 
@@ -2042,6 +2128,56 @@ document.querySelector("#modalAbsence").addEventListener("click", async () => {
   renderAll(); // Re-render everything to update UI
   toggleModal(false);
   showToast(`${family.name}이 전체 불참으로 등록되었습니다.`);
+});
+document.querySelector("#modalUndecided").addEventListener("click", async () => {
+  const existingIndex = families.findIndex((family) => family.id === editingFamilyId);
+  const family = getFamilyFromForm(existingIndex >= 0 ? families[existingIndex] : null);
+  if (!family) return;
+
+  if (!confirm(`${family.name}을 가족 전체 미정으로 등록하시겠습니까?\n(미정으로 등록 시 식사 집계 및 숙박비 계산에서 제외되며, 현재 상태가 미정으로 관리됩니다.)`)) return;
+
+  family.status = "undecided";
+  family.fee = 0;
+
+  if (family.members) {
+    family.members = family.members.map((member) => {
+      member[5] = [];
+      member[6] = [];
+      member[7] = "undecided";
+      return member;
+    });
+  }
+
+  const dbFamily = { ...family };
+  const feeInfo = {
+    fee: family.fee,
+    feeStatus: family.feeStatus,
+    room: family.room
+  };
+  const cleanMemo = family.memo === "별도 메모 없음" ? "" : family.memo;
+  dbFamily.memo = `${cleanMemo}\n__FEE_INFO__:${JSON.stringify(feeInfo)}`;
+  
+  delete dbFamily.fee;
+  delete dbFamily.feeStatus;
+  delete dbFamily.room;
+
+  if (supabaseClient) {
+    const { error } = await supabaseClient.from("families").upsert([dbFamily]);
+    if (error) {
+      console.error("Supabase 저장 에러:", error);
+      showToast("데이터 저장에 실패했습니다.");
+      return;
+    }
+  }
+
+  if (existingIndex >= 0) families[existingIndex] = family;
+  else families.push(family);
+
+  renderFamilies();
+  renderMeals();
+  renderAll(); // Re-render everything to update UI
+  toggleModal(false);
+  showToast(`${family.name}이 전체 미정으로 등록되었습니다.`);
 });
 document.querySelector("#downloadButton").addEventListener("click", () => showToast("참석 명단 다운로드를 준비했습니다."));
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));

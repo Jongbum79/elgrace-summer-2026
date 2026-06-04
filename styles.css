@@ -373,7 +373,7 @@ textarea { width: 100%; padding: 10px; resize: vertical; outline-color: var(--sa
 .date-heading, .attendance-days { display: grid; grid-template-columns: repeat(4, 57px); gap: 5px; }
 .date-heading span { color: #687872; text-align: center; font-size: 11px; font-weight: 700; }
 .date-heading small { display: block; padding-top: 3px; color: #9ba7a2; font-size: 9px; font-weight: 500; }
-.member-form-row { display: grid; grid-template-columns: 48px minmax(92px, 1fr) 50px 92px auto 53px 35px; gap: 7px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--soft-line); }
+.member-form-row { display: grid; grid-template-columns: 48px minmax(92px, 1fr) 50px 92px auto 53px 53px 35px; gap: 7px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--soft-line); }
 .member-role { color: var(--forest); font-size: 11px; font-weight: 800; }
 .attendance-day { width: 57px; height: 39px; display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; border-radius: 7px; background: white; border: 1px solid #dfe7e3; }
 .attendance-segment { padding: 0; color: #a1ada8; background: white; border-right: 1px dashed #bdcac5; font-size: 9px; font-weight: 700; transition: .12s ease; user-select: none; }
@@ -470,7 +470,8 @@ body.mobile-mode .member-attendance-heading { grid-column: auto; justify-items: 
 body.mobile-mode .member-form-row { grid-template-columns: 48px minmax(110px, 1fr) 35px; align-items: center; }
 body.mobile-mode .member-form-row select,
 body.mobile-mode .attendance-days,
-body.mobile-mode .member-full-attendance { grid-column: 2; }
+body.mobile-mode .member-full-attendance,
+body.mobile-mode .member-undecided-attendance { grid-column: 2; }
 body.mobile-mode .attendance-days { margin-top: 2px; }
 body.mobile-mode .remove-child { grid-column: 3; grid-row: 1; }
 
@@ -519,7 +520,8 @@ body.mobile-mode .remove-child { grid-column: 3; grid-row: 1; }
   .member-form-row { grid-template-columns: 58px minmax(95px, 1fr) 22px; align-items: center; }
   .member-form-row select { grid-column: 2; }
   .attendance-days { grid-column: 2; margin-top: 2px; }
-  .member-full-attendance { grid-column: 2; width: fit-content; }
+  .member-full-attendance,
+  .member-undecided-attendance { grid-column: 2; width: fit-content; }
   .remove-child { grid-column: 3; grid-row: 1; }
 }
 @media (max-width: 800px) {
@@ -844,4 +846,85 @@ body.mobile-mode .org-filter-row {
 body.mobile-mode .org-filter-row .filter-chip {
   flex: 0 0 auto;
 }
+
+/* Undecided (미정) Status Styles */
+.attendance-badge.undecided {
+  color: #505f5a;
+  background: #e8ecea;
+}
+
+.status.undecided {
+  color: #505f5a;
+  background: #e8ecea;
+}
+
+.family-day-square.undecided-day {
+  border: 1px dashed #b8c4bf;
+  background: #f8faf9;
+}
+
+.family-undecided-day {
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  color: #8fa09a;
+  background: #eef2f0;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.undecided-button {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #40504a;
+  background: #e8ecea;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.undecided-button:hover {
+  background: #d0dcd7;
+  color: #2d3c36;
+}
+
+.member-undecided-attendance {
+  border-radius: 15px;
+  color: #687873;
+  background: #eef2f0;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+.member-undecided-attendance:hover {
+  background: #d0dcd7;
+  color: #2d3c36;
+}
+.member-undecided-attendance.active {
+  color: white;
+  background: #687873;
+}
+
+.modal-actions {
+  flex-wrap: wrap;
+}
+
+.org-badge.badge-undecided {
+  color: #505f5a;
+  background: #e8ecea;
+  border: 1px solid #cbd5e1;
+}
+.org-member-node.registered.present.undecided {
+  background: #f1f3f2;
+  border-color: #cbd5e1;
+  color: #687873;
+}
+
 
