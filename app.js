@@ -3219,23 +3219,23 @@ function renderSchoolView() {
           <span>${dept.label}</span>
           <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${dept.children.length}명)</span>
         </h4>
-        <div class="school-cards-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;">
+        <div class="school-cards-container" style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 6px; align-items: flex-start;">
           ${sortedGroups.map(group => {
             group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
             
             return `
-              <div class="school-card" style="flex: 1 1 calc(50% - 8px); max-width: calc(50% - 4px); min-width: 90px; border: 1px solid ${group.mapping.color}35; border-radius: 8px; padding: 6px 8px; background: ${group.mapping.color}05; display: flex; flex-direction: column; gap: 5px;">
+              <div class="school-card" style="flex: 1 1 0px; min-width: 110px; border: 1px solid ${group.mapping.color}35; border-radius: 8px; padding: 6px 8px; background: ${group.mapping.color}05; display: flex; flex-direction: column; gap: 5px;">
                 <div style="font-size: 10px; font-weight: 800; background: ${group.mapping.color}; color: #ffffff; padding: 3px 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                   <span>${group.label}</span>
                   <span style="font-size: 9px; opacity: 0.9;">${group.members.length}명</span>
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 3px;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
                   ${group.members.map(member => {
                     const parentShortName = member.leader.replace(" 가족", "");
                     return `
-                      <span class="school-member-pill" style="font-size: 10px; padding: 2px 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; display: inline-flex; align-items: center; gap: 1px;" title="가족: ${member.familyName}">
-                        <strong style="color: #334155; font-weight: 800;">${member.name}</strong>
-                        <span style="color: #94a3b8; font-size: 9px; font-weight: 500;">(${parentShortName})</span>
+                      <span class="school-member-pill" style="font-size: 10px; padding: 2px 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; width: 100%; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="가족: ${member.familyName}">
+                        <strong style="color: #334155; font-weight: 800; white-space: nowrap;">${member.name}</strong>
+                        <span style="color: #94a3b8; font-size: 9px; font-weight: 500; white-space: nowrap;">(${parentShortName})</span>
                       </span>
                     `;
                   }).join("")}
