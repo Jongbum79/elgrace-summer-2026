@@ -50,6 +50,7 @@ let families = [];
 let currentOrgMode = "family";
 let orgActiveFilter = "all";
 let selectedOrgTimeSlot = null;
+let selectedSchoolTimeSlot = null;
 
 const sisterGroupsData = [
   { id: "1조", leader: "장세연", members: ["최찬미", "정래윤", "원지희", "이주영"] },
@@ -910,6 +911,35 @@ function renderOrgTimeFilter() {
         ${attendancePeriods.map((period) => {
           const periodKey = `${date.shortLabel}-${period.key}`;
           const active = selectedOrgTimeSlot === periodKey;
+          const disabled = !availablePeriods.includes(periodKey);
+          
+          return `
+            <button type="button" 
+              class="attendance-segment ${active ? "selected" : ""} ${disabled ? "unavailable" : ""}" 
+              data-slot="${periodKey}" 
+              aria-label="${date.label} ${period.label}${disabled ? " 없음" : ""}" 
+              ${disabled ? "disabled" : ""}
+              style="cursor: ${disabled ? "not-allowed" : "pointer"};"
+            >${period.label}</button>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }).join("");
+}
+
+function renderSchoolTimeFilter() {
+  const container = document.querySelector("#schoolTimeFilterDays");
+  if (!container) return;
+  
+  const availablePeriods = getAvailableAttendancePeriods();
+  
+  container.innerHTML = retreatDates.map((date) => {
+    return `
+      <div class="attendance-day" aria-label="${date.label} 참석 시간" style="cursor: default;">
+        ${attendancePeriods.map((period) => {
+          const periodKey = `${date.shortLabel}-${period.key}`;
+          const active = selectedSchoolTimeSlot === periodKey;
           const disabled = !availablePeriods.includes(periodKey);
           
           return `
@@ -2031,6 +2061,21 @@ document.addEventListener("click", (event) => {
     selectedOrgTimeSlot = null;
     renderOrgChart(currentOrgMode);
   }
+  const clearSchoolTimeFilter = event.target.closest("#clearSchoolTimeFilter");
+  if (clearSchoolTimeFilter) {
+    selectedSchoolTimeSlot = null;
+    renderSchoolView();
+  }
+  const schoolTimeSegmentBtn = event.target.closest("#schoolTimeFilterDays .attendance-segment");
+  if (schoolTimeSegmentBtn) {
+    const slot = schoolTimeSegmentBtn.dataset.slot;
+    if (selectedSchoolTimeSlot === slot) {
+      selectedSchoolTimeSlot = null;
+    } else {
+      selectedSchoolTimeSlot = slot;
+    }
+    renderSchoolView();
+  }
 
   const clickedBtn = event.target.closest(".sister-member-btn, .brother-member-btn");
   if (clickedBtn) {
@@ -3038,6 +3083,7 @@ function getChildBirthYear(childName, familyName) {
 }
 
 function renderSchoolView() {
+  renderSchoolTimeFilter();
   const container = document.querySelector("#schoolListContainer");
   const statsBar = document.querySelector("#schoolStatsBar");
   if (!container) return;
@@ -3055,6 +3101,12 @@ function renderSchoolView() {
       const isTargetChild = ["중고등부", "초등부", "유년부", "유치부", "유아"].includes(group);
       
       if (isTargetChild && !isUndecided && !isAbsent) {
+        if (selectedSchoolTimeSlot) {
+          const periods = getMemberAttendancePeriods(member);
+          if (!periods.includes(selectedSchoolTimeSlot)) {
+            return;
+          }
+        }
         const birthYear = getChildBirthYear(name, family.name);
         
         let mapping = birthYear ? birthYearMapping[birthYear] : null;
@@ -3214,6 +3266,12 @@ function downloadSchoolList() {
       
       const isTargetChild = ["중고등부", "초등부", "유년부", "유치부", "유아"].includes(group);
       if (isTargetChild && !isUndecided && !isAbsent) {
+        if (selectedSchoolTimeSlot) {
+          const periods = getMemberAttendancePeriods(member);
+          if (!periods.includes(selectedSchoolTimeSlot)) {
+            return;
+          }
+        }
         const birthYear = getChildBirthYear(name, family.name);
         let mapping = birthYear ? birthYearMapping[birthYear] : null;
         if (!mapping) {
@@ -3249,7 +3307,23 @@ function downloadSchoolList() {
     "대표자": child.leader
   }));
   
-  const fileName = `교회학교_참석자_명단.xlsx`;
+  let timeLabel = "";
+  if (selectedSchoolTimeSlot) {
+    const [datePart, periodPart] = selectedSchoolTimeSlot.split("-");
+    const dateObj = retreatDates.find(d => d.shortLabel === datePart);
+    const periodMap = { breakfast: "아침", lunch: "점심", dinner: "저녁" };
+    const periodKo = periodMap[periodPart] || periodPart;
+    
+    if (dateObj) {
+      const match = dateObj.label.match(/(\d+월\s*\d+일)\s*([일월화수목금토])요일/);
+      const dateKo = match ? `${match[1].replace(/\s+/g, "")}(${match[2]})` : dateObj.label;
+      timeLabel = `_${dateKo} ${periodKo} 참석자`;
+    } else {
+      timeLabel = `_${datePart} ${periodKo} 참석자`;
+    }
+  }
+  
+  const fileName = `교회학교${timeLabel}_명단.xlsx`;
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "교회학교 명단");
