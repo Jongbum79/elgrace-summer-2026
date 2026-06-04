@@ -2952,6 +2952,18 @@ function getChildBirthYear(childName, familyName) {
       const birthDateKey = Object.keys(familyRow).find((k) => k.startsWith(childNumber + "-") && k.includes("생년월일"));
       const birthDateStr = birthDateKey ? familyRow[birthDateKey].trim() : "";
       if (birthDateStr) {
+        // 구분 기호(.-/)를 기준으로 분리하여 첫 번째 요소에서 연도 추출
+        const dateParts = birthDateStr.split(/[\.\-\/]/).map(p => p.trim());
+        if (dateParts.length > 0) {
+          const firstPart = dateParts[0].replace(/\D/g, "");
+          if (firstPart.length === 4) {
+            return Number(firstPart);
+          } else if (firstPart.length === 2) {
+            const yy = Number(firstPart);
+            return (yy >= 0 && yy <= 26) ? 2000 + yy : 1900 + yy;
+          }
+        }
+        // 구분 기호가 없는 순수 숫자 형태 대비 폴백
         const digits = birthDateStr.replace(/\D/g, "");
         if (digits.length === 8) return Number(digits.slice(0, 4));
         if (digits.length === 6) {
