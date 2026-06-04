@@ -676,6 +676,9 @@ body.desktop-mode .memo {
   background: #ffffff;
   color: #475569;
   border: 1px solid #cbd5e1;
+  width: 145px;
+  box-sizing: border-box;
+  justify-content: flex-start;
 }
 .org-stats-item:hover {
   background: #f1f5f9;
@@ -860,8 +863,16 @@ body.mobile-mode .org-controls-container .org-stats-bar {
   gap: 6px;
 }
 body.mobile-mode .org-stats-row {
-  justify-content: flex-start;
-  gap: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+body.mobile-mode .org-stats-sep {
+  display: none !important;
+}
+body.mobile-mode .org-stats-item {
+  width: calc(50% - 4px) !important;
 }
 
 /* 조직도 전용 필터 바 및 칩 스타일 */

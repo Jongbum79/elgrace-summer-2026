@@ -1058,15 +1058,15 @@ function renderOrgChart(genderMode) {
       <div class="org-stats-item ${orgActiveFilter === 'all' ? 'active' : ''}" data-org-filter="all">
         <strong>🏫 전체 가족:</strong>&nbsp;<b>${totalFamiliesSum}가족</b>
       </div>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'attended' ? 'active' : ''}" data-org-filter="attended">
         <span class="org-badge" style="background: #cbd5e1; color: #334155; font-size: 10px; font-weight: 700;">전체참석</span>&nbsp;<b>${attendedFamilies}가족</b>
       </div>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'full' ? 'active' : ''}" data-org-filter="full">
         <span class="org-badge badge-full">풀참 가족</span>&nbsp;<b>${fullFamilies}가족</b>
       </div>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'partial' ? 'active' : ''}" data-org-filter="partial">
         <span class="org-badge badge-partial">부분참석 가족</span>&nbsp;<b>${partialFamilies}가족</b>
       </div>
@@ -1075,15 +1075,15 @@ function renderOrgChart(genderMode) {
       <div class="org-stats-item ${orgActiveFilter === 'absent' ? 'active' : ''}" data-org-filter="absent">
         <span class="org-badge badge-absent">불참 가족</span>&nbsp;<b>${absentFamilies}가족</b>
       </div>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'undecided' ? 'active' : ''}" data-org-filter="undecided">
         <span class="org-badge badge-undecided">미정 가족</span>&nbsp;<b>${undecidedFamilies}가족</b>
       </div>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'unregistered' ? 'active' : ''}" data-org-filter="unregistered">
         <span class="org-badge badge-unregistered">미등록</span>&nbsp;<b>${unregisteredFamilies}가족</b>
       </div>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'not_in_db' ? 'active' : ''}" data-org-filter="not_in_db">
         <span class="org-badge badge-not_in_db">미입력</span>&nbsp;<b>${notInDbFamilies}가족</b>
       </div>
