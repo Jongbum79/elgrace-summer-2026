@@ -3172,7 +3172,7 @@ function renderSchoolView() {
             group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
             
             return `
-              <div class="school-card" style="flex: 1 1 calc(33.33% - 8px); min-width: 90px; border: 1px solid ${group.mapping.color}35; border-radius: 8px; padding: 6px 8px; background: ${group.mapping.color}05; display: flex; flex-direction: column; gap: 5px;">
+              <div class="school-card" style="flex: 1 1 calc(50% - 8px); max-width: calc(50% - 4px); min-width: 90px; border: 1px solid ${group.mapping.color}35; border-radius: 8px; padding: 6px 8px; background: ${group.mapping.color}05; display: flex; flex-direction: column; gap: 5px;">
                 <div style="font-size: 10px; font-weight: 800; background: ${group.mapping.color}; color: #ffffff; padding: 3px 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                   <span>${group.label}</span>
                   <span style="font-size: 9px; opacity: 0.9;">${group.members.length}명</span>
