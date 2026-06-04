@@ -498,11 +498,15 @@ function renderFamilies() {
 
     const adultPills = brotherAndSister.map((member) => {
       const role = member[1] === "성인 남성" ? "brother" : "sister";
-      return `<span class="member-pill ${role}" title="${member[1]}">${member[0]}</span>`;
+      const isAbsent = getMemberAttendancePeriods(member).length === 0;
+      const absentClass = isAbsent ? "absent" : "";
+      return `<span class="member-pill ${role} ${absentClass}" title="${member[1]}${isAbsent ? ' (불참)' : ''}">${member[0]}</span>`;
     }).join("");
 
     const childPills = children.map((member) => {
-      return `<span class="member-pill child" title="${member[1]}">${member[0]}</span>`;
+      const isAbsent = getMemberAttendancePeriods(member).length === 0;
+      const absentClass = isAbsent ? "absent" : "";
+      return `<span class="member-pill child ${absentClass}" title="${member[1]}${isAbsent ? ' (불참)' : ''}">${member[0]}</span>`;
     }).join("");
 
     return `
