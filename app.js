@@ -391,11 +391,21 @@ function getFilteredFamilies() {
   return families.filter((family) => {
     if (family.status === "absent") return false;
     const isUndecidedFamily = family.status === "undecided" || family.members.some(member => member[7] === "undecided");
-    const filterMatches =
-      activeFilter === "all" ||
-      (activeFilter === "partial" && getFamilyAttendanceStatus(family) === "partial" && family.status !== "undecided") ||
-      (activeFilter === "late" && family.status === "late") ||
-      (activeFilter === "undecided" && isUndecidedFamily);
+    const status = getFamilyAttendanceStatus(family);
+    
+    let filterMatches = false;
+    if (activeFilter === "all") {
+      filterMatches = true;
+    } else if (activeFilter === "attending") {
+      filterMatches = (status === "full" || status === "partial") && !isUndecidedFamily;
+    } else if (activeFilter === "full") {
+      filterMatches = (status === "full") && !isUndecidedFamily;
+    } else if (activeFilter === "partial") {
+      filterMatches = (status === "partial") && !isUndecidedFamily;
+    } else if (activeFilter === "undecided") {
+      filterMatches = isUndecidedFamily;
+    }
+    
     const keywordMatches = !keyword || [family.name, family.leader, family.memo, ...family.members.flat()].join(" ").toLowerCase().includes(keyword);
     return filterMatches && keywordMatches;
   });
@@ -2305,7 +2315,7 @@ document.querySelector("#modalUndecided").addEventListener("click", async () => 
   toggleModal(false);
   showToast(`${family.name}이 전체 미정으로 등록되었습니다.`);
 });
-document.querySelector("#downloadButton").addEventListener("click", () => showToast("참석 명단 다운로드를 준비했습니다."));
+document.querySelector("#downloadButton").addEventListener("click", downloadList);
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
 document.querySelector("#mealDownloadButton").addEventListener("click", () => showToast("식사별 명단 다운로드를 준비했습니다."));
@@ -2861,3 +2871,191 @@ loadRetreatConfig()
     document.querySelector("#retreatMeta").textContent = error.message;
     showToast(error.message);
   });
+
+// ==========================================
+// EXCEL EXPORT FUNCTIONALITY
+// ==========================================
+function downloadList() {
+  if (!window.XLSX) {
+    showToast("엑셀 라이브러리가 로드되지 않았습니다. 잠시만 기다려주세요.");
+    return;
+  }
+  if (currentOrgMode === "family") {
+    downloadFamilyList();
+  } else if (currentOrgMode === "sister") {
+    downloadOrgList("sister");
+  } else if (currentOrgMode === "brother") {
+    downloadOrgList("brother");
+  }
+}
+
+function downloadFamilyList() {
+  const visibleFamilies = getFilteredFamilies();
+  
+  const filterLabels = {
+    all: "전체",
+    attending: "참석",
+    full: "풀참석",
+    partial: "부분참석",
+    undecided: "미정"
+  };
+  const filterLabel = filterLabels[activeFilter] || "전체";
+  const fileName = `가족별_${filterLabel}_명단.xlsx`;
+  
+  const data = visibleFamilies.map((family) => {
+    const statusText = statusMap[family.status] ? statusMap[family.status][0] : family.status;
+    
+    // 구성원 요약 텍스트 빌드
+    const memberSummary = family.members.map((m) => {
+      const isUndecided = m[7] === "undecided";
+      const isAbsent = !isUndecided && getMemberAttendancePeriods(m).length === 0;
+      let statusStr = "부분참석";
+      if (isUndecided) statusStr = "미정";
+      else if (isAbsent) statusStr = "불참";
+      else if (isMemberFullAttendance(m)) statusStr = "풀참";
+      
+      return `${m[0]}(${m[1]}/${statusStr})`;
+    }).join(", ");
+    
+    // 참석 날짜 요약 빌드
+    let dateSummary = "";
+    const attendingPeriods = family.members.flatMap((m) => getMemberAttendancePeriods(m));
+    const uniqueDays = [...new Set(attendingPeriods.map(p => p.split("-")[0]))];
+    if (uniqueDays.length > 0) {
+      dateSummary = uniqueDays.join(", ");
+    }
+    
+    return {
+      "가족명": family.name,
+      "대표자": family.leader,
+      "대표 연락처": family.phone,
+      "구성원 명단": memberSummary,
+      "참석 날짜": dateSummary,
+      "총 회비 (원)": family.fee,
+      "방 배정": family.room || "미배정",
+      "상태": statusText,
+      "메모": family.memo || ""
+    };
+  });
+
+  if (data.length === 0) {
+    showToast("다운로드할 데이터가 없습니다.");
+    return;
+  }
+  
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "가족별 명단");
+  
+  // 열 넓이 자동 조정
+  const maxProps = ["가족명", "대표자", "대표 연락처", "구성원 명단", "참석 날짜", "방 배정", "상태", "메모"];
+  worksheet["!cols"] = maxProps.map(prop => {
+    let maxLen = prop.length * 2;
+    data.forEach(item => {
+      const val = String(item[prop] || "");
+      const valLen = val.split("").reduce((acc, char) => acc + (char.charCodeAt(0) > 127 ? 2 : 1), 0);
+      if (valLen > maxLen) maxLen = valLen;
+    });
+    return { wch: maxLen + 2 };
+  });
+  
+  XLSX.writeFile(workbook, fileName);
+  showToast(`${fileName} 파일이 다운로드되었습니다.`);
+}
+
+function downloadOrgList(genderMode) {
+  const isSister = genderMode === "sister";
+  const groupsData = isSister ? sisterGroupsData : brotherGroupsData;
+  const staffData = isSister ? sisterStaffData : brotherStaffData;
+  const groupFilter = isSister ? "성인 여성" : "성인 남성";
+  const tabName = isSister ? "자매조" : "형제조";
+  
+  const filterLabels = {
+    all: "전체",
+    registered: "참석자만",
+    unregistered: "미등록자",
+    not_in_db: "미입력자",
+    absent: "불참자",
+    undecided: "미정자",
+    full: "풀참만",
+    partial: "부분참석만"
+  };
+  const filterLabel = filterLabels[orgActiveFilter] || "전체";
+  const fileName = `${tabName}_${filterLabel}_명단.xlsx`;
+  
+  const data = [];
+  
+  function addMemberRow(groupName, name, roleLabel) {
+    if (!matchesOrgFilter(name, orgActiveFilter, groupFilter)) return;
+    
+    const att = getMemberAttendanceStatus(name, groupFilter);
+    const family = getFamilyByMemberName(name, groupFilter);
+    
+    // 연락처 찾기
+    let phone = family ? family.phone : "";
+    if (!phone) {
+      const dbRow = churchFamilyDb.find(row => {
+        const key = Object.keys(row).find(k => normalizeName(row[k]) === normalizeName(name));
+        return !!key;
+      });
+      if (dbRow) {
+        const phoneKey = Object.keys(dbRow).find(k => k.match(/연락처|전화/));
+        if (phoneKey) phone = dbRow[phoneKey];
+      }
+    }
+    
+    data.push({
+      "구분 / 조": groupName,
+      "이름": name,
+      "역할": roleLabel || "조원",
+      "소속": groupFilter,
+      "수련회 참석 상태": att.label,
+      "방 배정": family ? (family.room || "미배정") : "-",
+      "대표 연락처": phone || "-",
+      "총 회비 (원)": family ? family.fee : 0,
+      "가족 정보": family ? family.name : "-"
+    });
+  }
+  
+  // 1. 임원 / 코디네이터 추가
+  staffData.coordinators.forEach((c) => {
+    addMemberRow("임원단", c.name, c.role);
+  });
+  
+  // 2. 각 조 추가
+  groupsData.forEach((group) => {
+    addMemberRow(group.name, group.leader, "조장");
+    group.members.forEach((m) => {
+      addMemberRow(group.name, m, "조원");
+    });
+  });
+  
+  // 3. 기타 스태프 추가
+  staffData.otherGroups.forEach((m) => {
+    addMemberRow("기타 스태프", m, "스태프");
+  });
+  
+  if (data.length === 0) {
+    showToast("다운로드할 데이터가 없습니다.");
+    return;
+  }
+  
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, `${tabName} 명단`);
+  
+  // 열 넓이 자동 조정
+  const maxProps = ["구분 / 조", "이름", "역할", "소속", "수련회 참석 상태", "방 배정", "대표 연락처", "가족 정보"];
+  worksheet["!cols"] = maxProps.map(prop => {
+    let maxLen = prop.length * 2;
+    data.forEach(item => {
+      const val = String(item[prop] || "");
+      const valLen = val.split("").reduce((acc, char) => acc + (char.charCodeAt(0) > 127 ? 2 : 1), 0);
+      if (valLen > maxLen) maxLen = valLen;
+    });
+    return { wch: maxLen + 2 };
+  });
+  
+  XLSX.writeFile(workbook, fileName);
+  showToast(`${fileName} 파일이 다운로드되었습니다.`);
+}
