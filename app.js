@@ -400,6 +400,7 @@ function getFilteredFamilies() {
 
 function getMemberAttendancePeriods(member) {
   if (member[5]) return member[5];
+  if (!member[2] || !member[3]) return [];
   const arrival = parseMemberDate(member[2]);
   const departure = parseMemberDate(member[3]);
   return getAvailableAttendancePeriods().filter((periodKey) => {
@@ -419,10 +420,23 @@ function getMemberChargeableMealPeriods(member) {
   return getMemberAttendancePeriods(member).filter((period) => !externalMeals.includes(period));
 }
 
-function getFamilyAttendanceStatus(family) {
+function isMemberFullAttendance(member) {
+  const memberPeriods = getMemberAttendancePeriods(member);
+  if (memberPeriods.length === 0) return false;
+  
   const availablePeriods = getAvailableAttendancePeriods();
-  const hasFullMember = family.members.some((member) =>
-    availablePeriods.every((period) => getMemberAttendancePeriods(member).includes(period)));
+  return retreatDates.every((date) => {
+    const dayPeriodKeys = attendancePeriods
+      .map((period) => `${date.shortLabel}-${period.key}`)
+      .filter((periodKey) => availablePeriods.includes(periodKey));
+      
+    if (dayPeriodKeys.length === 0) return true;
+    return dayPeriodKeys.some((periodKey) => memberPeriods.includes(periodKey));
+  });
+}
+
+function getFamilyAttendanceStatus(family) {
+  const hasFullMember = family.members.some((member) => isMemberFullAttendance(member));
   return hasFullMember ? "full" : "partial";
 }
 
@@ -456,7 +470,8 @@ function renderDaySquares(periods, externalMeals = [], titlePrefix = "") {
 function renderFamilyAttendance(family) {
   const status = getFamilyAttendanceStatus(family);
   const statusLabel = status === "full" ? "풀참" : "부분참석";
-  const groups = Object.values(family.members.reduce((result, member) => {
+  const attendingMembers = family.members.filter(member => getMemberAttendancePeriods(member).length > 0);
+  const groups = Object.values(attendingMembers.reduce((result, member) => {
     const periods = getMemberAttendancePeriods(member);
     const externalMeals = getMemberExternalMealPeriods(member);
     const key = `${periods.join("|")}::${externalMeals.join("|")}`;
@@ -517,8 +532,13 @@ function renderFamilies() {
 }
 
 function parseMemberDate(value) {
-  const [date, time] = value.split(" ");
-  const [month, day] = date.split("/").map(Number);
+  if (!value) return new Date(0);
+  const parts = value.split(" ");
+  if (parts.length < 2) return new Date(0);
+  const [date, time] = parts;
+  const dateParts = date.split("/");
+  if (dateParts.length < 2) return new Date(0);
+  const [month, day] = dateParts.map(Number);
   return new Date(`${retreatConfig.start.slice(0, 4)}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T${time}:00`);
 }
 
@@ -529,9 +549,13 @@ function getMealPeople(meal) {
   return families
     .filter((family) => family.status !== "absent")
     .flatMap((family) => family.members
-      .filter((member) => member[5]
-        ? getMemberChargeableMealPeriods(member).includes(`${mealDate}-${mealPeriod}`)
-        : parseMemberDate(member[2]) <= mealTime && parseMemberDate(member[3]) > mealTime)
+      .filter((member) => {
+        if (member[5]) {
+          return getMemberChargeableMealPeriods(member).includes(`${mealDate}-${mealPeriod}`);
+        }
+        if (!member[2] || !member[3]) return false;
+        return parseMemberDate(member[2]) <= mealTime && parseMemberDate(member[3]) > mealTime;
+      })
       .map((member) => {
         const group = member[1];
         let type = "adult";
@@ -702,8 +726,7 @@ function getMemberAttendanceStatus(name) {
     return { status: "absent", label: "불참" };
   }
   
-  const availablePeriods = getAvailableAttendancePeriods();
-  const isFull = availablePeriods.every((period) => periods.includes(period));
+  const isFull = isMemberFullAttendance(member);
   return isFull ? { status: "full", label: "풀참" } : { status: "partial", label: "부분참석" };
 }
 
@@ -1324,9 +1347,10 @@ function updateFullAttendanceLabels() {
 
 function updateEstimatedFee() {
   const rows = [...document.querySelectorAll(".member-form-row")];
-  const numMembers = rows.length;
+  const attendingRows = rows.filter((row) => row.querySelectorAll(".attendance-segment.selected").length > 0);
+  const numMembers = attendingRows.length;
   
-  let roomLabel = "";
+  let roomLabel = "없음";
   let roomRate = 0;
   if (numMembers === 1) {
     roomLabel = "1인실";
@@ -1346,7 +1370,7 @@ function updateEstimatedFee() {
   for (let d = 0; d < dateLabels.length - 1; d++) {
     const dayLabel = dateLabels[d];
     const nextDayLabel = dateLabels[d+1];
-    const hasOvernightMember = rows.some(row => {
+    const hasOvernightMember = attendingRows.some(row => {
       const selectedSegs = [...row.querySelectorAll(".attendance-segment.selected")].map(seg => 
         `${dateLabels[Number(seg.dataset.day)]}-${seg.dataset.period}`
       );
@@ -1366,7 +1390,7 @@ function updateEstimatedFee() {
   let preschoolBreakfast = 0;
   let preschoolLunchDinner = 0;
   
-  rows.forEach((row) => {
+  attendingRows.forEach((row) => {
     const groupSelect = row.querySelector(".new-member-group");
     if (!groupSelect) return;
     const group = groupSelect.value;
@@ -1408,8 +1432,8 @@ function updateEstimatedFee() {
   if (label) label.textContent = `${totalCost.toLocaleString()}원`;
   if (detail) {
     const breakfastCount = adultBreakfast + childBreakfast + preschoolBreakfast;
-    const lunchCount = rows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "lunch" && !seg.classList.contains("external-meal")).length, 0);
-    const dinnerCount = rows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "dinner" && !seg.classList.contains("external-meal")).length, 0);
+    const lunchCount = attendingRows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "lunch" && !seg.classList.contains("external-meal")).length, 0);
+    const dinnerCount = attendingRows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "dinner" && !seg.classList.contains("external-meal")).length, 0);
     
     detail.innerHTML = `
       <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
@@ -1450,17 +1474,21 @@ function getFamilyFromForm(existingFamily = null) {
     const selectedSegments = [...row.querySelectorAll(".attendance-segment.selected")];
     const externalMealSegments = [...row.querySelectorAll(".attendance-segment.external-meal")];
     const selectedDays = [...new Set(selectedSegments.map((button) => Number(button.dataset.day)))];
-    if (!selectedDays.length) {
-      showToast(`${row.querySelector(".new-member-name").value.trim()}님의 참석 날짜를 선택해주세요.`);
-      return null;
+    
+    let arrivalStr = "";
+    let departureStr = "";
+    if (selectedDays.length > 0) {
+      const firstDay = dateLabels[Math.min(...selectedDays)];
+      const lastDay = dateLabels[Math.max(...selectedDays)];
+      arrivalStr = `${firstDay} 12:00`;
+      departureStr = `${lastDay} 15:00`;
     }
-    const firstDay = dateLabels[Math.min(...selectedDays)];
-    const lastDay = dateLabels[Math.max(...selectedDays)];
+    
     members.push([
       row.querySelector(".new-member-name").value.trim(),
       row.querySelector(".new-member-group").value,
-      `${firstDay} 12:00`,
-      `${lastDay} 15:00`,
+      arrivalStr,
+      departureStr,
       selectedDays.map((index) => dateLabels[index]),
       selectedSegments.map((button) => `${dateLabels[Number(button.dataset.day)]}-${button.dataset.period}`),
       externalMealSegments.map((button) => `${dateLabels[Number(button.dataset.day)]}-${button.dataset.period}`),
@@ -1504,11 +1532,14 @@ function getFamilyFromForm(existingFamily = null) {
   } else if (sisterName && !brotherName) {
     leader = sisterName;
   }
-
+  
   const status = document.querySelector("#newFamilyStatus").value;
   
   // Calculate total fee again to save it in DB
-  const numMembers = enteredRows.length;
+  const attendingRows = enteredRows.filter(row => {
+    return row.querySelectorAll(".attendance-segment.selected").length > 0;
+  });
+  const numMembers = attendingRows.length;
   let roomRate = 0;
   if (numMembers === 1) roomRate = 60000;
   else if (numMembers === 2) roomRate = 70000;
@@ -1519,7 +1550,7 @@ function getFamilyFromForm(existingFamily = null) {
   for (let d = 0; d < dateLabels.length - 1; d++) {
     const dayLabel = dateLabels[d];
     const nextDayLabel = dateLabels[d+1];
-    const hasOvernightMember = enteredRows.some(row => {
+    const hasOvernightMember = attendingRows.some(row => {
       const selectedSegs = [...row.querySelectorAll(".attendance-segment.selected")].map(seg => 
         `${dateLabels[Number(seg.dataset.day)]}-${seg.dataset.period}`
       );
@@ -1531,7 +1562,7 @@ function getFamilyFromForm(existingFamily = null) {
   }
 
   let totalMealCost = 0;
-  enteredRows.forEach((row) => {
+  attendingRows.forEach((row) => {
     const group = row.querySelector(".new-member-group").value;
     
     let type = "adult";
