@@ -3094,7 +3094,6 @@ function getChildBirthYear(childName, familyName) {
 }
 
 function renderSchoolView() {
-  renderSchoolTimeFilter();
   const container = document.querySelector("#schoolListContainer");
   const statsBar = document.querySelector("#schoolStatsBar");
   if (!container) return;
@@ -3186,7 +3185,14 @@ function renderSchoolView() {
     <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">🔴 유치부: &nbsp;${stats.kinder}명</span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
     <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">🟢 유아부: &nbsp;${stats.toddler}명</span>
+    <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
+    <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
+      <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
+      <div class="attendance-days" id="schoolTimeFilterDays" style="display: flex; gap: 4px;"></div>
+      <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px;">❌ 해제</button>
+    </div>
   `;
+  renderSchoolTimeFilter();
   
   if (activeChildren.length === 0) {
     container.innerHTML = `
