@@ -520,7 +520,53 @@ function renderFamilyAttendance(family) {
 
 function renderFamilies() {
   const visibleFamilies = getFilteredFamilies();
-  document.querySelector("#familyCount").textContent = `${visibleFamilies.length}가족 표시 중`;
+  
+  let adultCount = 0;
+  let childCount = 0;
+  let kindergartenCount = 0;
+  let toddlerCount = 0;
+  let undecidedFamiliesCount = 0;
+  let undecidedMembersCount = 0;
+  
+  visibleFamilies.forEach((family) => {
+    const isUndecidedFamily = family.status === "undecided" || family.members.some(m => m[7] === "undecided");
+    if (isUndecidedFamily) {
+      undecidedFamiliesCount++;
+    }
+    
+    family.members.forEach((member) => {
+      const group = member[1];
+      const isUndecided = member[7] === "undecided";
+      const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+      
+      if (isUndecided) {
+        undecidedMembersCount++;
+      } else if (!isAbsent) {
+        if (group === "성인 남성" || group === "성인 여성" || group.startsWith("성인")) {
+          adultCount++;
+        } else if (group === "초등부" || group === "유년부" || group === "중고등부") {
+          childCount++;
+        } else if (group === "유치부") {
+          kindergartenCount++;
+        } else if (group === "유아") {
+          toddlerCount++;
+        }
+      }
+    });
+  });
+  
+  const statsHtml = `
+    <strong>🏠 ${visibleFamilies.length}가족</strong>
+    <span class="stats-sep">|</span> 장년 ${adultCount}명
+    <span class="stats-sep">|</span> 유초등 ${childCount}명
+    <span class="stats-sep">|</span> 유치 ${kindergartenCount}명
+    <span class="stats-sep">|</span> 유아 ${toddlerCount}명
+    ${undecidedFamiliesCount > 0 ? `
+      <span class="stats-sep">|</span> 
+      <span style="color: #687873; font-weight: 700;">❓ 미정 ${undecidedFamiliesCount}가족(${undecidedMembersCount}명)</span>
+    ` : ""}
+  `;
+  document.querySelector("#familyCount").innerHTML = statsHtml;
   document.querySelector("#familyTableBody").innerHTML = visibleFamilies.map((family) => {
     const [statusText, statusClass] = statusMap[family.status];
     const brotherAndSister = family.members.filter(m => m[1] === "성인 남성" || m[1] === "성인 여성");

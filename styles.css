@@ -195,7 +195,8 @@ h2, h3, h4, p { margin-top: 0; }
 .family-filter-row { display: flex; align-items: center; gap: 6px; padding: 0 20px 13px; border-bottom: 1px solid var(--line); }
 .filter-chip { padding: 6px 9px; border-radius: 20px; color: #7b8983; background: #f4f7f5; font-size: 11px; }
 .filter-chip.active { color: var(--forest); background: var(--mint); font-weight: 700; }
-.table-count { margin-left: auto; color: var(--muted); font-size: 11px; }
+.table-count { margin-left: auto; color: var(--muted); font-size: 11px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stats-sep { color: #cbd5e1; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
 th { padding: 11px 20px; color: #819088; background: #fbfcfb; border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 700; }
