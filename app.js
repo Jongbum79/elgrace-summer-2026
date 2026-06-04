@@ -3175,10 +3175,10 @@ function renderSchoolView() {
             group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
             
             return `
-              <div class="school-card" style="flex: 1; min-width: 110px; max-width: 250px; border: 1px solid #f1f5f9; border-radius: 8px; padding: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 5px;">
-                <div style="font-size: 10px; font-weight: 800; color: ${group.mapping.color}; border-bottom: 2px solid ${group.mapping.color}30; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">
+              <div class="school-card" style="flex: 1 1 calc(33.33% - 8px); min-width: 90px; border: 1px solid ${group.mapping.color}35; border-radius: 8px; padding: 6px 8px; background: ${group.mapping.color}05; display: flex; flex-direction: column; gap: 5px;">
+                <div style="font-size: 10px; font-weight: 800; background: ${group.mapping.color}; color: #ffffff; padding: 3px 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                   <span>${group.label}</span>
-                  <span style="font-size: 9px; opacity: 0.8;">${group.members.length}명</span>
+                  <span style="font-size: 9px; opacity: 0.9;">${group.members.length}명</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 3px;">
                   ${group.members.map(member => {
