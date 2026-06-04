@@ -365,7 +365,7 @@ textarea { width: 100%; padding: 10px; resize: vertical; outline-color: var(--sa
 .member-form-heading h4 { margin-bottom: 4px; font-size: 13px; }
 .member-form-heading span { color: var(--muted); font-size: 10px; }
 .member-form-copy { grid-column: 1 / 5; }
-.member-attendance-heading { display: grid; grid-column: 5; justify-items: end; gap: 7px; }
+.member-attendance-heading { display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 12px; grid-column: 5; justify-self: end; }
 .family-full-attendance, .member-full-attendance { border-radius: 15px; color: var(--forest); background: #e4f3eb; font-size: 10px; font-weight: 800; }
 .family-full-attendance { padding: 6px 10px; }
 .member-full-attendance { padding: 6px 8px; }
@@ -858,18 +858,14 @@ body.mobile-mode .org-filter-row .filter-chip {
   background: #e8ecea;
 }
 
-.family-day-square.undecided-day {
-  border: 1px dashed #b8c4bf;
-  background: #f8faf9;
-}
-
 .family-undecided-day {
   height: 19px;
   display: grid;
   place-items: center;
   border-radius: 4px;
-  color: #8fa09a;
+  color: #687873;
   background: #eef2f0;
+  border: 1px dashed #cbd5e1;
   font-size: 8px;
   font-weight: 800;
 }

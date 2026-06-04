@@ -460,7 +460,7 @@ function renderDaySquares(periods, externalMeals = [], titlePrefix = "", isUndec
     const isFullDay = availableDayPeriods.length && !hasExternalMeal && availableDayPeriods.every((periodKey) => periods.includes(periodKey));
     const isEmptyDay = availableDayPeriods.length && availableDayPeriods.every((periodKey) => !periods.includes(periodKey));
     if (isUndecided) {
-      return `<span class="family-day-square undecided-day" title="${titlePrefix}${date.shortLabel} · 미정"><b>${date.date}</b><span class="family-undecided-day">미정</span></span>`;
+      return `<span class="family-day-square" title="${titlePrefix}${date.shortLabel} · 미정"><b>${date.date}</b><span class="family-undecided-day">미정</span></span>`;
     }
     if (isFullDay) {
       return `<span class="family-day-square full-day" title="${titlePrefix}${date.shortLabel} · 전체 참석"><b>${date.date}</b><span class="family-full-day">참석</span></span>`;
