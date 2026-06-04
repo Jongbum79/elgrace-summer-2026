@@ -557,10 +557,10 @@ function renderFamilies() {
   
   const statsHtml = `
     <strong>🏠 ${visibleFamilies.length}가족</strong>
-    <span class="stats-sep">|</span> 장년 ${adultCount}명
-    <span class="stats-sep">|</span> 유초등 ${childCount}명
-    <span class="stats-sep">|</span> 유치 ${kindergartenCount}명
-    <span class="stats-sep">|</span> 유아 ${toddlerCount}명
+    <span class="stats-sep">|</span> 장년부 ${adultCount}명
+    <span class="stats-sep">|</span> 유초등부 ${childCount}명
+    <span class="stats-sep">|</span> 유치부 ${kindergartenCount}명
+    <span class="stats-sep">|</span> 유아부 ${toddlerCount}명
     ${undecidedFamiliesCount > 0 ? `
       <span class="stats-sep">|</span> 
       <span style="color: #687873; font-weight: 700;">❓ 미정 ${undecidedFamiliesCount}가족(${undecidedMembersCount}명)</span>
