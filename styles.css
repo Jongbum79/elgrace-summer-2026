@@ -635,17 +635,34 @@ body.desktop-mode .memo {
   font-size: 12px;
   color: var(--muted);
 }
-.org-stats-bar {
+.org-controls-container {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
   margin-bottom: 20px;
   padding: 12px 18px;
   background: var(--background);
   border-radius: 8px;
   border: 1px solid var(--soft-line);
+}
+.org-controls-container .org-stats-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+  padding: 0;
+  background: transparent;
+  border: none;
+  margin: 0;
   font-size: 13px;
   color: var(--ink);
+}
+.org-stats-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .org-stats-item {
   cursor: pointer;
@@ -831,10 +848,20 @@ body.mobile-mode .org-chart-grid {
   grid-template-columns: 1fr;
   gap: 16px;
 }
-body.mobile-mode .org-stats-bar {
+body.mobile-mode .org-controls-container {
+  flex-direction: column;
+  align-items: stretch;
   padding: 10px 12px;
+  gap: 12px;
+}
+body.mobile-mode .org-controls-container .org-stats-bar {
+  padding: 0;
   font-size: 11px;
-  gap: 10px;
+  gap: 6px;
+}
+body.mobile-mode .org-stats-row {
+  justify-content: flex-start;
+  gap: 6px;
 }
 
 /* 조직도 전용 필터 바 및 칩 스타일 */
