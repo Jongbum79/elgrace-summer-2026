@@ -440,6 +440,9 @@ function isMemberFullAttendance(member) {
 }
 
 function getFamilyAttendanceStatus(family) {
+  if (family.status === "absent") {
+    return "absent";
+  }
   const allUndecided = family.members.every(member => member[7] === "undecided");
   if (family.status === "undecided" || allUndecided) {
     return "undecided";
@@ -765,8 +768,16 @@ function getMemberAttendanceStatus(name) {
 }
 
 function matchesOrgFilter(name, filter) {
-  if (filter === "all") return true;
   const att = getMemberAttendanceStatus(name);
+  const family = getFamilyByMemberName(name);
+  if (family && att.status === "undecided") {
+    const familyStatus = getFamilyAttendanceStatus(family);
+    if (familyStatus !== "undecided") {
+      return false;
+    }
+  }
+
+  if (filter === "all") return true;
   if (filter === "registered") return att.status === "full" || att.status === "partial";
   if (filter === "unregistered") return att.status === "unregistered";
   if (filter === "not_in_db") return att.status === "not_in_db";
@@ -791,56 +802,64 @@ function renderOrgChart(genderMode) {
     ? "전체 자매조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다."
     : "전체 형제조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다.";
     
-  let totalCount = 0;
-  let fullCount = 0;
-  let partialCount = 0;
-  let absentCount = 0;
-  let undecidedCount = 0;
-  let unregisteredCount = 0;
-  let notInDbCount = 0;
-  
   const orgFamilies = new Set();
+  const unregisteredPeople = new Set();
+  
   function collectFamily(name) {
     const f = getFamilyByMemberName(name);
-    if (f) orgFamilies.add(f);
-  }
-  
-  function updateStats(name) {
-    totalCount++;
-    collectFamily(name);
-    const att = getMemberAttendanceStatus(name);
-    if (att.status === "full") fullCount++;
-    else if (att.status === "partial") partialCount++;
-    else if (att.status === "absent") absentCount++;
-    else if (att.status === "undecided") undecidedCount++;
-    else if (att.status === "unregistered") unregisteredCount++;
-    else if (att.status === "not_in_db") notInDbCount++;
+    if (f) {
+      orgFamilies.add(f);
+    } else {
+      unregisteredPeople.add(name);
+    }
   }
   
   groupsData.forEach((group) => {
-    updateStats(group.leader);
-    group.members.forEach((m) => updateStats(m));
+    collectFamily(group.leader);
+    group.members.forEach((m) => collectFamily(m));
   });
-  staffData.coordinators.forEach((c) => updateStats(c.name));
-  staffData.otherGroups.forEach((m) => updateStats(m));
+  staffData.coordinators.forEach((c) => collectFamily(c.name));
+  staffData.otherGroups.forEach((m) => collectFamily(m));
   
-  let undecidedFamiliesCount = 0;
+  let fullFamilies = 0;
+  let partialFamilies = 0;
+  let absentFamilies = 0;
+  let undecidedFamilies = 0;
+  
   orgFamilies.forEach((family) => {
-    const isUndecided = family.status === "undecided" || family.members.some(member => member[7] === "undecided");
-    if (isUndecided) {
-      undecidedFamiliesCount++;
+    const status = getFamilyAttendanceStatus(family);
+    if (status === "full") {
+      fullFamilies++;
+    } else if (status === "partial") {
+      partialFamilies++;
+    } else if (status === "undecided") {
+      undecidedFamilies++;
+    } else if (status === "absent") {
+      absentFamilies++;
     }
   });
   
+  let unregisteredFamilies = 0;
+  let notInDbFamilies = 0;
+  unregisteredPeople.forEach((name) => {
+    const att = getMemberAttendanceStatus(name);
+    if (att.status === "unregistered") {
+      unregisteredFamilies++;
+    } else if (att.status === "not_in_db") {
+      notInDbFamilies++;
+    }
+  });
+  
+  const totalFamiliesSum = orgFamilies.size + unregisteredFamilies + notInDbFamilies;
+  
   statsBar.innerHTML = `
-    <div class="org-stats-item"><span>전체 인원:</span><b>${totalCount}명</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-full">풀참:</span><b>${fullCount}명</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-partial">부분참석:</span><b>${partialCount}명</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-absent">불참:</span><b>${absentCount}명</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-undecided">미정 인원:</span><b>${undecidedCount}명</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-undecided-family" style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-style: normal; color: #505f5a; background: #e8ecea; border: 1px solid #cbd5e1;">미정 가정:</span><b>${undecidedFamiliesCount}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-unregistered">미등록:</span><b>${unregisteredCount}명</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-not_in_db">미입력:</span><b>${notInDbCount}명</b></div>
+    <div class="org-stats-item"><span>전체 가족:</span><b>${totalFamiliesSum}가족</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-full">풀참 가족:</span><b>${fullFamilies}가족</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-partial">부분참석 가족:</span><b>${partialFamilies}가족</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-absent">불참 가족:</span><b>${absentFamilies}가족</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-undecided">미정 가족:</span><b>${undecidedFamilies}가족</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-unregistered">미등록:</span><b>${unregisteredFamilies}가족</b></div>
+    <div class="org-stats-item"><span class="org-badge badge-not_in_db">미입력:</span><b>${notInDbFamilies}가족</b></div>
   `;
   
   let html = "";
