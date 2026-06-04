@@ -899,31 +899,32 @@ function matchesOrgFilter(name, filter, groupFilter = null) {
 }
 
 function renderOrgTimeFilter() {
-  const dateSelect = document.querySelector("#orgTimeFilterDate");
-  const periodSelect = document.querySelector("#orgTimeFilterPeriod");
+  const container = document.querySelector("#orgTimeFilterDays");
+  if (!container) return;
   
-  if (!dateSelect || !periodSelect) return;
+  const availablePeriods = getAvailableAttendancePeriods();
   
-  // 날짜 옵션 채우기 (이미 채워져 있지 않다면)
-  if (dateSelect.options.length <= 1) {
-    let optionsHtml = `<option value="">날짜 선택</option>`;
-    retreatDates.forEach(date => {
-      const match = date.label.match(/(\d+월\s*\d+일)\s*([일월화수목금토])요일/);
-      const optionText = match ? `${match[1]}(${match[2]})` : date.label;
-      optionsHtml += `<option value="${date.shortLabel}">${optionText}</option>`;
-    });
-    dateSelect.innerHTML = optionsHtml;
-  }
-  
-  // 현재 선택된 값 반영
-  if (selectedOrgTimeSlot) {
-    const [selDate, selPeriod] = selectedOrgTimeSlot.split("-");
-    dateSelect.value = selDate;
-    periodSelect.value = selPeriod;
-  } else {
-    dateSelect.value = "";
-    periodSelect.value = "";
-  }
+  container.innerHTML = retreatDates.map((date) => {
+    return `
+      <div class="attendance-day" aria-label="${date.label} 참석 시간" style="cursor: default;">
+        ${attendancePeriods.map((period) => {
+          const periodKey = `${date.shortLabel}-${period.key}`;
+          const active = selectedOrgTimeSlot === periodKey;
+          const disabled = !availablePeriods.includes(periodKey);
+          
+          return `
+            <button type="button" 
+              class="attendance-segment ${active ? "selected" : ""} ${disabled ? "unavailable" : ""}" 
+              data-slot="${periodKey}" 
+              aria-label="${date.label} ${period.label}${disabled ? " 없음" : ""}" 
+              ${disabled ? "disabled" : ""}
+              style="cursor: ${disabled ? "not-allowed" : "pointer"};"
+            >${period.label}</button>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }).join("");
 }
 
 function renderOrgChart(genderMode) {
@@ -2016,6 +2017,16 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("#familyFullAttendance")) toggleFullAttendance(document.querySelector("#memberFormList"));
   if (mealGroup) openMealDrawer(mealSchedule.find((meal) => meal.id === mealGroup.dataset.mealId), mealGroup.dataset.mealGroup);
   
+  const orgTimeSegmentBtn = event.target.closest("#orgTimeFilterDays .attendance-segment");
+  if (orgTimeSegmentBtn) {
+    const slot = orgTimeSegmentBtn.dataset.slot;
+    if (selectedOrgTimeSlot === slot) {
+      selectedOrgTimeSlot = null;
+    } else {
+      selectedOrgTimeSlot = slot;
+    }
+    renderOrgChart(currentOrgMode);
+  }
   if (clearOrgTimeFilter) {
     selectedOrgTimeSlot = null;
     renderOrgChart(currentOrgMode);
@@ -2383,20 +2394,6 @@ document.querySelector("#loadMoreButton").addEventListener("click", () => showTo
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
 document.querySelector("#mealDownloadButton").addEventListener("click", () => showToast("식사별 명단 다운로드를 준비했습니다."));
 
-document.querySelector("#orgTimeFilterDate")?.addEventListener("change", handleOrgTimeFilterChange);
-document.querySelector("#orgTimeFilterPeriod")?.addEventListener("change", handleOrgTimeFilterChange);
-
-function handleOrgTimeFilterChange() {
-  const dateVal = document.querySelector("#orgTimeFilterDate")?.value;
-  const periodVal = document.querySelector("#orgTimeFilterPeriod")?.value;
-  
-  if (dateVal && periodVal) {
-    selectedOrgTimeSlot = `${dateVal}-${periodVal}`;
-  } else {
-    selectedOrgTimeSlot = null;
-  }
-  renderOrgChart(currentOrgMode);
-}
 
 // ==========================================
 // AI CHATBOT FUNCTIONALITY
