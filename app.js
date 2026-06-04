@@ -2906,29 +2906,29 @@ function downloadList() {
 }
 
 const birthYearMapping = {
-  2008: { label: "고등학교 3학년 (2008년생)", category: "중고등부", weight: 1, color: "#1e3a8a" },
-  2009: { label: "고등학교 2학년 (2009년생)", category: "중고등부", weight: 2, color: "#1d4ed8" },
-  2010: { label: "고등학교 1학년 (2010년생)", category: "중고등부", weight: 3, color: "#2563eb" },
-  2011: { label: "중학교 3학년 (2011년생)", category: "중고등부", weight: 4, color: "#3b82f6" },
-  2012: { label: "중학교 2학년 (2012년생)", category: "중고등부", weight: 5, color: "#60a5fa" },
-  2013: { label: "중학교 1학년 (2013년생)", category: "중고등부", weight: 6, color: "#93c5fd" },
+  2008: { label: "고3", category: "중고등부", weight: 1, color: "#1e3a8a" },
+  2009: { label: "고2", category: "중고등부", weight: 2, color: "#1d4ed8" },
+  2010: { label: "고1", category: "중고등부", weight: 3, color: "#2563eb" },
+  2011: { label: "중3", category: "중고등부", weight: 4, color: "#3b82f6" },
+  2012: { label: "중2", category: "중고등부", weight: 5, color: "#60a5fa" },
+  2013: { label: "중1", category: "중고등부", weight: 6, color: "#93c5fd" },
   
-  2014: { label: "초등학교 6학년 (2014년생)", category: "초등부", weight: 11, color: "#b45309" },
-  2015: { label: "초등학교 5학년 (2015년생)", category: "초등부", weight: 12, color: "#d97706" },
-  2016: { label: "초등학교 4학년 (2016년생)", category: "초등부", weight: 13, color: "#f59e0b" },
+  2014: { label: "초6", category: "초등부", weight: 11, color: "#b45309" },
+  2015: { label: "초5", category: "초등부", weight: 12, color: "#d97706" },
+  2016: { label: "초4", category: "초등부", weight: 13, color: "#f59e0b" },
   
-  2017: { label: "초등학교 3학년 (2017년생)", category: "유년부", weight: 21, color: "#047857" },
-  2018: { label: "초등학교 2학년 (2018년생)", category: "유년부", weight: 22, color: "#059669" },
-  2019: { label: "초등학교 1학년 (2019년생)", category: "유년부", weight: 23, color: "#10b981" },
+  2017: { label: "초3", category: "유년부", weight: 21, color: "#047857" },
+  2018: { label: "초2", category: "유년부", weight: 22, color: "#059669" },
+  2019: { label: "초1", category: "유년부", weight: 23, color: "#10b981" },
   
-  2020: { label: "유치부2 (7세 - 2020년생)", category: "유치부2", weight: 31, color: "#db2777" },
-  2021: { label: "유치부2 (6세 - 2021년생)", category: "유치부2", weight: 32, color: "#ec4899" },
-  2022: { label: "유치부1 (5세 - 2022년생)", category: "유치부1", weight: 41, color: "#be185d" },
-  2023: { label: "유치부1 (4세 - 2023년생)", category: "유치부1", weight: 42, color: "#f43f5e" },
+  2020: { label: "7세", category: "유치부2", weight: 31, color: "#db2777" },
+  2021: { label: "6세", category: "유치부2", weight: 32, color: "#ec4899" },
+  2022: { label: "5세", category: "유치부1", weight: 41, color: "#be185d" },
+  2023: { label: "4세", category: "유치부1", weight: 42, color: "#f43f5e" },
   
-  2024: { label: "유아부 (3세 - 2024년생)", category: "유아", weight: 51, color: "#4d7c0f" },
-  2025: { label: "유아부 (2세 - 2025년생)", category: "유아", weight: 52, color: "#65a30d" },
-  2026: { label: "유아부 (1세 - 2026년생)", category: "유아", weight: 53, color: "#84cc16" },
+  2024: { label: "3세", category: "유아", weight: 51, color: "#4d7c0f" },
+  2025: { label: "2세", category: "유아", weight: 52, color: "#65a30d" },
+  2026: { label: "1세", category: "유아", weight: 53, color: "#84cc16" },
 };
 
 function getChildBirthYear(childName, familyName) {
@@ -2987,15 +2987,15 @@ function renderSchoolView() {
         let mapping = birthYear ? birthYearMapping[birthYear] : null;
         if (!mapping) {
           if (group === "중고등부") {
-            mapping = { label: "중고등부 (학년 미정)", category: "중고등부", weight: 10, color: "#94a3b8" };
+            mapping = { label: "미정", category: "중고등부", weight: 10, color: "#94a3b8" };
           } else if (group === "초등부") {
-            mapping = { label: "초등부 (학년 미정)", category: "초등부", weight: 20, color: "#94a3b8" };
+            mapping = { label: "미정", category: "초등부", weight: 20, color: "#94a3b8" };
           } else if (group === "유년부") {
-            mapping = { label: "유년부 (학년 미정)", category: "유년부", weight: 30, color: "#94a3b8" };
+            mapping = { label: "미정", category: "유년부", weight: 30, color: "#94a3b8" };
           } else if (group === "유치부") {
-            mapping = { label: "유치부 (나이 미정)", category: "유치부", weight: 45, color: "#94a3b8" };
+            mapping = { label: "미정", category: "유치부", weight: 45, color: "#94a3b8" };
           } else {
-            mapping = { label: "유아 (나이 미정)", category: "유아", weight: 60, color: "#94a3b8" };
+            mapping = { label: "미정", category: "유아", weight: 60, color: "#94a3b8" };
           }
         }
         
@@ -3005,7 +3005,6 @@ function renderSchoolView() {
           birthYear,
           mapping,
           familyName: family.name,
-          room: family.room || "미배정",
           leader: family.leader
         });
       }
@@ -3034,7 +3033,7 @@ function renderSchoolView() {
     <span style="color: #cbd5e1;">|</span>
     <span>🟡 초등/유년부: ${stats.elem}명</span>
     <span style="color: #cbd5e1;">|</span>
-    <span>🔴 유치부(1,2): ${stats.kinder}명</span>
+    <span>🔴 유치부: ${stats.kinder}명</span>
     <span style="color: #cbd5e1;">|</span>
     <span>🟢 유아부: ${stats.toddler}명</span>
   `;
@@ -3048,51 +3047,81 @@ function renderSchoolView() {
     return;
   }
   
-  const grouped = {};
-  activeChildren.forEach((child) => {
-    const label = child.mapping.label;
-    if (!grouped[label]) {
-      grouped[label] = {
-        label,
-        mapping: child.mapping,
-        members: []
-      };
+  const departments = [
+    { key: "중고등부", label: "중고등부", color: "#2563eb", children: [] },
+    { key: "초등부", label: "초등부", color: "#d97706", children: [] },
+    { key: "유년부", label: "유년부", color: "#059669", children: [] },
+    { key: "유치부", label: "유치부", color: "#db2777", children: [] },
+    { key: "유아", label: "유아부", color: "#65a30d", children: [] },
+  ];
+  
+  activeChildren.forEach(child => {
+    let deptKey = child.mapping.category;
+    if (deptKey === "유치부1" || deptKey === "유치부2") {
+      deptKey = "유치부";
     }
-    grouped[label].members.push(child);
+    const dept = departments.find(d => d.key === deptKey || (deptKey === "유치부" && d.key === "유치부") || (deptKey === "유아" && d.key === "유아"));
+    if (dept) {
+      dept.children.push(child);
+    } else {
+      const fallbackDept = departments.find(d => d.key === child.group) || departments[departments.length - 1];
+      fallbackDept.children.push(child);
+    }
   });
   
-  const sortedGroups = Object.values(grouped).sort((a, b) => a.mapping.weight - b.mapping.weight);
-  
-  container.innerHTML = `
-    <div class="school-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-      ${sortedGroups.map((group) => {
-        group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-        
-        return `
-          <div class="school-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; gap: 12px;">
-            <h4 style="margin: 0; color: #1e293b; border-bottom: 3px solid ${group.mapping.color}; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800;">
-              <span>${group.label}</span>
-              <span style="font-size: 11px; background: ${group.mapping.color}15; color: ${group.mapping.color}; padding: 2px 8px; border-radius: 20px; font-weight: 800;">${group.members.length}명</span>
-            </h4>
-            <div class="school-members" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
-              ${group.members.map((member) => {
-                return `
-                  <div class="school-member-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 6px; font-size: 12px;">
-                    <span style="font-weight: 700; color: #334155;">${member.name}</span>
-                    <span style="color: #64748b; font-size: 11px; display: flex; align-items: center; gap: 4px;">
-                      <span>🏠 ${member.familyName.replace(" 가족", "")}</span>
-                      <span style="color: #cbd5e1;">|</span>
-                      <span style="color: #0f766e; font-weight: 600;">🛏️ ${member.room}</span>
-                    </span>
-                  </div>
-                `;
-              }).join("")}
-            </div>
-          </div>
-        `;
-      }).join("")}
-    </div>
-  `;
+  container.innerHTML = departments.map(dept => {
+    if (dept.children.length === 0) return "";
+    
+    const grouped = {};
+    dept.children.forEach(child => {
+      const label = child.mapping.label;
+      if (!grouped[label]) {
+        grouped[label] = {
+          label,
+          mapping: child.mapping,
+          members: []
+        };
+      }
+      grouped[label].members.push(child);
+    });
+    
+    const sortedGroups = Object.values(grouped).sort((a, b) => a.mapping.weight - b.mapping.weight);
+    
+    return `
+      <div class="school-department-row" style="margin-bottom: 16px; background: #ffffff; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 8px;">
+        <h4 style="margin: 0; color: #334155; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 14px; background: ${dept.color}; border-radius: 3px; display: inline-block;"></span>
+          <span>${dept.label}</span>
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${dept.children.length}명)</span>
+        </h4>
+        <div class="school-cards-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;">
+          ${sortedGroups.map(group => {
+            group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+            
+            return `
+              <div class="school-card" style="flex: 1; min-width: 110px; max-width: 250px; border: 1px solid #f1f5f9; border-radius: 8px; padding: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 5px;">
+                <div style="font-size: 10px; font-weight: 800; color: ${group.mapping.color}; border-bottom: 2px solid ${group.mapping.color}30; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">
+                  <span>${group.label}</span>
+                  <span style="font-size: 9px; opacity: 0.8;">${group.members.length}명</span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 3px;">
+                  ${group.members.map(member => {
+                    const parentShortName = member.leader.replace(" 가족", "");
+                    return `
+                      <span class="school-member-pill" style="font-size: 10px; padding: 2px 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; display: inline-flex; align-items: center; gap: 1px;" title="가족: ${member.familyName}">
+                        <strong style="color: #334155; font-weight: 800;">${member.name}</strong>
+                        <span style="color: #94a3b8; font-size: 9px; font-weight: 500;">(${parentShortName})</span>
+                      </span>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function downloadSchoolList() {
@@ -3115,11 +3144,11 @@ function downloadSchoolList() {
         const birthYear = getChildBirthYear(name, family.name);
         let mapping = birthYear ? birthYearMapping[birthYear] : null;
         if (!mapping) {
-          if (group === "중고등부") mapping = { label: "중고등부 (학년 미정)", category: "중고등부" };
-          else if (group === "초등부") mapping = { label: "초등부 (학년 미정)", category: "초등부" };
-          else if (group === "유년부") mapping = { label: "유년부 (학년 미정)", category: "유년부" };
-          else if (group === "유치부") mapping = { label: "유치부 (나이 미정)", category: "유치부" };
-          else mapping = { label: "유아 (나이 미정)", category: "유아" };
+          if (group === "중고등부") mapping = { label: "미정", category: "중고등부" };
+          else if (group === "초등부") mapping = { label: "미정", category: "초등부" };
+          else if (group === "유년부") mapping = { label: "미정", category: "유년부" };
+          else if (group === "유치부") mapping = { label: "미정", category: "유치부" };
+          else mapping = { label: "미정", category: "유아" };
         }
         activeChildren.push({ name, group, birthYear, mapping, familyName: family.name, room: family.room || "미배정", leader: family.leader });
       }
