@@ -51,6 +51,7 @@ let currentOrgMode = "family";
 let orgActiveFilter = "all";
 let selectedOrgTimeSlot = null;
 let selectedSchoolTimeSlot = null;
+let selectedSchoolDeptFilter = "all";
 
 const sisterGroupsData = [
   { id: "1조", leader: "장세연", members: ["최찬미", "정래윤", "원지희", "이주영"] },
@@ -2076,6 +2077,16 @@ document.addEventListener("click", (event) => {
     }
     renderSchoolView();
   }
+  const schoolStatFilterChip = event.target.closest(".school-stat-filter-chip");
+  if (schoolStatFilterChip) {
+    const filterVal = schoolStatFilterChip.dataset.filter;
+    if (selectedSchoolDeptFilter === filterVal) {
+      selectedSchoolDeptFilter = "all";
+    } else {
+      selectedSchoolDeptFilter = filterVal;
+    }
+    renderSchoolView();
+  }
 
   const clickedBtn = event.target.closest(".sister-member-btn, .brother-member-btn");
   if (clickedBtn) {
@@ -3151,16 +3162,30 @@ function renderSchoolView() {
     else stats.toddler++;
   });
   
+  const getSpanStyle = (filterKey) => {
+    const isActive = selectedSchoolDeptFilter === filterKey;
+    return `
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      ${isActive ? "background: #1e5a45; color: #ffffff; font-weight: 800; border: 1px solid #113f30;" : "background: #ffffff; color: #475569; border: 1px solid #cbd5e1;"}
+    `;
+  };
+
   statsBar.innerHTML = `
-    <span><strong>🏫 총 참석 자녀:</strong> ${activeChildren.length}명</span>
-    <span style="color: #cbd5e1;">|</span>
-    <span>🔵 중고등부: ${stats.youth}명</span>
-    <span style="color: #cbd5e1;">|</span>
-    <span>🟡 초등/유년부: ${stats.elem}명</span>
-    <span style="color: #cbd5e1;">|</span>
-    <span>🔴 유치부: ${stats.kinder}명</span>
-    <span style="color: #cbd5e1;">|</span>
-    <span>🟢 유아부: ${stats.toddler}명</span>
+    <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}"><strong>🏫 총 참석 자녀:</strong> &nbsp;${activeChildren.length}명</span>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">🔵 중고등부: &nbsp;${stats.youth}명</span>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">🟡 초등/유년부: &nbsp;${stats.elem}명</span>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">🔴 유치부: &nbsp;${stats.kinder}명</span>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">🟢 유아부: &nbsp;${stats.toddler}명</span>
   `;
   
   if (activeChildren.length === 0) {
@@ -3195,6 +3220,15 @@ function renderSchoolView() {
   });
   
   container.innerHTML = departments.map(dept => {
+    if (selectedSchoolDeptFilter !== "all") {
+      let matched = false;
+      if (selectedSchoolDeptFilter === "youth" && dept.key === "중고등부") matched = true;
+      if (selectedSchoolDeptFilter === "elem" && (dept.key === "초등부" || dept.key === "유년부")) matched = true;
+      if (selectedSchoolDeptFilter === "kinder" && dept.key === "유치부") matched = true;
+      if (selectedSchoolDeptFilter === "toddler" && dept.key === "유아") matched = true;
+      if (!matched) return "";
+    }
+    
     if (dept.children.length === 0) return "";
     
     const grouped = {};
@@ -3272,6 +3306,14 @@ function downloadSchoolList() {
             return;
           }
         }
+        if (selectedSchoolDeptFilter !== "all") {
+          let matched = false;
+          if (selectedSchoolDeptFilter === "youth" && group === "중고등부") matched = true;
+          if (selectedSchoolDeptFilter === "elem" && (group === "초등부" || group === "유년부")) matched = true;
+          if (selectedSchoolDeptFilter === "kinder" && group === "유치부") matched = true;
+          if (selectedSchoolDeptFilter === "toddler" && group === "유아") matched = true;
+          if (!matched) return;
+        }
         const birthYear = getChildBirthYear(name, family.name);
         let mapping = birthYear ? birthYearMapping[birthYear] : null;
         if (!mapping) {
@@ -3323,7 +3365,9 @@ function downloadSchoolList() {
     }
   }
   
-  const fileName = `교회학교${timeLabel}_명단.xlsx`;
+  const deptMap = { youth: "중고등부", elem: "초등유년부", kinder: "유치부", toddler: "유아부" };
+  const deptLabel = selectedSchoolDeptFilter !== "all" ? `_${deptMap[selectedSchoolDeptFilter]}` : "";
+  const fileName = `교회학교${deptLabel}${timeLabel}_명단.xlsx`;
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "교회학교 명단");
