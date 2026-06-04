@@ -8,7 +8,7 @@ const normalizeName = (str) => String(str || "").replace(/\s+/g, "").replace(/\(
 const slots = ["08:00", "12:00", "18:00", "22:00"];
 const categories = [
   { key: "adult", label: "장년부", color: "#1e5a45" },
-  { key: "youth", label: "중·고등부", color: "#6c9ecf" },
+  { key: "youth", label: "중·고등/대학부", color: "#6c9ecf" },
   { key: "elementary", label: "초등부", color: "#e3bf62" },
   { key: "preschool", label: "유치부 이하", color: "#d9879f" },
 ];
@@ -134,7 +134,7 @@ let newMemberId = 0;
 let dateDrag = null;
 let editingFamilyId = null;
 
-const childGroups = ["중고등부", "초등부", "유년부", "유치부", "유아"];
+const childGroups = ["대학부", "중고등부", "초등부", "유년부", "유치부", "유아"];
 const attendancePeriods = [
   { key: "breakfast", label: "아" },
   { key: "lunch", label: "점" },
@@ -522,6 +522,7 @@ function renderFamilies() {
   const visibleFamilies = getFilteredFamilies();
   
   let adultCount = 0;
+  let collegeCount = 0;
   let childCount = 0;
   let kindergartenCount = 0;
   let toddlerCount = 0;
@@ -544,6 +545,8 @@ function renderFamilies() {
       } else if (!isAbsent) {
         if (group === "성인 남성" || group === "성인 여성" || group.startsWith("성인")) {
           adultCount++;
+        } else if (group === "대학부") {
+          collegeCount++;
         } else if (group === "초등부" || group === "유년부" || group === "중고등부") {
           childCount++;
         } else if (group === "유치부") {
@@ -558,6 +561,7 @@ function renderFamilies() {
   const statsHtml = `
     <strong>🏠 ${visibleFamilies.length}가족</strong>
     <span class="stats-sep">|</span> 장년부 ${adultCount}명
+    <span class="stats-sep">|</span> 대학부 ${collegeCount}명
     <span class="stats-sep">|</span> 유초등부 ${childCount}명
     <span class="stats-sep">|</span> 유치부 ${kindergartenCount}명
     <span class="stats-sep">|</span> 유아부 ${toddlerCount}명
@@ -791,16 +795,24 @@ function isNameRegistered(name) {
   return getNameRegistrationStatus(name) !== null;
 }
 
-function getFamilyByMemberName(name) {
+function getFamilyByMemberName(name, groupFilter = null) {
   const target = normalizeName(name);
   return families.find((family) => 
-    family.members && Array.isArray(family.members) && family.members.some((member) => member && normalizeName(member[0]) === target)
+    family.members && Array.isArray(family.members) && family.members.some((member) => {
+      if (!member) return false;
+      const nameMatches = normalizeName(member[0]) === target;
+      if (!nameMatches) return false;
+      if (groupFilter) {
+        return member[1] === groupFilter;
+      }
+      return true;
+    })
   );
 }
 
-function getMemberAttendanceStatus(name) {
+function getMemberAttendanceStatus(name, groupFilter = null) {
   const target = normalizeName(name);
-  const foundFamily = getFamilyByMemberName(name);
+  const foundFamily = getFamilyByMemberName(name, groupFilter);
   
   if (!foundFamily) {
     const isInDb = churchFamilyDb.some((row) =>
@@ -814,7 +826,14 @@ function getMemberAttendanceStatus(name) {
     return { status: "absent", label: "불참" };
   }
   
-  const member = foundFamily.members.find((m) => normalizeName(m[0]) === target);
+  const member = foundFamily.members.find((m) => {
+    const nameMatches = normalizeName(m[0]) === target;
+    if (!nameMatches) return false;
+    if (groupFilter) {
+      return m[1] === groupFilter;
+    }
+    return true;
+  });
   if (!member) {
     const isInDb = churchFamilyDb.some((row) =>
       Object.values(row).some((val) => normalizeName(val) === target)
@@ -835,9 +854,9 @@ function getMemberAttendanceStatus(name) {
   return isFull ? { status: "full", label: "풀참" } : { status: "partial", label: "부분참석" };
 }
 
-function matchesOrgFilter(name, filter) {
-  const att = getMemberAttendanceStatus(name);
-  const family = getFamilyByMemberName(name);
+function matchesOrgFilter(name, filter, groupFilter = null) {
+  const att = getMemberAttendanceStatus(name, groupFilter);
+  const family = getFamilyByMemberName(name, groupFilter);
   if (family && att.status === "undecided") {
     const familyStatus = getFamilyAttendanceStatus(family);
     if (familyStatus !== "undecided") {
@@ -872,9 +891,10 @@ function renderOrgChart(genderMode) {
     
   const orgFamilies = new Set();
   const unregisteredPeople = new Set();
+  const groupFilter = isSister ? "성인 여성" : "성인 남성";
   
   function collectFamily(name) {
-    const f = getFamilyByMemberName(name);
+    const f = getFamilyByMemberName(name, groupFilter);
     if (f) {
       orgFamilies.add(f);
     } else {
@@ -910,7 +930,7 @@ function renderOrgChart(genderMode) {
   let unregisteredFamilies = 0;
   let notInDbFamilies = 0;
   unregisteredPeople.forEach((name) => {
-    const att = getMemberAttendanceStatus(name);
+    const att = getMemberAttendanceStatus(name, groupFilter);
     if (att.status === "unregistered") {
       unregisteredFamilies++;
     } else if (att.status === "not_in_db") {
@@ -933,7 +953,7 @@ function renderOrgChart(genderMode) {
   let html = "";
   
   function makeNodeHtml(name, roleLabel, btnClassPrefix) {
-    const att = getMemberAttendanceStatus(name);
+    const att = getMemberAttendanceStatus(name, groupFilter);
     const badgeClass = `badge-${att.status}`;
     const btnClass = `${btnClassPrefix}-member-btn`;
     const isLeader = roleLabel ? "leader" : "";
@@ -944,7 +964,7 @@ function renderOrgChart(genderMode) {
     const showLabel = roleLabel && roleLabel !== "조장";
     
     // Check if this node matches the active filter
-    const visible = matchesOrgFilter(name, orgActiveFilter);
+    const visible = matchesOrgFilter(name, orgActiveFilter, groupFilter);
     const displayStyle = visible ? "" : "display: none !important;";
       
     return `
@@ -956,8 +976,8 @@ function renderOrgChart(genderMode) {
   }
   
   groupsData.forEach((group) => {
-    const leaderVisible = matchesOrgFilter(group.leader, orgActiveFilter);
-    const visibleMembers = group.members.filter((m) => matchesOrgFilter(m, orgActiveFilter));
+    const leaderVisible = matchesOrgFilter(group.leader, orgActiveFilter, groupFilter);
+    const visibleMembers = group.members.filter((m) => matchesOrgFilter(m, orgActiveFilter, groupFilter));
     
     if (!leaderVisible && visibleMembers.length === 0) {
       return; // Skip rendering this group card completely if no one matches!
@@ -981,8 +1001,8 @@ function renderOrgChart(genderMode) {
     `;
   });
   
-  const visibleCoordinators = staffData.coordinators.filter((c) => matchesOrgFilter(c.name, orgActiveFilter));
-  const visibleOtherGroups = staffData.otherGroups.filter((m) => matchesOrgFilter(m, orgActiveFilter));
+  const visibleCoordinators = staffData.coordinators.filter((c) => matchesOrgFilter(c.name, orgActiveFilter, groupFilter));
+  const visibleOtherGroups = staffData.otherGroups.filter((m) => matchesOrgFilter(m, orgActiveFilter, groupFilter));
   
   if (visibleCoordinators.length > 0 || visibleOtherGroups.length > 0) {
     const showConnector = visibleCoordinators.length > 0 && visibleOtherGroups.length > 0;
@@ -1276,6 +1296,7 @@ var closeBrotherGroupDrawer = function() {
 
 function getCategoryKey(group) {
   if (["성인 남성", "성인남성", "성인 여성", "성인여성", "장년부", "장년"].includes(group)) return "adult";
+  if (["대학부", "대학"].includes(group)) return "youth";
   if (["중·고등부", "중고등부", "청소년"].includes(group)) return "youth";
   if (["초등부", "유년부", "어린이"].includes(group)) return "elementary";
   if (["유치부", "유아", "미취학"].includes(group)) return "preschool";
@@ -1932,7 +1953,7 @@ document.addEventListener("click", (event) => {
     const isBrother = clickedBtn.classList.contains("brother-member-btn");
     const name = clickedBtn.dataset.name;
 
-    const registeredFamily = getFamilyByMemberName(name);
+    const registeredFamily = getFamilyByMemberName(name, isBrother ? "성인 남성" : "성인 여성");
     if (registeredFamily) {
       toggleModal(true, registeredFamily);
       return;
@@ -1942,9 +1963,27 @@ document.addEventListener("click", (event) => {
     const searchName = normalizeName(name);
     const isDbEmpty = !churchFamilyDb || churchFamilyDb.length === 0;
 
-    const familyRow = churchFamilyDb.find((row) =>
-      Object.values(row).some((val) => normalizeName(val) === searchName)
-    );
+    const familyRow = churchFamilyDb.find((row) => {
+      if (isBrother) {
+        const brotherKey = Object.keys(row).find((key) => key.match(/형제|남편|아빠/) && !key.match(/생년월일|연락처|나이/));
+        if (brotherKey && normalizeName(row[brotherKey]) === searchName) return true;
+        
+        const sisterKey = Object.keys(row).find((key) => key.match(/자매|부인|아내/) && !key.match(/생년월일|연락처|나이/));
+        return Object.keys(row).some(key => {
+          if (key === sisterKey) return false;
+          return normalizeName(row[key]) === searchName;
+        });
+      } else {
+        const sisterKey = Object.keys(row).find((key) => key.match(/자매|부인|아내/) && !key.match(/생년월일|연락처|나이/));
+        if (sisterKey && normalizeName(row[sisterKey]) === searchName) return true;
+        
+        const brotherKey = Object.keys(row).find((key) => key.match(/형제|남편|아빠/) && !key.match(/생년월일|연락처|나이/));
+        return Object.keys(row).some(key => {
+          if (key === brotherKey) return false;
+          return normalizeName(row[key]) === searchName;
+        });
+      }
+    });
 
     toggleModal(true);
     setTimeout(() => {
