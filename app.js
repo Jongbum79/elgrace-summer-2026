@@ -49,6 +49,7 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 let families = [];
 let currentOrgMode = "family";
 let orgActiveFilter = "all";
+let selectedOrgTimeSlot = null;
 
 const sisterGroupsData = [
   { id: "1조", leader: "장세연", members: ["최찬미", "정래윤", "원지희", "이주영"] },
@@ -865,6 +866,18 @@ function getMemberAttendanceStatus(name, groupFilter = null) {
 }
 
 function matchesOrgFilter(name, filter, groupFilter = null) {
+  if (selectedOrgTimeSlot) {
+    const family = getFamilyByMemberName(name, groupFilter);
+    if (!family || family.status === "absent") return false;
+    const member = family.members.find(m => normalizeName(m[0]) === normalizeName(name) && (!groupFilter || m[1] === groupFilter));
+    if (!member || member[7] === "undecided") return false;
+    
+    const periods = getMemberAttendancePeriods(member);
+    if (!periods.includes(selectedOrgTimeSlot)) {
+      return false;
+    }
+  }
+
   const att = getMemberAttendanceStatus(name, groupFilter);
   const family = getFamilyByMemberName(name, groupFilter);
   if (family && att.status === "undecided") {
@@ -885,7 +898,36 @@ function matchesOrgFilter(name, filter, groupFilter = null) {
   return true;
 }
 
+function renderOrgTimeFilter() {
+  const container = document.querySelector("#orgTimeFilterSlots");
+  if (!container) return;
+  
+  const availablePeriods = getAvailableAttendancePeriods();
+  
+  container.innerHTML = retreatDates.map((date) => {
+    return `
+      <div class="org-time-date-group" style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; padding: 6px; border-radius: 6px; border: 1px solid #f1f5f9; min-width: 90px; align-items: center;">
+        <span style="font-size: 10px; font-weight: 800; color: #64748b;">${date.shortLabel}</span>
+        <div style="display: flex; gap: 3px;">
+          ${attendancePeriods.map(period => {
+            const slotKey = `${date.shortLabel}-${period.key}`;
+            const active = selectedOrgTimeSlot === slotKey;
+            const disabled = !availablePeriods.includes(slotKey);
+            
+            const btnStyle = active 
+              ? "background: #1e5a45; color: #ffffff;" 
+              : (disabled ? "background: #f1f5f9; color: #cbd5e1; cursor: not-allowed;" : "background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; cursor: pointer;");
+              
+            return `<button type="button" class="org-time-segment-btn ${active ? 'active' : ''}" data-slot="${slotKey}" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; border: none; font-weight: 800; ${btnStyle}" ${disabled ? 'disabled' : ''}>${period.label}</button>`;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 function renderOrgChart(genderMode) {
+  renderOrgTimeFilter();
   const isSister = genderMode === "sister";
   const groupsData = isSister ? sisterGroupsData : brotherGroupsData;
   const staffData = isSister ? sisterStaffData : brotherStaffData;
@@ -1900,6 +1942,8 @@ document.addEventListener("click", (event) => {
   const mealGroup = event.target.closest(".meal-group-button");
   const modeTab = event.target.closest(".mode-tab");
   const refreshBtn = event.target.closest("#refreshParticipantsButton");
+  const orgTimeBtn = event.target.closest(".org-time-segment-btn");
+  const clearOrgTimeFilter = event.target.closest("#clearOrgTimeFilter");
   
   if (modeButton) setViewMode(modeButton.dataset.mode);
   if (navItem) {
@@ -1971,6 +2015,20 @@ document.addEventListener("click", (event) => {
   if (event.target.closest(".member-undecided-attendance")) toggleMemberUndecided(event.target.closest(".member-form-row"));
   if (event.target.closest("#familyFullAttendance")) toggleFullAttendance(document.querySelector("#memberFormList"));
   if (mealGroup) openMealDrawer(mealSchedule.find((meal) => meal.id === mealGroup.dataset.mealId), mealGroup.dataset.mealGroup);
+  
+  if (orgTimeBtn) {
+    const slot = orgTimeBtn.dataset.slot;
+    if (selectedOrgTimeSlot === slot) {
+      selectedOrgTimeSlot = null;
+    } else {
+      selectedOrgTimeSlot = slot;
+    }
+    renderOrgChart(currentOrgMode);
+  }
+  if (clearOrgTimeFilter) {
+    selectedOrgTimeSlot = null;
+    renderOrgChart(currentOrgMode);
+  }
 
   const clickedBtn = event.target.closest(".sister-member-btn, .brother-member-btn");
   if (clickedBtn) {
