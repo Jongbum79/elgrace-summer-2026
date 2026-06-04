@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260605_0120" />
+    <link rel="stylesheet" href="./styles.css?v=20260605_0130" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
@@ -155,6 +155,7 @@
             <button class="mode-tab active" data-mode="family">👪 가족별 정보</button>
             <button class="mode-tab" data-mode="sister">👩 자매조 조직도</button>
             <button class="mode-tab" data-mode="brother">👨 형제조 조직도</button>
+            <button class="mode-tab" data-mode="school">🏫 교회학교</button>
             <button class="refresh-button" id="refreshParticipantsButton" title="새로고침" aria-label="참석자 정보 새로고침">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="23 4 23 10 17 10"></polyline>
@@ -231,6 +232,20 @@
           </div>
           <div class="org-stats-bar" id="orgStatsBar"></div>
           <div class="org-chart-grid" id="orgChartContainer"></div>
+        </section>
+
+        <!-- 교회학교 뷰 섹션 -->
+        <section class="card school-section" id="schoolViewSection" style="display: none;">
+          <div class="school-header" style="margin-bottom: 20px;">
+            <div class="school-title-area">
+              <h3 id="schoolTitle">🏫 교회학교 학년·나이별 현황</h3>
+              <p id="schoolSubtitle">대학부를 제외하고 실제 참석하는 자녀들의 학년 및 나이별 그룹 명단입니다. (불참/미정 제외)</p>
+            </div>
+            <div class="school-stats" id="schoolStatsBar" style="display: flex; gap: 15px; margin-top: 10px; padding: 10px; background: #f8fafc; border-radius: 6px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; flex-wrap: wrap;">
+              <!-- Stats populated dynamically -->
+            </div>
+          </div>
+          <div class="school-list-container" id="schoolListContainer"></div>
         </section>
         </div>
 
@@ -447,6 +462,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260605_0120"></script>
+    <script src="./app.js?v=20260605_0130"></script>
   </body>
 </html>

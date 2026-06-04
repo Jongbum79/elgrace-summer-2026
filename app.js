@@ -1367,7 +1367,11 @@ function renderAll() {
   renderFamilies();
   renderMeals();
   if (currentOrgMode && currentOrgMode !== "family") {
-    renderOrgChart(currentOrgMode);
+    if (currentOrgMode === "school") {
+      renderSchoolView();
+    } else {
+      renderOrgChart(currentOrgMode);
+    }
   }
 }
 
@@ -1912,13 +1916,23 @@ document.addEventListener("click", (event) => {
     
     const familySec = document.querySelector("#familyViewSection");
     const orgSec = document.querySelector("#orgChartViewSection");
+    const schoolSec = document.querySelector("#schoolViewSection");
     
     if (mode === "family") {
       familySec.style.display = "block";
       orgSec.style.display = "none";
+      if (schoolSec) schoolSec.style.display = "none";
+    } else if (mode === "school") {
+      familySec.style.display = "none";
+      orgSec.style.display = "none";
+      if (schoolSec) {
+        schoolSec.style.display = "block";
+        renderSchoolView();
+      }
     } else {
       familySec.style.display = "none";
       orgSec.style.display = "block";
+      if (schoolSec) schoolSec.style.display = "none";
       renderOrgChart(mode);
     }
   }
@@ -2886,7 +2900,271 @@ function downloadList() {
     downloadOrgList("sister");
   } else if (currentOrgMode === "brother") {
     downloadOrgList("brother");
+  } else if (currentOrgMode === "school") {
+    downloadSchoolList();
   }
+}
+
+const birthYearMapping = {
+  2008: { label: "고등학교 3학년 (2008년생)", category: "중고등부", weight: 1, color: "#1e3a8a" },
+  2009: { label: "고등학교 2학년 (2009년생)", category: "중고등부", weight: 2, color: "#1d4ed8" },
+  2010: { label: "고등학교 1학년 (2010년생)", category: "중고등부", weight: 3, color: "#2563eb" },
+  2011: { label: "중학교 3학년 (2011년생)", category: "중고등부", weight: 4, color: "#3b82f6" },
+  2012: { label: "중학교 2학년 (2012년생)", category: "중고등부", weight: 5, color: "#60a5fa" },
+  2013: { label: "중학교 1학년 (2013년생)", category: "중고등부", weight: 6, color: "#93c5fd" },
+  
+  2014: { label: "초등학교 6학년 (2014년생)", category: "초등부", weight: 11, color: "#b45309" },
+  2015: { label: "초등학교 5학년 (2015년생)", category: "초등부", weight: 12, color: "#d97706" },
+  2016: { label: "초등학교 4학년 (2016년생)", category: "초등부", weight: 13, color: "#f59e0b" },
+  
+  2017: { label: "초등학교 3학년 (2017년생)", category: "유년부", weight: 21, color: "#047857" },
+  2018: { label: "초등학교 2학년 (2018년생)", category: "유년부", weight: 22, color: "#059669" },
+  2019: { label: "초등학교 1학년 (2019년생)", category: "유년부", weight: 23, color: "#10b981" },
+  
+  2020: { label: "유치부2 (7세 - 2020년생)", category: "유치부2", weight: 31, color: "#db2777" },
+  2021: { label: "유치부2 (6세 - 2021년생)", category: "유치부2", weight: 32, color: "#ec4899" },
+  2022: { label: "유치부1 (5세 - 2022년생)", category: "유치부1", weight: 41, color: "#be185d" },
+  2023: { label: "유치부1 (4세 - 2023년생)", category: "유치부1", weight: 42, color: "#f43f5e" },
+  
+  2024: { label: "유아부 (3세 - 2024년생)", category: "유아", weight: 51, color: "#4d7c0f" },
+  2025: { label: "유아부 (2세 - 2025년생)", category: "유아", weight: 52, color: "#65a30d" },
+  2026: { label: "유아부 (1세 - 2026년생)", category: "유아", weight: 53, color: "#84cc16" },
+};
+
+function getChildBirthYear(childName, familyName) {
+  const searchChild = normalizeName(childName);
+  
+  const familyRow = churchFamilyDb.find(row => {
+    return Object.keys(row).some(key => {
+      if (key.match(/자녀|아이|아들|딸/) && !key.match(/생년월일|연락처|나이/)) {
+        return normalizeName(row[key]) === searchChild;
+      }
+      return false;
+    });
+  });
+  
+  if (familyRow) {
+    const key = Object.keys(familyRow).find(key => {
+      return key.match(/자녀|아이|아들|딸/) && !key.match(/생년월일|연락처|나이/) && normalizeName(familyRow[key]) === searchChild;
+    });
+    if (key) {
+      const childNumber = key.match(/^\d+/)?.[0];
+      const birthDateKey = Object.keys(familyRow).find((k) => k.startsWith(childNumber + "-") && k.includes("생년월일"));
+      const birthDateStr = birthDateKey ? familyRow[birthDateKey].trim() : "";
+      if (birthDateStr) {
+        const digits = birthDateStr.replace(/\D/g, "");
+        if (digits.length === 8) return Number(digits.slice(0, 4));
+        if (digits.length === 6) {
+          const yy = Number(digits.slice(0, 2));
+          return (yy >= 0 && yy <= 26) ? 2000 + yy : 1900 + yy;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function renderSchoolView() {
+  const container = document.querySelector("#schoolListContainer");
+  const statsBar = document.querySelector("#schoolStatsBar");
+  if (!container) return;
+  
+  const activeChildren = [];
+  families.forEach((family) => {
+    if (family.status === "absent") return;
+    
+    family.members.forEach((member) => {
+      const name = member[0];
+      const group = member[1];
+      const isUndecided = member[7] === "undecided";
+      const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+      
+      const isTargetChild = ["중고등부", "초등부", "유년부", "유치부", "유아"].includes(group);
+      
+      if (isTargetChild && !isUndecided && !isAbsent) {
+        const birthYear = getChildBirthYear(name, family.name);
+        
+        let mapping = birthYear ? birthYearMapping[birthYear] : null;
+        if (!mapping) {
+          if (group === "중고등부") {
+            mapping = { label: "중고등부 (학년 미정)", category: "중고등부", weight: 10, color: "#94a3b8" };
+          } else if (group === "초등부") {
+            mapping = { label: "초등부 (학년 미정)", category: "초등부", weight: 20, color: "#94a3b8" };
+          } else if (group === "유년부") {
+            mapping = { label: "유년부 (학년 미정)", category: "유년부", weight: 30, color: "#94a3b8" };
+          } else if (group === "유치부") {
+            mapping = { label: "유치부 (나이 미정)", category: "유치부", weight: 45, color: "#94a3b8" };
+          } else {
+            mapping = { label: "유아 (나이 미정)", category: "유아", weight: 60, color: "#94a3b8" };
+          }
+        }
+        
+        activeChildren.push({
+          name,
+          group,
+          birthYear,
+          mapping,
+          familyName: family.name,
+          room: family.room || "미배정",
+          leader: family.leader
+        });
+      }
+    });
+  });
+  
+  let stats = {
+    youth: 0,
+    elem: 0,
+    kinder: 0,
+    toddler: 0
+  };
+  
+  activeChildren.forEach(child => {
+    const cat = child.mapping.category;
+    if (cat === "중고등부") stats.youth++;
+    else if (cat === "초등부" || cat === "유년부") stats.elem++;
+    else if (cat === "유치부1" || cat === "유치부2" || child.group === "유치부") stats.kinder++;
+    else stats.toddler++;
+  });
+  
+  statsBar.innerHTML = `
+    <span><strong>🏫 총 참석 자녀:</strong> ${activeChildren.length}명</span>
+    <span style="color: #cbd5e1;">|</span>
+    <span>🔵 중고등부: ${stats.youth}명</span>
+    <span style="color: #cbd5e1;">|</span>
+    <span>🟡 초등/유년부: ${stats.elem}명</span>
+    <span style="color: #cbd5e1;">|</span>
+    <span>🔴 유치부(1,2): ${stats.kinder}명</span>
+    <span style="color: #cbd5e1;">|</span>
+    <span>🟢 유아부: ${stats.toddler}명</span>
+  `;
+  
+  if (activeChildren.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #64748b; font-size: 14px;">
+        참석하는 교회학교 자녀가 없습니다.
+      </div>
+    `;
+    return;
+  }
+  
+  const grouped = {};
+  activeChildren.forEach((child) => {
+    const label = child.mapping.label;
+    if (!grouped[label]) {
+      grouped[label] = {
+        label,
+        mapping: child.mapping,
+        members: []
+      };
+    }
+    grouped[label].members.push(child);
+  });
+  
+  const sortedGroups = Object.values(grouped).sort((a, b) => a.mapping.weight - b.mapping.weight);
+  
+  container.innerHTML = `
+    <div class="school-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      ${sortedGroups.map((group) => {
+        group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+        
+        return `
+          <div class="school-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; gap: 12px;">
+            <h4 style="margin: 0; color: #1e293b; border-bottom: 3px solid ${group.mapping.color}; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800;">
+              <span>${group.label}</span>
+              <span style="font-size: 11px; background: ${group.mapping.color}15; color: ${group.mapping.color}; padding: 2px 8px; border-radius: 20px; font-weight: 800;">${group.members.length}명</span>
+            </h4>
+            <div class="school-members" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+              ${group.members.map((member) => {
+                return `
+                  <div class="school-member-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 6px; font-size: 12px;">
+                    <span style="font-weight: 700; color: #334155;">${member.name}</span>
+                    <span style="color: #64748b; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+                      <span>🏠 ${member.familyName.replace(" 가족", "")}</span>
+                      <span style="color: #cbd5e1;">|</span>
+                      <span style="color: #0f766e; font-weight: 600;">🛏️ ${member.room}</span>
+                    </span>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function downloadSchoolList() {
+  if (!window.XLSX) {
+    showToast("엑셀 라이브러리가 로드되지 않았습니다.");
+    return;
+  }
+  
+  const activeChildren = [];
+  families.forEach((family) => {
+    if (family.status === "absent") return;
+    family.members.forEach((member) => {
+      const name = member[0];
+      const group = member[1];
+      const isUndecided = member[7] === "undecided";
+      const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+      
+      const isTargetChild = ["중고등부", "초등부", "유년부", "유치부", "유아"].includes(group);
+      if (isTargetChild && !isUndecided && !isAbsent) {
+        const birthYear = getChildBirthYear(name, family.name);
+        let mapping = birthYear ? birthYearMapping[birthYear] : null;
+        if (!mapping) {
+          if (group === "중고등부") mapping = { label: "중고등부 (학년 미정)", category: "중고등부" };
+          else if (group === "초등부") mapping = { label: "초등부 (학년 미정)", category: "초등부" };
+          else if (group === "유년부") mapping = { label: "유년부 (학년 미정)", category: "유년부" };
+          else if (group === "유치부") mapping = { label: "유치부 (나이 미정)", category: "유치부" };
+          else mapping = { label: "유아 (나이 미정)", category: "유아" };
+        }
+        activeChildren.push({ name, group, birthYear, mapping, familyName: family.name, room: family.room || "미배정", leader: family.leader });
+      }
+    });
+  });
+  
+  if (activeChildren.length === 0) {
+    showToast("다운로드할 데이터가 없습니다.");
+    return;
+  }
+  
+  activeChildren.sort((a, b) => {
+    const wDiff = (a.mapping.weight || 99) - (b.mapping.weight || 99);
+    if (wDiff !== 0) return wDiff;
+    return a.name.localeCompare(b.name, "ko");
+  });
+  
+  const data = activeChildren.map(child => ({
+    "분류 / 학년": child.mapping.label,
+    "이름": child.name,
+    "소속 부서": child.group,
+    "출생연도": child.birthYear || "미정",
+    "방 배정": child.room,
+    "가족 정보": child.familyName,
+    "대표자": child.leader
+  }));
+  
+  const fileName = `교회학교_참석자_명단.xlsx`;
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "교회학교 명단");
+  
+  const maxProps = ["분류 / 학년", "이름", "소속 부서", "출생연도", "방 배정", "가족 정보", "대표자"];
+  worksheet["!cols"] = maxProps.map(prop => {
+    let maxLen = prop.length * 2;
+    data.forEach(item => {
+      const val = String(item[prop] || "");
+      const valLen = val.split("").reduce((acc, char) => acc + (char.charCodeAt(0) > 127 ? 2 : 1), 0);
+      if (valLen > maxLen) maxLen = valLen;
+    });
+    return { wch: maxLen + 2 };
+  });
+  
+  XLSX.writeFile(workbook, fileName);
+  showToast(`${fileName} 파일이 다운로드되었습니다.`);
 }
 
 function downloadFamilyList() {
