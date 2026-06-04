@@ -882,21 +882,49 @@ function matchesOrgFilter(name, filter, groupFilter = null) {
 
   const att = getMemberAttendanceStatus(name, groupFilter);
   const family = getFamilyByMemberName(name, groupFilter);
-  if (family && att.status === "undecided") {
-    const familyStatus = getFamilyAttendanceStatus(family);
-    if (familyStatus !== "undecided") {
-      return false;
+  
+  if (filter === "all") return true;
+
+  if (filter === "attended") {
+    if (family) {
+      const famStatus = getFamilyAttendanceStatus(family);
+      return famStatus === "full" || famStatus === "partial";
     }
+    return att.status === "full" || att.status === "partial";
   }
 
-  if (filter === "all") return true;
   if (filter === "registered") return att.status === "full" || att.status === "partial";
   if (filter === "unregistered") return att.status === "unregistered";
   if (filter === "not_in_db") return att.status === "not_in_db";
-  if (filter === "absent") return att.status === "absent";
-  if (filter === "undecided") return att.status === "undecided";
-  if (filter === "full") return att.status === "full";
-  if (filter === "partial") return att.status === "partial";
+
+  if (filter === "full") {
+    if (family) {
+      return getFamilyAttendanceStatus(family) === "full";
+    }
+    return att.status === "full";
+  }
+
+  if (filter === "partial") {
+    if (family) {
+      return getFamilyAttendanceStatus(family) === "partial";
+    }
+    return att.status === "partial";
+  }
+
+  if (filter === "absent") {
+    if (family) {
+      return getFamilyAttendanceStatus(family) === "absent";
+    }
+    return att.status === "absent";
+  }
+
+  if (filter === "undecided") {
+    if (family) {
+      return getFamilyAttendanceStatus(family) === "undecided";
+    }
+    return att.status === "undecided";
+  }
+
   return true;
 }
 
@@ -1023,15 +1051,40 @@ function renderOrgChart(genderMode) {
   });
   
   const totalFamiliesSum = orgFamilies.size + unregisteredFamilies + notInDbFamilies;
-  
+  const attendedFamilies = fullFamilies + partialFamilies;
+
   statsBar.innerHTML = `
-    <div class="org-stats-item"><span>전체 가족:</span><b>${totalFamiliesSum}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-full">풀참 가족:</span><b>${fullFamilies}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-partial">부분참석 가족:</span><b>${partialFamilies}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-absent">불참 가족:</span><b>${absentFamilies}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-undecided">미정 가족:</span><b>${undecidedFamilies}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-unregistered">미등록:</span><b>${unregisteredFamilies}가족</b></div>
-    <div class="org-stats-item"><span class="org-badge badge-not_in_db">미입력:</span><b>${notInDbFamilies}가족</b></div>
+    <div class="org-stats-item ${orgActiveFilter === 'all' ? 'active' : ''}" data-org-filter="all">
+      <strong>🏫 전체 가족:</strong>&nbsp;<b>${totalFamiliesSum}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'attended' ? 'active' : ''}" data-org-filter="attended">
+      <span class="org-badge" style="background: #cbd5e1; color: #334155; font-size: 10px; font-weight: 700;">전체참석</span>&nbsp;<b>${attendedFamilies}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'full' ? 'active' : ''}" data-org-filter="full">
+      <span class="org-badge badge-full">풀참 가족</span>&nbsp;<b>${fullFamilies}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'partial' ? 'active' : ''}" data-org-filter="partial">
+      <span class="org-badge badge-partial">부분참석 가족</span>&nbsp;<b>${partialFamilies}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'absent' ? 'active' : ''}" data-org-filter="absent">
+      <span class="org-badge badge-absent">불참 가족</span>&nbsp;<b>${absentFamilies}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'undecided' ? 'active' : ''}" data-org-filter="undecided">
+      <span class="org-badge badge-undecided">미정 가족</span>&nbsp;<b>${undecidedFamilies}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'unregistered' ? 'active' : ''}" data-org-filter="unregistered">
+      <span class="org-badge badge-unregistered">미등록</span>&nbsp;<b>${unregisteredFamilies}가족</b>
+    </div>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <div class="org-stats-item ${orgActiveFilter === 'not_in_db' ? 'active' : ''}" data-org-filter="not_in_db">
+      <span class="org-badge badge-not_in_db">미입력</span>&nbsp;<b>${notInDbFamilies}가족</b>
+    </div>
   `;
   
   let html = "";
@@ -2022,16 +2075,9 @@ document.addEventListener("click", (event) => {
     renderAll();
   }
   if (filterChip) {
-    const orgFilter = filterChip.dataset.orgFilter;
-    if (orgFilter) {
-      orgActiveFilter = orgFilter;
-      document.querySelectorAll(".org-filter-row .filter-chip").forEach((chip) => chip.classList.toggle("active", chip === filterChip));
-      renderOrgChart(currentOrgMode);
-    } else {
-      activeFilter = filterChip.dataset.filter;
-      document.querySelectorAll(".family-filter-row .filter-chip").forEach((chip) => chip.classList.toggle("active", chip === filterChip));
-      renderFamilies();
-    }
+    activeFilter = filterChip.dataset.filter;
+    document.querySelectorAll(".family-filter-row .filter-chip").forEach((chip) => chip.classList.toggle("active", chip === filterChip));
+    renderFamilies();
   }
   if (familyMenu) toggleModal(true, families.find((family) => family.id === Number(familyMenu.dataset.familyId)));
   if (event.target.closest("#addChildButton")) {
@@ -2060,6 +2106,16 @@ document.addEventListener("click", (event) => {
   }
   if (clearOrgTimeFilter) {
     selectedOrgTimeSlot = null;
+    renderOrgChart(currentOrgMode);
+  }
+  const orgStatChip = event.target.closest("#orgStatsBar .org-stats-item");
+  if (orgStatChip) {
+    const filterVal = orgStatChip.dataset.orgFilter;
+    if (orgActiveFilter === filterVal) {
+      orgActiveFilter = "all";
+    } else {
+      orgActiveFilter = filterVal;
+    }
     renderOrgChart(currentOrgMode);
   }
   const clearSchoolTimeFilter = event.target.closest("#clearSchoolTimeFilter");
@@ -3476,13 +3532,14 @@ function downloadOrgList(genderMode) {
   
   const filterLabels = {
     all: "전체",
+    attended: "전체참석",
     registered: "참석자만",
     unregistered: "미등록자",
     not_in_db: "미입력자",
     absent: "불참자",
     undecided: "미정자",
-    full: "풀참만",
-    partial: "부분참석만"
+    full: "풀참가족",
+    partial: "부분참석가족"
   };
   const filterLabel = filterLabels[orgActiveFilter] || "전체";
   

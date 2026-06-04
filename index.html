@@ -11,7 +11,7 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260605_0240" />
+    <link rel="stylesheet" href="./styles.css?v=20260605_0250" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
@@ -221,18 +221,9 @@
             </div>
           </div>
           
-          <div class="org-filter-row">
-            <button class="filter-chip active" data-org-filter="all">🔍 전체 보기</button>
-            <button class="filter-chip" data-org-filter="registered">✅ 참석자만 보기</button>
-            <button class="filter-chip" data-org-filter="unregistered">❓ 미등록자 보기</button>
-            <button class="filter-chip" data-org-filter="not_in_db">📝 미입력자 보기</button>
-            <button class="filter-chip" data-org-filter="absent">❌ 불참자 보기</button>
-            <button class="filter-chip" data-org-filter="undecided">❔ 미정 보기</button>
-            <button class="filter-chip" data-org-filter="full">🟢 풀참만 보기</button>
-            <button class="filter-chip" data-org-filter="partial">🟡 부분 참석만 보기</button>
-            
+          <div class="org-filter-row" style="background-color: transparent; border: none; padding: 0; margin-bottom: 8px;">
             <!-- 조직도 전용 시간대 필터 달력 UI -->
-            <div id="orgTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; border-left: 1px solid #cbd5e1; margin-left: 4px;">
+            <div id="orgTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; background: #f7f9f8; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8e5;">
               <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
               <div class="attendance-days" id="orgTimeFilterDays" style="display: flex; gap: 4px;">
                 <!-- 동적으로 날짜별 아/점/저 세그먼트 버튼들이 생성됨 -->
@@ -240,7 +231,7 @@
               <button id="clearOrgTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px;">❌ 해제</button>
             </div>
           </div>
-          <div class="org-stats-bar" id="orgStatsBar"></div>
+          <div class="org-stats-bar" id="orgStatsBar" style="align-items: center;"></div>
           <div class="org-chart-grid" id="orgChartContainer"></div>
         </section>
 
@@ -472,6 +463,6 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260605_0240"></script>
+    <script src="./app.js?v=20260605_0250"></script>
   </body>
 </html>

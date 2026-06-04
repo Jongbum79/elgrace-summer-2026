@@ -648,9 +648,20 @@ body.desktop-mode .memo {
   color: var(--ink);
 }
 .org-stats-item {
-  display: flex;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  transition: all 0.15s ease;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+.org-stats-item:hover {
+  background: #f1f5f9;
 }
 .org-stats-item span {
   color: var(--muted);
@@ -658,6 +669,22 @@ body.desktop-mode .memo {
 .org-stats-item b {
   font-weight: 800;
   color: var(--forest);
+}
+.org-stats-item.active {
+  background: #1e5a45 !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  border: 1px solid #113f30;
+}
+.org-stats-item.active b,
+.org-stats-item.active span,
+.org-stats-item.active strong {
+  color: #ffffff !important;
+}
+.org-stats-item.active .org-badge {
+  background: #113f30 !important;
+  color: #ffffff !important;
+  border-color: #0c2d22 !important;
 }
 .org-chart-grid {
   display: grid;
