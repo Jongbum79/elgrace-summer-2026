@@ -528,15 +528,37 @@ function renderFamilies() {
 
     const adultPills = brotherAndSister.map((member) => {
       const role = member[1] === "성인 남성" ? "brother" : "sister";
-      const isAbsent = getMemberAttendancePeriods(member).length === 0;
-      const absentClass = isAbsent ? "absent" : "";
-      return `<span class="member-pill ${role} ${absentClass}" title="${member[1]}${isAbsent ? ' (불참)' : ''}">${member[0]}</span>`;
+      const isUndecided = member[7] === "undecided";
+      const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+      let statusClass = "";
+      let titleSuffix = "";
+      let nameSuffix = "";
+      if (isUndecided) {
+        statusClass = "undecided-member";
+        titleSuffix = " (미정)";
+        nameSuffix = " ❓";
+      } else if (isAbsent) {
+        statusClass = "absent";
+        titleSuffix = " (불참)";
+      }
+      return `<span class="member-pill ${role} ${statusClass}" title="${member[1]}${titleSuffix}">${member[0]}${nameSuffix}</span>`;
     }).join("");
 
     const childPills = children.map((member) => {
-      const isAbsent = getMemberAttendancePeriods(member).length === 0;
-      const absentClass = isAbsent ? "absent" : "";
-      return `<span class="member-pill child ${absentClass}" title="${member[1]}${isAbsent ? ' (불참)' : ''}">${member[0]}</span>`;
+      const isUndecided = member[7] === "undecided";
+      const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+      let statusClass = "";
+      let titleSuffix = "";
+      let nameSuffix = "";
+      if (isUndecided) {
+        statusClass = "undecided-member";
+        titleSuffix = " (미정)";
+        nameSuffix = " ❓";
+      } else if (isAbsent) {
+        statusClass = "absent";
+        titleSuffix = " (불참)";
+      }
+      return `<span class="member-pill child ${statusClass}" title="${member[1]}${titleSuffix}">${member[0]}${nameSuffix}</span>`;
     }).join("");
 
     return `
