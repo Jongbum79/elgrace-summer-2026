@@ -366,9 +366,9 @@ textarea { width: 100%; padding: 10px; resize: vertical; outline-color: var(--sa
 .member-form-heading h4 { margin-bottom: 4px; font-size: 13px; }
 .member-form-heading span { color: var(--muted); font-size: 10px; }
 .member-form-copy { grid-column: 1 / 5; }
-.member-attendance-heading { display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 12px; grid-column: 5; justify-self: end; }
+.member-attendance-heading { display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 12px; grid-column: 5 / 9; justify-self: end; }
 .family-full-attendance, .member-full-attendance { border-radius: 15px; color: var(--forest); background: #e4f3eb; font-size: 10px; font-weight: 800; }
-.family-full-attendance { padding: 6px 10px; }
+.family-full-attendance { padding: 6px 10px; white-space: nowrap; }
 .member-full-attendance { padding: 6px 8px; }
 .family-full-attendance:hover, .member-full-attendance:hover { color: white; background: var(--forest); }
 .date-heading, .attendance-days { display: grid; grid-template-columns: repeat(4, 57px); gap: 5px; }
