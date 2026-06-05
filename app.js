@@ -3256,7 +3256,7 @@ function renderSchoolView() {
     }
   });
   
-  container.innerHTML = departments.map(dept => {
+  const deptCardsHtml = departments.map(dept => {
     if (selectedSchoolDeptFilter !== "all") {
       let matched = false;
       if (selectedSchoolDeptFilter === "youth" && dept.key === "중고등부") matched = true;
@@ -3333,6 +3333,115 @@ function renderSchoolView() {
       </div>
     `;
   }).join("");
+
+  const listChildren = [];
+  departments.forEach(dept => {
+    if (selectedSchoolDeptFilter !== "all") {
+      let matched = false;
+      if (selectedSchoolDeptFilter === "youth" && dept.key === "중고등부") matched = true;
+      if (selectedSchoolDeptFilter === "elem" && dept.key === "초등부") matched = true;
+      if (selectedSchoolDeptFilter === "junior" && dept.key === "유년부") matched = true;
+      if (selectedSchoolDeptFilter === "kinder" && dept.key === "유치부") matched = true;
+      if (selectedSchoolDeptFilter === "toddler" && dept.key === "유아") matched = true;
+      if (!matched) return;
+    }
+    
+    dept.children.forEach(c => listChildren.push(c));
+  });
+  
+  listChildren.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+
+  const listHtml = `
+    <div class="school-list-table-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
+      <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        <span>📋 자녀 상세 명단</span>
+        <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
+      </h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>자녀 / 자매(연락처)</th>
+              <th>소속 부서</th>
+              <th>현재 상태</th>
+              <th>참석 날짜</th>
+              <th>상세</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${listChildren.map(child => {
+              const family = families.find(f => f.name === child.familyName);
+              const mother = family ? family.members.find(m => m[1] === "성인 여성") : null;
+              const motherName = mother ? mother[0] : "";
+              const parentLabel = motherName ? `${child.name} / ${motherName}` : child.name;
+              
+              const memberObj = family ? family.members.find(m => normalizeName(m[0]) === normalizeName(child.name)) : null;
+              let status = "partial";
+              let statusLabel = "부분참석";
+              if (!memberObj) {
+                status = "absent";
+                statusLabel = "불참";
+              } else if (memberObj[7] === "undecided" || (family && family.status === "undecided")) {
+                status = "undecided";
+                statusLabel = "미정";
+              } else {
+                const periods = getMemberAttendancePeriods(memberObj);
+                if (periods.length === 0) {
+                  status = "absent";
+                  statusLabel = "불참";
+                } else if (isMemberFullAttendance(memberObj)) {
+                  status = "full";
+                  statusLabel = "풀참";
+                }
+              }
+              
+              let attendanceHtml = "-";
+              if (memberObj) {
+                const periods = getMemberAttendancePeriods(memberObj);
+                const externalMeals = getMemberExternalMealPeriods(memberObj);
+                const isUndecided = memberObj[7] === "undecided" || (family && family.status === "undecided");
+                
+                const squares = renderDaySquares(periods, externalMeals, "", isUndecided);
+                attendanceHtml = `
+                  <div class="family-attendance-summary" style="grid-template-columns: 1fr;">
+                    <div class="family-schedule-groups">
+                      <div class="family-schedule-group" style="grid-template-columns: 1fr;">
+                        <div class="family-day-squares">${squares}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+              
+              return `
+                <tr>
+                  <td class="family-cell" data-label="자녀">
+                    <b>${parentLabel}</b>
+                    <span>${family ? family.phone : "-"}</span>
+                  </td>
+                  <td data-label="소속 부서">
+                    <span class="member-pill child" style="font-weight: 800; font-size: 10px;">${child.group}</span>
+                    <span style="font-size: 10px; color: #718078;">(${child.mapping.label})</span>
+                  </td>
+                  <td data-label="현재 상태">
+                    <span class="status ${status}">${statusLabel}</span>
+                  </td>
+                  <td class="schedule-cell" data-label="참석 날짜">
+                    ${attendanceHtml}
+                  </td>
+                  <td class="table-row-action">
+                    <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = deptCardsHtml + listHtml;
 }
 
 function downloadSchoolList() {
