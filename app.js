@@ -513,10 +513,27 @@ function getFamilyAttendanceStatus(family) {
   if (family.status === "absent") {
     return "absent";
   }
-  const allUndecided = family.members.every(member => member[7] === "undecided");
-  if (family.status === "undecided" || allUndecided) {
+  
+  // 실제 참석 확정자가 한 명이라도 있는지 확인
+  const hasAttendingMember = family.members.some(member => {
+    const isUndecided = member[7] === "undecided";
+    const periods = getMemberAttendancePeriods(member);
+    return !isUndecided && periods.length > 0;
+  });
+  
+  // 미정 상태인 멤버가 한 명이라도 있는지 확인
+  const hasUndecidedMember = family.members.some(member => member[7] === "undecided");
+  
+  // 실제 참석자는 없는데 미정 멤버가 있다면 가족 전체는 "미정"
+  if (family.status === "undecided" || (!hasAttendingMember && hasUndecidedMember)) {
     return "undecided";
   }
+  
+  // 실제 참석자도 없고 미정자도 없다면(모두 불참) "불참"
+  if (!hasAttendingMember && !hasUndecidedMember) {
+    return "absent";
+  }
+  
   const hasFullMember = family.members.some((member) => isMemberFullAttendance(member));
   return hasFullMember ? "full" : "partial";
 }
