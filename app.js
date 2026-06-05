@@ -1036,9 +1036,7 @@ function renderOrgChart(genderMode) {
   
   // Title & Subtitle
   document.querySelector("#orgTitle").textContent = isSister ? "👩 자매조 조직도" : "👨 형제조 조직도";
-  document.querySelector("#orgSubtitle").textContent = isSister 
-    ? "전체 자매조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다."
-    : "전체 형제조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다.";
+  document.querySelector("#orgSubtitle").textContent = "";
     
   const allPeople = new Set();
   const groupFilter = isSister ? "성인 여성" : "성인 남성";
