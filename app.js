@@ -3298,11 +3298,24 @@ function renderSchoolView() {
     
     const grouped = {};
     dept.children.forEach(child => {
-      const label = child.mapping.label;
+      let label = child.mapping.label;
+      let mapping = child.mapping;
+      if (dept.key === "유치부") {
+        if (child.mapping.category === "유치부1") {
+          label = "돌봄1";
+          mapping = { label: "돌봄1", category: "유치부1", weight: 41, color: "#be185d" };
+        } else if (child.mapping.category === "유치부2") {
+          label = "돌봄2";
+          mapping = { label: "돌봄2", category: "유치부2", weight: 31, color: "#db2777" };
+        } else {
+          label = "돌봄 미정";
+          mapping = { label: "돌봄 미정", category: "유치부", weight: 45, color: "#94a3b8" };
+        }
+      }
       if (!grouped[label]) {
         grouped[label] = {
           label,
-          mapping: child.mapping,
+          mapping: mapping,
           members: []
         };
       }
@@ -3331,10 +3344,11 @@ function renderSchoolView() {
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
                   ${group.members.map(member => {
                     const parentShortName = member.leader.replace(" 가족", "");
+                    const showAge = dept.key === "유치부" ? `${member.mapping.label.replace("세", "")}, ` : "";
                     return `
-                      <span class="school-member-pill" style="font-size: 10px; padding: 2px 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; width: 100%; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="가족: ${member.familyName}">
+                      <span class="school-member-pill" style="font-size: 10px; padding: 2px 4px; background: #ffffff; border: 1px solid #e2e8e5; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; width: 100%; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="가족: ${member.familyName}">
                         <strong style="color: #334155; font-weight: 800; white-space: nowrap;">${member.name}</strong>
-                        <span style="color: #94a3b8; font-size: 9px; font-weight: 500; white-space: nowrap;">(${parentShortName})</span>
+                        <span style="color: #94a3b8; font-size: 9px; font-weight: 500; white-space: nowrap;">(${showAge}${parentShortName})</span>
                       </span>
                     `;
                   }).join("")}
@@ -3404,15 +3418,27 @@ function downloadSchoolList() {
     return a.name.localeCompare(b.name, "ko");
   });
   
-  const data = activeChildren.map(child => ({
-    "분류 / 학년": child.mapping.label,
-    "이름": child.name,
-    "소속 부서": child.group,
-    "출생연도": child.birthYear || "미정",
-    "방 배정": child.room,
-    "가족 정보": child.familyName,
-    "대표자": child.leader
-  }));
+  const data = activeChildren.map(child => {
+    let label = child.mapping.label;
+    if (child.group === "유치부" || child.mapping.category === "유치부1" || child.mapping.category === "유치부2") {
+      if (child.mapping.category === "유치부1") {
+        label = "돌봄1";
+      } else if (child.mapping.category === "유치부2") {
+        label = "돌봄2";
+      } else {
+        label = "돌봄 미정";
+      }
+    }
+    return {
+      "분류 / 학년": label,
+      "이름": child.name,
+      "소속 부서": child.group,
+      "출생연도": child.birthYear || "미정",
+      "방 배정": child.room,
+      "가족 정보": child.familyName,
+      "대표자": child.leader
+    };
+  });
   
   let timeLabel = "";
   if (selectedSchoolTimeSlot) {
