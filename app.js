@@ -725,6 +725,7 @@ function renderFamilies() {
       absent: "✕",
       undecided: "?"
     }[family.status] || "";
+    const actualStatus = getFamilyAttendanceStatus(family);
     const brotherAndSister = family.members.filter(m => m[1] === "성인 남성" || m[1] === "성인 여성");
     const children = family.members.filter(m => m[1] !== "성인 남성" && m[1] !== "성인 여성");
 
@@ -764,7 +765,7 @@ function renderFamilies() {
     }).join("");
 
     return `
-      <tr class="status-row-${family.status}">
+      <tr class="status-row-${actualStatus}">
         <td class="family-cell" data-label="가족">
           <b>${family.name}</b>
           <span>${family.leader} · ${family.phone}</span>

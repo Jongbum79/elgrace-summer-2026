@@ -1327,9 +1327,11 @@ body.mobile-mode .org-filter-row .filter-chip {
 }
 
 /* 가족 테이블 행 좌측 4px 상태 바 */
-tr.status-row-stay td:first-child { border-left: 4px solid #3F7D58 !important; }
-tr.status-row-late td:first-child { border-left: 4px solid #C98A2E !important; }
-tr.status-row-leave td:first-child { border-left: 4px solid #C66A6A !important; }
+tr.status-row-stay td:first-child,
+tr.status-row-full td:first-child { border-left: 4px solid #3F7D58 !important; }
+tr.status-row-late td:first-child,
+tr.status-row-partial td:first-child { border-left: 4px solid #C98A2E !important; }
+tr.status-row-leave td:first-child,
 tr.status-row-absent td:first-child { border-left: 4px solid #C66A6A !important; }
 tr.status-row-undecided td:first-child { border-left: 4px solid #B8B8B8 !important; }
 
