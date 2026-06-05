@@ -773,7 +773,7 @@ function renderFamilies() {
           <div style="font-size: 11px; color: #5c7066; display: flex; flex-direction: column; gap: 4px;">
             <div>💰 <b>${(family.fee || 0).toLocaleString()}원</b></div>
             <div><span class="fee-badge ${family.feeStatus || 'pending'}" style="margin: 0;">${(family.feeStatus === 'paid' ? '완납' : '납부 예정')}</span></div>
-            <div>🏠 <span style="font-weight: 700; color: #1e5a45;">${family.room || '미배정'}</span></div>
+            <div>🏠 <span style="font-weight: 700; color: var(--forest);">${family.room || '미배정'}</span></div>
           </div>
         </td>
         <td data-label="현재 상태"><span class="status ${statusClass}">${statusText}</span></td>
@@ -1110,8 +1110,8 @@ function renderOrgChart(genderMode) {
   const statsBar = document.querySelector("#orgStatsBar");
   
   // Title & Subtitle
-  document.querySelector("#orgTitle").textContent = isSister ? "👩 자매조 조직도" : "👨 형제조 조직도";
-  document.querySelector("#orgSubtitle").textContent = "";
+  document.querySelector("#orgTitle").innerHTML = `Small Group Community <span style="font-size: 15px; font-weight: 600; color: var(--muted); margin-left: 8px;">(${isSister ? "자매조 소그룹" : "형제조 소그룹"})</span>`;
+  document.querySelector("#orgSubtitle").textContent = "전체 조원들의 조장-조원 구조 및 실시간 참석 상태를 시각화한 소그룹 조직도입니다.";
     
   const allPeople = new Set();
   const groupFilter = isSister ? "성인 여성" : "성인 남성";
@@ -1158,7 +1158,7 @@ function renderOrgChart(genderMode) {
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'attended' ? 'active' : ''}" data-org-filter="attended">
-        <span class="org-badge" style="background: #cbd5e1; color: #334155; font-size: 10px; font-weight: 700;">전체참석</span>&nbsp;<b>${attendedPeople}명</b>
+        <span class="org-badge" style="background: var(--sage); color: var(--forest); border-color: #b8d4c7;">참석자</span>&nbsp;<b>${attendedPeople}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'full' ? 'active' : ''}" data-org-filter="full">
@@ -3180,29 +3180,29 @@ function downloadList() {
 }
 
 const birthYearMapping = {
-  2008: { label: "고3", category: "중고등부", weight: 1, color: "#1e3a8a" },
-  2009: { label: "고2", category: "중고등부", weight: 2, color: "#1d4ed8" },
-  2010: { label: "고1", category: "중고등부", weight: 3, color: "#2563eb" },
-  2011: { label: "중3", category: "중고등부", weight: 4, color: "#3b82f6" },
-  2012: { label: "중2", category: "중고등부", weight: 5, color: "#60a5fa" },
-  2013: { label: "중1", category: "중고등부", weight: 6, color: "#93c5fd" },
+  2008: { label: "고3", category: "중고등부", weight: 1, color: "#334155" },
+  2009: { label: "고2", category: "중고등부", weight: 2, color: "#475569" },
+  2010: { label: "고1", category: "중고등부", weight: 3, color: "#64748b" },
+  2011: { label: "중3", category: "중고등부", weight: 4, color: "#78909c" },
+  2012: { label: "중2", category: "중고등부", weight: 5, color: "#90a4ae" },
+  2013: { label: "중1", category: "중고등부", weight: 6, color: "#b0bec5" },
   
-  2014: { label: "초6", category: "초등부", weight: 11, color: "#b45309" },
-  2015: { label: "초5", category: "초등부", weight: 12, color: "#d97706" },
-  2016: { label: "초4", category: "초등부", weight: 13, color: "#f59e0b" },
+  2014: { label: "초6", category: "초등부", weight: 11, color: "#8C6615" },
+  2015: { label: "초5", category: "초등부", weight: 12, color: "#A37B24" },
+  2016: { label: "초4", category: "초등부", weight: 13, color: "#BCA362" },
   
-  2017: { label: "초3", category: "유년부", weight: 21, color: "#047857" },
-  2018: { label: "초2", category: "유년부", weight: 22, color: "#059669" },
-  2019: { label: "초1", category: "유년부", weight: 23, color: "#10b981" },
+  2017: { label: "초3", category: "유년부", weight: 21, color: "#184E3A" },
+  2018: { label: "초2", category: "유년부", weight: 22, color: "#346C55" },
+  2019: { label: "초1", category: "유년부", weight: 23, color: "#558C73" },
   
-  2020: { label: "7세", category: "유치부2", weight: 31, color: "#db2777" },
-  2021: { label: "6세", category: "유치부2", weight: 32, color: "#ec4899" },
-  2022: { label: "5세", category: "유치부1", weight: 41, color: "#be185d" },
-  2023: { label: "4세", category: "유치부1", weight: 42, color: "#f43f5e" },
+  2020: { label: "7세", category: "유치부2", weight: 31, color: "#964F65" },
+  2021: { label: "6세", category: "유치부2", weight: 32, color: "#AC6D80" },
+  2022: { label: "5세", category: "유치부1", weight: 41, color: "#C18B9A" },
+  2023: { label: "4세", category: "유치부1", weight: 42, color: "#D5ACB6" },
   
-  2024: { label: "3세", category: "유아", weight: 51, color: "#4d7c0f" },
-  2025: { label: "2세", category: "유아", weight: 52, color: "#65a30d" },
-  2026: { label: "1세", category: "유아", weight: 53, color: "#84cc16" },
+  2024: { label: "3세", category: "유아", weight: 51, color: "#5F8B77" },
+  2025: { label: "2세", category: "유아", weight: 52, color: "#7FA894" },
+  2026: { label: "1세", category: "유아", weight: 53, color: "#9ABFB0" },
 };
 
 function getChildBirthYear(childName, familyName) {
@@ -3320,32 +3320,61 @@ function renderSchoolView() {
     else stats.toddler++;
   });
   
+  const deptColors = {
+    all: "#184E3A",
+    youth: "#475569",
+    elem: "#A37B24",
+    junior: "#184E3A",
+    kinder: "#AC6D80",
+    toddler: "#5F8B77"
+  };
+
   const getSpanStyle = (filterKey) => {
     const isActive = selectedSchoolDeptFilter === filterKey;
+    const color = deptColors[filterKey] || "#184E3A";
     return `
       cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 11px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
       transition: all 0.15s ease;
       display: inline-flex;
       align-items: center;
-      ${isActive ? "background: #1e5a45; color: #ffffff; font-weight: 800; border: 1px solid #113f30;" : "background: #ffffff; color: #475569; border: 1px solid #cbd5e1;"}
+      gap: 6px;
+      ${isActive ? `background: ${color}; color: #ffffff; font-weight: 800; border: 1px solid ${color};` : "background: #ffffff; color: var(--muted); border: 1px solid var(--line);"}
     `;
   };
 
   statsBar.innerHTML = `
-    <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}"><strong>🏫 총 참석 자녀:</strong> &nbsp;${activeChildren.length}명</span>
+    <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}">
+      ${selectedSchoolDeptFilter === "all" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
+      <strong>🏫 총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
+    </span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">🔵 중고등부: &nbsp;${stats.youth}명</span>
+    <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">
+      ${selectedSchoolDeptFilter === "youth" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block;"></span>'}
+      중고등부:&nbsp;${stats.youth}명
+    </span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">🟡 초등부: &nbsp;${stats.elem}명</span>
+    <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">
+      ${selectedSchoolDeptFilter === "elem" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #A37B24; display: inline-block;"></span>'}
+      초등부:&nbsp;${stats.elem}명
+    </span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">🟢 유년부: &nbsp;${stats.junior}명</span>
+    <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">
+      ${selectedSchoolDeptFilter === "junior" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
+      유년부:&nbsp;${stats.junior}명
+    </span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">🔴 유치부: &nbsp;${stats.kinder}명</span>
+    <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">
+      ${selectedSchoolDeptFilter === "kinder" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #AC6D80; display: inline-block;"></span>'}
+      유치부:&nbsp;${stats.kinder}명
+    </span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">🧸 유아부: &nbsp;${stats.toddler}명</span>
+    <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">
+      ${selectedSchoolDeptFilter === "toddler" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #5F8B77; display: inline-block;"></span>'}
+      유아부:&nbsp;${stats.toddler}명
+    </span>
     <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
     <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
       <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
@@ -3365,11 +3394,11 @@ function renderSchoolView() {
   }
   
   const departments = [
-    { key: "중고등부", label: "중고등부", color: "#2563eb", children: [] },
-    { key: "초등부", label: "초등부", color: "#d97706", children: [] },
-    { key: "유년부", label: "유년부", color: "#059669", children: [] },
-    { key: "유치부", label: "유치부", color: "#db2777", children: [] },
-    { key: "유아", label: "유아부", color: "#65a30d", children: [] },
+    { key: "중고등부", label: "중고등부", color: "#475569", children: [] },
+    { key: "초등부", label: "초등부", color: "#A37B24", children: [] },
+    { key: "유년부", label: "유년부", color: "#184E3A", children: [] },
+    { key: "유치부", label: "유치부", color: "#AC6D80", children: [] },
+    { key: "유아", label: "유아부", color: "#5F8B77", children: [] },
   ];
   
   activeChildren.forEach(child => {
@@ -3406,10 +3435,10 @@ function renderSchoolView() {
       if (dept.key === "유치부") {
         if (child.mapping.category === "유치부1") {
           label = "돌봄1";
-          mapping = { label: "돌봄1", category: "유치부1", weight: 41, color: "#be185d" };
+          mapping = { label: "돌봄1", category: "유치부1", weight: 41, color: "#C18B9A" };
         } else if (child.mapping.category === "유치부2") {
           label = "돌봄2";
-          mapping = { label: "돌봄2", category: "유치부2", weight: 31, color: "#db2777" };
+          mapping = { label: "돌봄2", category: "유치부2", weight: 31, color: "#AC6D80" };
         } else {
           label = "돌봄 미정";
           mapping = { label: "돌봄 미정", category: "유치부", weight: 45, color: "#94a3b8" };
@@ -3428,30 +3457,30 @@ function renderSchoolView() {
     const sortedGroups = Object.values(grouped).sort((a, b) => a.mapping.weight - b.mapping.weight);
     
     return `
-      <div class="school-department-row" style="margin-bottom: 16px; background: #ffffff; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 8px;">
+      <div class="school-department-row">
         <h4 style="margin: 0; color: #334155; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
           <span style="width: 8px; height: 14px; background: ${dept.color}; border-radius: 3px; display: inline-block;"></span>
           <span>${dept.label}</span>
           <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${dept.children.length}명)</span>
         </h4>
-        <div class="school-cards-container" style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 6px; align-items: flex-start;">
+        <div class="school-cards-container">
           ${sortedGroups.map(group => {
             group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
             
             return `
-              <div class="school-card" style="flex: 1 1 0px; min-width: 110px; border: 1px solid ${group.mapping.color}35; border-radius: 8px; padding: 6px 8px; background: ${group.mapping.color}05; display: flex; flex-direction: column; gap: 5px;">
-                <div style="font-size: 10px; font-weight: 800; background: ${group.mapping.color}; color: #ffffff; padding: 3px 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+              <div class="school-card" style="border-color: ${group.mapping.color}30; background-color: ${group.mapping.color}05;">
+                <div class="school-card-header" style="background-color: ${group.mapping.color};">
                   <span>${group.label}</span>
-                  <span style="font-size: 9px; opacity: 0.9;">${group.members.length}명</span>
+                  <span style="font-size: 9px; opacity: 0.95;">${group.members.length}명</span>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
                   ${group.members.map(member => {
                     const parentShortName = member.leader.replace(" 가족", "");
                     const showAge = dept.key === "유치부" ? `${member.mapping.label.replace("세", "")}, ` : "";
                     return `
-                      <span class="school-member-pill" style="font-size: 11.5px; padding: 3px 5px; background: #ffffff; border: 1px solid #e2e8e5; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 1.5px; width: 100%; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="가족: ${member.familyName}">
-                        <strong style="color: #334155; font-weight: 800; white-space: nowrap;">${member.name}</strong>
-                        <span style="color: #94a3b8; font-size: 10px; font-weight: 500; white-space: nowrap;">(${showAge}${parentShortName})</span>
+                      <span class="school-member-pill" title="가족: ${member.familyName}">
+                        <strong>${member.name}</strong>
+                        <span>(${showAge}${parentShortName})</span>
                       </span>
                     `;
                   }).join("")}
