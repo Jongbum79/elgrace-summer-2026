@@ -245,6 +245,7 @@
             <span class="table-count" id="familyCount"></span>
           </div>
           <div class="table-wrap">
+            <div id="familyCardList" class="family-card-list"></div>
             <table>
               <thead>
                 <tr>
@@ -428,12 +429,21 @@
     </div>
 
     <nav class="mobile-bottom-nav" aria-label="모바일 주 메뉴">
-      <a class="mobile-nav-item active" href="#" data-view="attendance"><span>⌂</span><b>현황</b></a>
-      <a class="mobile-nav-item" href="#" data-view="participants"><span>👪</span><b>참석자</b></a>
-      <a class="mobile-nav-item" href="#" data-view="rooms"><span>🚪</span><b>방 배치</b></a>
-      <a class="mobile-nav-item" href="#" data-view="meals"><span>🍚</span><b>식사</b></a>
-      <a class="mobile-nav-item" href="#" data-view="schedule"><span>◷</span><b>일정</b></a>
-      <a class="mobile-nav-item" href="#" data-view="chatbot"><span>✦</span><b>챗봇</b></a>
+      <a class="mobile-nav-item active" href="#" data-view="attendance">
+        <i data-lucide="house" class="nav-icon"></i><b>홈</b>
+      </a>
+      <a class="mobile-nav-item" href="#" data-view="participants">
+        <i data-lucide="users" class="nav-icon"></i><b>참석자</b>
+      </a>
+      <a class="mobile-nav-item" href="#" data-view="rooms">
+        <i data-lucide="bed-double" class="nav-icon"></i><b>방배정</b>
+      </a>
+      <a class="mobile-nav-item" href="#" data-view="meals">
+        <i data-lucide="utensils-crossed" class="nav-icon"></i><b>식사</b>
+      </a>
+      <a class="mobile-nav-item" href="#" data-view="more">
+        <i data-lucide="menu" class="nav-icon"></i><b>더보기</b>
+      </a>
     </nav>
 
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -443,6 +453,40 @@
       <h2 id="mealDrawerTitle">식사 상세 명단</h2>
       <p class="drawer-subtitle" id="mealDrawerSubtitle"></p>
       <div class="meal-detail-list" id="mealDetailList"></div>
+    </aside>
+
+    <aside class="detail-drawer more-menu-drawer" id="moreMenuDrawer" aria-hidden="true">
+      <div class="drawer-pull-bar"></div>
+      <button class="drawer-close" id="moreMenuDrawerClose" aria-label="닫기">×</button>
+      <p class="eyebrow">RETREAT MENU</p>
+      <h2>더 보기</h2>
+      <p class="drawer-subtitle">추가 기능 및 일정 정보 확인</p>
+      <div class="more-menu-grid">
+        <a class="more-menu-item" href="#" data-view="chatbot">
+          <div class="more-menu-icon"><i data-lucide="sparkles"></i></div>
+          <span>AI 운영 챗봇</span>
+        </a>
+        <a class="more-menu-item" href="#" data-view="schedule">
+          <div class="more-menu-icon"><i data-lucide="calendar-days"></i></div>
+          <span>전체 일정</span>
+        </a>
+        <a class="more-menu-item" href="#" data-view="docs">
+          <div class="more-menu-icon"><i data-lucide="folder"></i></div>
+          <span>문서 자료실</span>
+        </a>
+        <a class="more-menu-item" href="#" data-view="help">
+          <div class="more-menu-icon"><i data-lucide="circle-help"></i></div>
+          <span>도움말 및 문의</span>
+        </a>
+      </div>
+    </aside>
+
+    <aside class="detail-drawer group-detail-drawer" id="groupDetailDrawer" aria-hidden="true">
+      <button class="drawer-close" id="groupDrawerClose" aria-label="닫기">×</button>
+      <p class="eyebrow" id="groupDrawerEyebrow">SMALL GROUP DETAILS</p>
+      <h2 id="groupDrawerTitle">조 상세 정보</h2>
+      <p class="drawer-subtitle" id="groupDrawerSubtitle"></p>
+      <div class="group-detail-content" id="groupDetailContent"></div>
     </aside>
 
     <aside class="detail-drawer" id="brotherGroupDrawer" aria-hidden="true" style="width: min(100%, 640px);">

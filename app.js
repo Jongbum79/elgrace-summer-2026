@@ -395,6 +395,57 @@ function renderStats() {
     }
   ];
   
+  if (document.body.classList.contains("mobile-mode")) {
+    const totalFamilies = families.length;
+    const decidedFamilies = families.filter(f => f.status && f.status !== "undecided").length;
+    const inputRate = totalFamilies > 0 ? ((decidedFamilies / totalFamilies) * 100).toFixed(1) : "0.0";
+    
+    const assignedFamilies = families.filter(f => f.room && f.room !== "미배정").length;
+    const roomRate = totalFamilies > 0 ? ((assignedFamilies / totalFamilies) * 100).toFixed(1) : "0.0";
+
+    const mobileStats = [
+      {
+        label: "참석자",
+        value: `<span style="color: var(--forest); font-weight: 800;">${currentActual}</span><span style="color: #9CA3AF; font-size: 14px; font-weight: 500;"> / ${currentExpected}</span>`,
+        caption: `입소율 ${getPercentStr(currentActual, currentExpected)}%`,
+        icon: "user-check"
+      },
+      {
+        label: "가족수",
+        value: `<span style="font-weight: 800; color: var(--ink);">${totalFamilies}</span><small style="font-size: 12px; font-weight: 500; color: #9CA3AF; margin-left: 2px;">가족</small>`,
+        caption: "등록된 총 가족 수",
+        icon: "users"
+      },
+      {
+        label: "입력률",
+        value: `<span style="font-weight: 800; color: var(--ink);">${inputRate}</span><small style="font-size: 12px; font-weight: 500; color: #9CA3AF; margin-left: 2px;">%</small>`,
+        caption: `확정 ${decidedFamilies} / 총 ${totalFamilies}가족`,
+        icon: "clipboard-check"
+      },
+      {
+        label: "방배정률",
+        value: `<span style="font-weight: 800; color: var(--ink);">${roomRate}</span><small style="font-size: 12px; font-weight: 500; color: #9CA3AF; margin-left: 2px;">%</small>`,
+        caption: `배정 ${assignedFamilies} / 총 ${totalFamilies}가족`,
+        icon: "bed-double"
+      }
+    ];
+
+    document.querySelector("#statsGrid").innerHTML = mobileStats.map((item) => `
+      <article class="stat-card">
+        <div class="stat-top">
+          <span>${item.label}</span>
+          <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
+        </div>
+        <div>
+          <div class="stat-value">${item.value}</div>
+          <span class="stat-caption">${item.caption}</span>
+        </div>
+      </article>
+    `).join("");
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
   document.querySelector("#statsGrid").innerHTML = stats.map((item) => {
     if (item.isRatio) {
       return `
@@ -716,6 +767,120 @@ function renderFamilies() {
     ` : ""}
   `;
   document.querySelector("#familyCount").innerHTML = statsHtml;
+  if (document.body.classList.contains("mobile-mode")) {
+    document.querySelector("#familyTableBody").innerHTML = "";
+    document.querySelector("#familyCardList").innerHTML = visibleFamilies.map((family) => {
+      const [statusText, statusClass] = statusMap[family.status] || [family.status, "undecided"];
+      const actualStatus = getFamilyAttendanceStatus(family);
+      const brotherAndSister = family.members.filter(m => m[1] === "성인 남성" || m[1] === "성인 여성");
+      const children = family.members.filter(m => m[1] !== "성인 남성" && m[1] !== "성인 여성");
+      const memberCount = family.members.length;
+
+      const adultPills = brotherAndSister.map((member) => {
+        const role = member[1] === "성인 남성" ? "brother" : "sister";
+        const isUndecided = member[7] === "undecided";
+        const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+        let sClass = "";
+        let nameSuffix = "";
+        if (isUndecided) {
+          sClass = "undecided-member";
+          nameSuffix = " ❓";
+        } else if (isAbsent) {
+          sClass = "absent";
+        }
+        return `<span class="member-pill ${role} ${sClass}">${member[0]}${nameSuffix}</span>`;
+      }).join("");
+
+      const childPills = children.map((member) => {
+        const isUndecided = member[7] === "undecided";
+        const isAbsent = !isUndecided && getMemberAttendancePeriods(member).length === 0;
+        let sClass = "";
+        let nameSuffix = "";
+        if (isUndecided) {
+          sClass = "undecided-member";
+          nameSuffix = " ❓";
+        } else if (isAbsent) {
+          sClass = "absent";
+        }
+        return `<span class="member-pill child ${sClass}">${member[0]}${nameSuffix}</span>`;
+      }).join("");
+
+      return `
+        <div class="family-card status-border-${actualStatus}" data-family-id="${family.id}">
+          <div class="family-card-header">
+            <div class="header-left">
+              <div class="family-title-row">
+                <span class="family-name">${family.name}가족</span>
+                <span class="member-count-badge">${memberCount}명</span>
+              </div>
+              <div class="family-meta-row">
+                <span class="status-badge ${statusClass}">${statusText}</span>
+                <span class="room-badge">${family.room || '미배정'}</span>
+              </div>
+            </div>
+            <div class="header-right">
+              <button class="chevron-btn" aria-label="상세 보기 토글">
+                <i data-lucide="chevron-down" class="chevron-icon"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="family-card-detail">
+            <div class="detail-divider"></div>
+            
+            <div class="detail-section">
+              <div class="detail-row">
+                <span class="detail-label">대표자 / 연락처</span>
+                <span class="detail-value">
+                  ${family.leader} · 
+                  <a href="tel:${family.phone}" class="phone-link">${family.phone}</a>
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">회비 납부</span>
+                <span class="detail-value" style="display: flex; align-items: center; gap: 6px;">
+                  <span class="fee-badge ${family.feeStatus || 'pending'}" style="margin:0;">${family.feeStatus === 'paid' ? '완납' : '납부 예정'}</span>
+                  <strong>${(family.fee || 0).toLocaleString()}원</strong>
+                </span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <span class="section-label">구성원 현황</span>
+              <div class="member-stack" style="display: flex; flex-direction: column; gap: 5px;">
+                ${adultPills ? `<div class="member-pill-group">${adultPills}</div>` : ""}
+                ${childPills ? `<div class="member-pill-group">${childPills}</div>` : ""}
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <span class="section-label">상세 참석 일정</span>
+              <div class="family-attendance-summary-wrapper">
+                ${renderFamilyAttendance(family)}
+              </div>
+            </div>
+
+            ${family.memo ? `
+            <div class="detail-section">
+              <span class="section-label">운영 메모</span>
+              <p class="family-memo-text">${family.memo}</p>
+            </div>
+            ` : ""}
+
+            <div class="detail-actions">
+              <button class="secondary-button row-menu" data-family-id="${family.id}">
+                <i data-lucide="pencil" style="width: 14px; height: 14px; margin-right: 6px;"></i> 정보 수정
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  document.querySelector("#familyCardList").innerHTML = "";
   document.querySelector("#familyTableBody").innerHTML = visibleFamilies.map((family) => {
     const [statusText, statusClass] = statusMap[family.status] || [family.status, "undecided"];
     const statusSymbol = {
@@ -1123,12 +1288,158 @@ function renderOrgChart(genderMode) {
   const container = document.querySelector("#orgChartContainer");
   const statsBar = document.querySelector("#orgStatsBar");
   
+  const groupFilter = isSister ? "성인 여성" : "성인 남성";
+
+  if (document.body.classList.contains("mobile-mode")) {
+    const allPeople = new Set();
+    groupsData.forEach((group) => {
+      allPeople.add(group.leader);
+      group.members.forEach((m) => allPeople.add(m));
+    });
+    staffData.coordinators.forEach((c) => allPeople.add(c.name));
+    staffData.otherGroups.forEach((m) => allPeople.add(m));
+    
+    let totalPeopleCount = 0;
+    let fullPeople = 0;
+    let partialPeople = 0;
+    let absentPeople = 0;
+    let undecidedPeople = 0;
+    let unregisteredPeopleCount = 0;
+    let notInDbPeopleCount = 0;
+    
+    allPeople.forEach((name) => {
+      const att = getMemberAttendanceStatus(name, groupFilter);
+      totalPeopleCount++;
+      if (att.status === "full") {
+        fullPeople++;
+      } else if (att.status === "partial") {
+        partialPeople++;
+      } else if (att.status === "undecided") {
+        undecidedPeople++;
+      } else if (att.status === "absent") {
+        absentPeople++;
+      } else if (att.status === "unregistered") {
+        unregisteredPeopleCount++;
+      } else if (att.status === "not_in_db") {
+        notInDbPeopleCount++;
+      }
+    });
+    
+    const attendedPeople = fullPeople + partialPeople;
+
+    statsBar.innerHTML = `
+      <div class="org-stats-row">
+        <div class="org-stats-item ${orgActiveFilter === 'all' ? 'active' : ''}" data-org-filter="all">
+          <strong><i data-lucide="users" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>전체:</strong>&nbsp;<b>${totalPeopleCount}명</b>
+        </div>
+        <span class="org-stats-sep">|</span>
+        <div class="org-stats-item ${orgActiveFilter === 'attended' ? 'active' : ''}" data-org-filter="attended">
+          <span class="org-badge" style="background: var(--sage); color: var(--forest); border-color: #b8d4c7; padding: 2px 4px; font-size: 9px; border-radius: 4px;">참석</span>&nbsp;<b>${attendedPeople}명</b>
+        </div>
+        <span class="org-stats-sep">|</span>
+        <div class="org-stats-item ${orgActiveFilter === 'full' ? 'active' : ''}" data-org-filter="full">
+          <span class="org-badge badge-full" style="padding: 2px 4px; font-size: 9px; border-radius: 4px;">풀참</span>&nbsp;<b>${fullPeople}명</b>
+        </div>
+      </div>
+      <div class="org-stats-row">
+        <div class="org-stats-item ${orgActiveFilter === 'partial' ? 'active' : ''}" data-org-filter="partial">
+          <span class="org-badge badge-partial" style="padding: 2px 4px; font-size: 9px; border-radius: 4px;">부분</span>&nbsp;<b>${partialPeople}명</b>
+        </div>
+        <span class="org-stats-sep">|</span>
+        <div class="org-stats-item ${orgActiveFilter === 'absent' ? 'active' : ''}" data-org-filter="absent">
+          <span class="org-badge badge-absent" style="padding: 2px 4px; font-size: 9px; border-radius: 4px;">불참</span>&nbsp;<b>${absentPeople}명</b>
+        </div>
+        <span class="org-stats-sep">|</span>
+        <div class="org-stats-item ${orgActiveFilter === 'undecided' ? 'active' : ''}" data-org-filter="undecided">
+          <span class="org-badge badge-undecided" style="padding: 2px 4px; font-size: 9px; border-radius: 4px;">미정</span>&nbsp;<b>${undecidedPeople}명</b>
+        </div>
+      </div>
+    `;
+
+    let html = "";
+    groupsData.forEach((group) => {
+      const leaderVisible = matchesOrgFilter(group.leader, orgActiveFilter, groupFilter);
+      const visibleMembers = group.members.filter((m) => matchesOrgFilter(m, orgActiveFilter, groupFilter));
+      
+      if (!leaderVisible && visibleMembers.length === 0) {
+        return;
+      }
+      
+      const allMembers = [group.leader, ...group.members];
+      const attStatuses = allMembers.map(name => getMemberAttendanceStatus(name, groupFilter).status);
+      const totalCount = attStatuses.length;
+      const attendingCount = attStatuses.filter(s => s === "full" || s === "partial").length;
+      const undecidedCount = attStatuses.filter(s => s === "undecided").length;
+      const absentCount = attStatuses.filter(s => s === "absent" || s === "unregistered" || s === "not_in_db").length;
+
+      html += `
+        <div class="org-mobile-group-card" data-group-id="${group.id}">
+          <div class="group-card-header-row">
+            <span class="group-card-name">${group.id}</span>
+            <span class="group-card-count">${totalCount}명</span>
+          </div>
+          <div class="group-card-leader">조장: ${group.leader}</div>
+          <div class="group-card-summary">
+            <div class="summary-text">참석 ${attendingCount} · 불참 ${absentCount} · 미정 ${undecidedCount}</div>
+            <div class="summary-bar">
+              <span style="width: ${(attendingCount/totalCount)*100}%; background-color: #3F7D58;"></span>
+              <span style="width: ${(undecidedCount/totalCount)*100}%; background-color: #B8B8B8;"></span>
+              <span style="width: ${(absentCount/totalCount)*100}%; background-color: #C66A6A;"></span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    const visibleCoordinators = staffData.coordinators.filter((c) => matchesOrgFilter(c.name, orgActiveFilter, groupFilter));
+    const visibleOtherGroups = staffData.otherGroups.filter((m) => matchesOrgFilter(m, orgActiveFilter, groupFilter));
+    
+    if (visibleCoordinators.length > 0 || visibleOtherGroups.length > 0) {
+      const allMembers = [...staffData.coordinators.map(c => c.name), ...staffData.otherGroups];
+      const attStatuses = allMembers.map(name => getMemberAttendanceStatus(name, groupFilter).status);
+      const totalCount = attStatuses.length;
+      const attendingCount = attStatuses.filter(s => s === "full" || s === "partial").length;
+      const undecidedCount = attStatuses.filter(s => s === "undecided").length;
+      const absentCount = attStatuses.filter(s => s === "absent" || s === "unregistered" || s === "not_in_db").length;
+
+      html += `
+        <div class="org-mobile-group-card" data-group-id="staff">
+          <div class="group-card-header-row">
+            <span class="group-card-name">스태프 및 기타</span>
+            <span class="group-card-count">${totalCount}명</span>
+          </div>
+          <div class="group-card-leader">코디네이터</div>
+          <div class="group-card-summary">
+            <div class="summary-text">참석 ${attendingCount} · 불참 ${absentCount} · 미정 ${undecidedCount}</div>
+            <div class="summary-bar">
+              <span style="width: ${(attendingCount/totalCount)*100}%; background-color: #3F7D58;"></span>
+              <span style="width: ${(undecidedCount/totalCount)*100}%; background-color: #B8B8B8;"></span>
+              <span style="width: ${(absentCount/totalCount)*100}%; background-color: #C66A6A;"></span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (!html) {
+      html = `
+        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; background: #fafafa; border-radius: 8px; border: 1px dashed #dcdcdc;">
+          <i data-lucide="search" style="width: 32px; height: 32px; stroke-width: 1.5px; color: var(--muted); margin-bottom: 12px;"></i>
+          <p style="font-size: 13px; font-weight: 600; color: #555; margin: 0;">필터 조건에 맞는 조원이 없습니다.</p>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+  
   // Title & Subtitle
   document.querySelector("#orgTitle").innerHTML = `Small Group Community <span style="font-size: 15px; font-weight: 600; color: var(--muted); margin-left: 8px;">(${isSister ? "자매조 소그룹" : "형제조 소그룹"})</span>`;
   document.querySelector("#orgSubtitle").textContent = "전체 조원들의 조장-조원 구조 및 실시간 참석 상태를 시각화한 소그룹 조직도입니다.";
     
   const allPeople = new Set();
-  const groupFilter = isSister ? "성인 여성" : "성인 남성";
   
   groupsData.forEach((group) => {
     allPeople.add(group.leader);
@@ -1416,6 +1727,96 @@ function closeSisterGroupDrawer() {
   document.querySelector("#sisterGroupDrawer").classList.remove("open");
   document.querySelector("#drawerBackdrop").classList.remove("open");
   document.querySelector("#sisterGroupDrawer").setAttribute("aria-hidden", "true");
+}
+
+function openGroupDetailDrawer(groupId, genderMode) {
+  const isSister = genderMode === "sister";
+  const groupsData = isSister ? sisterGroupsData : brotherGroupsData;
+  const staffData = isSister ? sisterStaffData : brotherStaffData;
+  const groupFilter = isSister ? "성인 여성" : "성인 남성";
+
+  let group = groupsData.find(g => g.id === groupId);
+  let isStaff = false;
+  if (!group && groupId === "staff") {
+    group = {
+      id: "코디 및 기타 스태프",
+      leader: staffData.coordinators[0]?.name || "",
+      members: staffData.otherGroups
+    };
+    isStaff = true;
+  }
+
+  if (!group) return;
+
+  document.querySelector("#groupDrawerTitle").textContent = group.id;
+  document.querySelector("#groupDrawerSubtitle").textContent = isStaff ? "스태프 구성원 목록" : `조장: ${group.leader} · 총 조원: ${group.members.length + 1}명`;
+
+  const container = document.querySelector("#groupDetailContent");
+  
+  function makeNodeHtml(name, roleLabel, btnClassPrefix) {
+    const att = getMemberAttendanceStatus(name, groupFilter);
+    const isLeader = roleLabel ? "leader" : "";
+    const regClass = att.status;
+    const showLabel = roleLabel && roleLabel !== "조장";
+    
+    return `
+      <div class="org-${isLeader ? "leader" : "member"}-node ${btnClassPrefix}-member-btn ${isLeader} ${regClass}" data-name="${name}" style="width: 100%; max-width: 100%;">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span class="org-status-dot badge-${att.status}"></span>
+          <b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}
+        </span>
+      </div>
+    `;
+  }
+
+  let html = "";
+  if (isStaff) {
+    html = `
+      <div class="org-leader-box" style="margin-bottom: 15px; width: 100%;">
+        ${staffData.coordinators.map((c) => makeNodeHtml(c.name, c.role, isSister ? "sister" : "brother")).join("")}
+      </div>
+      <div class="org-connector" style="margin: 8px auto; width: 1px; height: 16px; background: #e2e8e5;"></div>
+      <div class="org-member-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+        ${staffData.otherGroups.map((m) => makeNodeHtml(m, "기타", isSister ? "sister" : "brother")).join("")}
+      </div>
+    `;
+  } else {
+    html = `
+      <div class="org-leader-box" style="margin-bottom: 15px; width: 100%;">
+        ${makeNodeHtml(group.leader, "조장", isSister ? "sister" : "brother")}
+      </div>
+      <div class="org-connector" style="margin: 8px auto; width: 1px; height: 16px; background: #e2e8e5;"></div>
+      <div class="org-member-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+        ${group.members.map((m) => makeNodeHtml(m, null, isSister ? "sister" : "brother")).join("")}
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+
+  document.querySelector("#groupDetailDrawer").classList.add("open");
+  document.querySelector("#drawerBackdrop").classList.add("open");
+  document.querySelector("#groupDetailDrawer").setAttribute("aria-hidden", "false");
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeGroupDetailDrawer() {
+  document.querySelector("#groupDetailDrawer").classList.remove("open");
+  document.querySelector("#drawerBackdrop").classList.remove("open");
+  document.querySelector("#groupDetailDrawer").setAttribute("aria-hidden", "true");
+}
+
+function openMoreMenuDrawer() {
+  document.querySelector("#moreMenuDrawer").classList.add("open");
+  document.querySelector("#drawerBackdrop").classList.add("open");
+  document.querySelector("#moreMenuDrawer").setAttribute("aria-hidden", "false");
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeMoreMenuDrawer() {
+  document.querySelector("#moreMenuDrawer").classList.remove("open");
+  document.querySelector("#drawerBackdrop").classList.remove("open");
+  document.querySelector("#moreMenuDrawer").setAttribute("aria-hidden", "true");
 }
 
 function renderBrotherGroups() {
@@ -2097,6 +2498,7 @@ function setViewMode(mode, remember = true) {
     button.classList.toggle("active", button.dataset.mode === mode);
   });
   if (remember) localStorage.setItem("retreat-view-mode", mode);
+  renderAll();
 }
 
 async function refreshParticipantsData() {
@@ -2152,7 +2554,13 @@ document.addEventListener("click", (event) => {
   if (modeButton) setViewMode(modeButton.dataset.mode);
   if (navItem) {
     event.preventDefault();
-    openPage(navItem.dataset.view);
+    const view = navItem.dataset.view;
+    if (view === "more") {
+      openMoreMenuDrawer();
+    } else {
+      closeMoreMenuDrawer();
+      openPage(view);
+    }
   }
   if (refreshBtn) {
     refreshParticipantsData();
@@ -2420,6 +2828,24 @@ document.addEventListener("click", (event) => {
       closeSisterGroupDrawer();
     }
   }
+
+  const chevronBtn = event.target.closest(".chevron-btn");
+  const cardHeader = event.target.closest(".family-card-header");
+  if (chevronBtn || cardHeader) {
+    const card = (chevronBtn || cardHeader).closest(".family-card");
+    const isExpanded = card.classList.toggle("expanded");
+    const icon = card.querySelector(".chevron-icon");
+    if (icon) {
+      icon.style.transform = isExpanded ? "rotate(180deg)" : "rotate(0deg)";
+    }
+  }
+
+  const mobileGroupCard = event.target.closest(".org-mobile-group-card");
+  if (mobileGroupCard) {
+    const groupId = mobileGroupCard.dataset.groupId;
+    openGroupDetailDrawer(groupId, currentOrgMode);
+  }
+
   if (window.lucide) lucide.createIcons();
 });
 
@@ -2450,10 +2876,14 @@ document.querySelector("#memberFormList").addEventListener("change", (event) => 
   }
 });
 document.querySelector("#mealDrawerClose").addEventListener("click", closeMealDrawer);
+document.querySelector("#moreMenuDrawerClose")?.addEventListener("click", closeMoreMenuDrawer);
+document.querySelector("#groupDrawerClose")?.addEventListener("click", closeGroupDetailDrawer);
 document.querySelector("#drawerBackdrop").addEventListener("click", () => {
   closeMealDrawer();
   closeSisterGroupDrawer();
   closeBrotherGroupDrawer();
+  closeGroupDetailDrawer();
+  closeMoreMenuDrawer();
 });
 document.querySelector("#sisterGroupButton")?.addEventListener("click", () => {
   const tab = document.querySelector(".mode-tab[data-mode='sister']");
@@ -3364,44 +3794,61 @@ function renderSchoolView() {
     `;
   };
 
-  statsBar.innerHTML = `
-    <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}">
-      ${selectedSchoolDeptFilter === "all" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
-      <i data-lucide="baby" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i><strong>총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
-    </span>
-    <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">
-      ${selectedSchoolDeptFilter === "youth" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block;"></span>'}
-      중고등부:&nbsp;${stats.youth}명
-    </span>
-    <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">
-      ${selectedSchoolDeptFilter === "elem" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #A37B24; display: inline-block;"></span>'}
-      초등부:&nbsp;${stats.elem}명
-    </span>
-    <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">
-      ${selectedSchoolDeptFilter === "junior" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
-      유년부:&nbsp;${stats.junior}명
-    </span>
-    <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">
-      ${selectedSchoolDeptFilter === "kinder" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #AC6D80; display: inline-block;"></span>'}
-      유치부:&nbsp;${stats.kinder}명
-    </span>
-    <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">
-      ${selectedSchoolDeptFilter === "toddler" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #5F8B77; display: inline-block;"></span>'}
-      유아부:&nbsp;${stats.toddler}명
-    </span>
-    <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
-    <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
-      <i data-lucide="clock" style="width: 12px; height: 12px; stroke-width: 2.2px; vertical-align: middle; margin-right: 4px; color: #475569;"></i><span style="font-size: 11px; font-weight: 800; color: #475569;">시간대 필터:</span>
-      <div class="attendance-days" id="schoolTimeFilterDays" style="display: flex; gap: 4px;"></div>
-      <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="x" style="width: 10px; height: 10px; stroke-width: 2.5px;"></i>해제</button>
-    </div>
-  `;
-  renderSchoolTimeFilter();
+  if (document.body.classList.contains("mobile-mode")) {
+    if (selectedSchoolDeptFilter === "all") {
+      selectedSchoolDeptFilter = "youth";
+    }
+  }
+
+  // Stats filter segmented tabs or desktop chips
+  if (document.body.classList.contains("mobile-mode")) {
+    statsBar.innerHTML = `
+      <span class="school-stat-filter-chip ${selectedSchoolDeptFilter === "youth" ? "active" : ""}" data-filter="youth">중고등부 (${stats.youth})</span>
+      <span class="school-stat-filter-chip ${selectedSchoolDeptFilter === "elem" ? "active" : ""}" data-filter="elem">초등부 (${stats.elem})</span>
+      <span class="school-stat-filter-chip ${selectedSchoolDeptFilter === "junior" ? "active" : ""}" data-filter="junior">유년부 (${stats.junior})</span>
+      <span class="school-stat-filter-chip ${selectedSchoolDeptFilter === "kinder" ? "active" : ""}" data-filter="kinder">유치부 (${stats.kinder})</span>
+      <span class="school-stat-filter-chip ${selectedSchoolDeptFilter === "toddler" ? "active" : ""}" data-filter="toddler">유아부 (${stats.toddler})</span>
+    `;
+  } else {
+    statsBar.innerHTML = `
+      <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}">
+        ${selectedSchoolDeptFilter === "all" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
+        <i data-lucide="baby" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i><strong>총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
+      </span>
+      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">
+        ${selectedSchoolDeptFilter === "youth" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block;"></span>'}
+        중고등부:&nbsp;${stats.youth}명
+      </span>
+      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">
+        ${selectedSchoolDeptFilter === "elem" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #A37B24; display: inline-block;"></span>'}
+        초등부:&nbsp;${stats.elem}명
+      </span>
+      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">
+        ${selectedSchoolDeptFilter === "junior" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
+        유년부:&nbsp;${stats.junior}명
+      </span>
+      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">
+        ${selectedSchoolDeptFilter === "kinder" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #AC6D80; display: inline-block;"></span>'}
+        유치부:&nbsp;${stats.kinder}명
+      </span>
+      <span style="color: #cbd5e1; align-self: center;">|</span>
+      <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">
+        ${selectedSchoolDeptFilter === "toddler" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #5F8B77; display: inline-block;"></span>'}
+        유아부:&nbsp;${stats.toddler}명
+      </span>
+      <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
+      <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
+        <i data-lucide="clock" style="width: 12px; height: 12px; stroke-width: 2.2px; vertical-align: middle; margin-right: 4px; color: #475569;"></i><span style="font-size: 11px; font-weight: 800; color: #475569;">시간대 필터:</span>
+        <div class="attendance-days" id="schoolTimeFilterDays" style="display: flex; gap: 4px;"></div>
+        <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="x" style="width: 10px; height: 10px; stroke-width: 2.5px;"></i>해제</button>
+      </div>
+    `;
+    renderSchoolTimeFilter();
+  }
   
   if (activeChildren.length === 0) {
     container.innerHTML = `
@@ -3530,169 +3977,256 @@ function renderSchoolView() {
 
   let listHtml = "";
   if (selectedSchoolDeptFilter !== "all") {
-    listHtml = `
-      <style>
-        .school-list-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 8px;
-          white-space: nowrap;
-        }
-        body.desktop-mode .school-list-table th,
-        body.desktop-mode .school-list-table td {
-          width: auto !important;
-          min-width: 0 !important;
-          padding: 10px 12px !important;
-        }
-        body.desktop-mode .school-list-table th:nth-child(1),
-        body.desktop-mode .school-list-table td:nth-child(1) {
-          width: 200px !important;
-          min-width: 200px !important;
-        }
-        body.desktop-mode .school-list-table th:nth-child(2),
-        body.desktop-mode .school-list-table td:nth-child(2) {
-          width: 130px !important;
-          min-width: 130px !important;
-        }
-        body.desktop-mode .school-list-table th:nth-child(3),
-        body.desktop-mode .school-list-table td:nth-child(3) {
-          width: 90px !important;
-          min-width: 90px !important;
-        }
-        body.desktop-mode .school-list-table th:nth-child(4),
-        body.desktop-mode .school-list-table td:nth-child(4) {
-          width: 210px !important;
-          min-width: 210px !important;
-        }
-        body.desktop-mode .school-list-table th:nth-child(5),
-        body.desktop-mode .school-list-table td:nth-child(5) {
-          width: 50px !important;
-          min-width: 50px !important;
+    if (document.body.classList.contains("mobile-mode")) {
+      const cardsHtml = listChildren.map(child => {
+        const family = families.find(f => f.name === child.familyName);
+        const mother = family ? family.members.find(m => m[1] === "성인 여성") : null;
+        const motherName = mother ? mother[0] : "";
+        
+        const memberObj = family ? family.members.find(m => normalizeName(m[0]) === normalizeName(child.name)) : null;
+        let status = "partial";
+        let statusLabel = "부분참석";
+        if (!memberObj) {
+          status = "absent";
+          statusLabel = "불참";
+        } else if (memberObj[7] === "undecided" || (family && family.status === "undecided")) {
+          status = "undecided";
+          statusLabel = "미정";
+        } else {
+          const periods = getMemberAttendancePeriods(memberObj);
+          if (periods.length === 0) {
+            status = "absent";
+            statusLabel = "불참";
+          } else if (isMemberFullAttendance(memberObj)) {
+            status = "full";
+            statusLabel = "풀참";
+          }
         }
         
-        .school-attendance-badge {
-          display: inline-block;
-          padding: 5px 8px;
-          border-radius: 15px;
-          font-size: 10px;
-          font-weight: 800;
-          text-align: center;
-          min-width: 54px;
-          box-sizing: border-box;
+        let attendanceHtml = "-";
+        if (memberObj) {
+          const periods = getMemberAttendancePeriods(memberObj);
+          const externalMeals = getMemberExternalMealPeriods(memberObj);
+          const isUndecided = memberObj[7] === "undecided" || (family && family.status === "undecided");
+          
+          const squares = renderDaySquares(periods, externalMeals, "", isUndecided);
+          attendanceHtml = `
+            <div class="family-attendance-summary" style="grid-template-columns: 1fr; min-width: auto;">
+              <div class="family-schedule-groups">
+                <div class="family-schedule-group" style="grid-template-columns: 1fr;">
+                  <div class="family-day-squares">${squares}</div>
+                </div>
+              </div>
+            </div>
+          `;
         }
-        .school-attendance-badge.full {
-          color: #347150;
-          background: #e2f3e8;
-        }
-        .school-attendance-badge.partial {
-          color: #ad672f;
-          background: #fff0df;
-        }
-        .school-attendance-badge.absent {
-          color: #64748b;
-          background: #f1f5f9;
-        }
-        .school-attendance-badge.undecided {
-          color: #687873;
-          background: #eef2f0;
-        }
-      </style>
-      <div class="school-list-table-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
-        <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="clipboard-list" style="width: 15px; height: 15px; stroke-width: 2px; vertical-align: middle; color: var(--forest);"></i>
-          <span>자녀 상세 명단</span>
-          <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
-        </h3>
-        <div class="table-wrap">
-          <table class="school-list-table">
-            <thead>
-              <tr>
-                <th>자녀 정보</th>
-                <th>소속 부서</th>
-                <th>현재 상태</th>
-                <th>참석 날짜</th>
-                <th>상세</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${listChildren.map(child => {
-                const family = families.find(f => f.name === child.familyName);
-                const mother = family ? family.members.find(m => m[1] === "성인 여성") : null;
-                const motherName = mother ? mother[0] : "";
-                
-                const memberObj = family ? family.members.find(m => normalizeName(m[0]) === normalizeName(child.name)) : null;
-                let status = "partial";
-                let statusLabel = "부분참석";
-                if (!memberObj) {
-                  status = "absent";
-                  statusLabel = "불참";
-                } else if (memberObj[7] === "undecided" || (family && family.status === "undecided")) {
-                  status = "undecided";
-                  statusLabel = "미정";
-                } else {
-                  const periods = getMemberAttendancePeriods(memberObj);
-                  if (periods.length === 0) {
+        
+        const schoolStatusMap = {
+          full: ["stay", "✓", "풀참"],
+          partial: ["late", "◐", "부분참석"],
+          absent: ["leave", "✕", "불참"],
+          undecided: ["undecided", "?", "미정"]
+        };
+        const [badgeClass, symbol, labelText] = schoolStatusMap[status] || ["undecided", "?", "미정"];
+
+        return `
+          <div class="school-student-card">
+            <div class="student-card-header">
+              <span class="student-name">${child.name}</span>
+              <span class="student-dept-pill">${child.group}</span>
+            </div>
+            <div class="student-card-info">
+              학년·나이: ${child.mapping.label} <br/>
+              부모: ${motherName ? `${motherName} · ` : ""}<a href="tel:${family ? family.phone : ''}" class="phone-link">${family ? family.phone : "-"}</a>
+            </div>
+            <div class="student-card-footer">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="status ${badgeClass}" style="margin: 0; padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 8px;">${symbol} ${labelText}</span>
+                ${attendanceHtml}
+              </div>
+              <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      listHtml = `
+        <div class="school-list-table-section" style="margin-top: 24px;">
+          <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="clipboard-list" style="width: 15px; height: 15px; stroke-width: 2px; vertical-align: middle; color: var(--forest);"></i>
+            <span>자녀 상세 명단</span>
+            <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
+          </h3>
+          <div class="table-wrap" style="display: flex; flex-direction: column; gap: 10px;">
+            ${cardsHtml}
+          </div>
+        </div>
+      `;
+    } else {
+      listHtml = `
+        <style>
+          .school-list-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            white-space: nowrap;
+          }
+          body.desktop-mode .school-list-table th,
+          body.desktop-mode .school-list-table td {
+            width: auto !important;
+            min-width: 0 !important;
+            padding: 10px 12px !important;
+          }
+          body.desktop-mode .school-list-table th:nth-child(1),
+          body.desktop-mode .school-list-table td:nth-child(1) {
+            width: 200px !important;
+            min-width: 200px !important;
+          }
+          body.desktop-mode .school-list-table th:nth-child(2),
+          body.desktop-mode .school-list-table td:nth-child(2) {
+            width: 130px !important;
+            min-width: 130px !important;
+          }
+          body.desktop-mode .school-list-table th:nth-child(3),
+          body.desktop-mode .school-list-table td:nth-child(3) {
+            width: 90px !important;
+            min-width: 90px !important;
+          }
+          body.desktop-mode .school-list-table th:nth-child(4),
+          body.desktop-mode .school-list-table td:nth-child(4) {
+            width: 210px !important;
+            min-width: 210px !important;
+          }
+          body.desktop-mode .school-list-table th:nth-child(5),
+          body.desktop-mode .school-list-table td:nth-child(5) {
+            width: 50px !important;
+            min-width: 50px !important;
+          }
+          
+          .school-attendance-badge {
+            display: inline-block;
+            padding: 5px 8px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: 800;
+            text-align: center;
+            min-width: 54px;
+            box-sizing: border-box;
+          }
+          .school-attendance-badge.full {
+            color: #347150;
+            background: #e2f3e8;
+          }
+          .school-attendance-badge.partial {
+            color: #ad672f;
+            background: #fff0df;
+          }
+          .school-attendance-badge.absent {
+            color: #64748b;
+            background: #f1f5f9;
+          }
+          .school-attendance-badge.undecided {
+            color: #687873;
+            background: #eef2f0;
+          }
+        </style>
+        <div class="school-list-table-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
+          <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="clipboard-list" style="width: 15px; height: 15px; stroke-width: 2px; vertical-align: middle; color: var(--forest);"></i>
+            <span>자녀 상세 명단</span>
+            <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
+          </h3>
+          <div class="table-wrap">
+            <table class="school-list-table">
+              <thead>
+                <tr>
+                  <th>자녀 정보</th>
+                  <th>소속 부서</th>
+                  <th>현재 상태</th>
+                  <th>참석 날짜</th>
+                  <th>상세</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${listChildren.map(child => {
+                  const family = families.find(f => f.name === child.familyName);
+                  const mother = family ? family.members.find(m => m[1] === "성인 여성") : null;
+                  const motherName = mother ? mother[0] : "";
+                  
+                  const memberObj = family ? family.members.find(m => normalizeName(m[0]) === normalizeName(child.name)) : null;
+                  let status = "partial";
+                  let statusLabel = "부분참석";
+                  if (!memberObj) {
                     status = "absent";
                     statusLabel = "불참";
-                  } else if (isMemberFullAttendance(memberObj)) {
-                    status = "full";
-                    statusLabel = "풀참";
+                  } else if (memberObj[7] === "undecided" || (family && family.status === "undecided")) {
+                    status = "undecided";
+                    statusLabel = "미정";
+                  } else {
+                    const periods = getMemberAttendancePeriods(memberObj);
+                    if (periods.length === 0) {
+                      status = "absent";
+                      statusLabel = "불참";
+                    } else if (isMemberFullAttendance(memberObj)) {
+                      status = "full";
+                      statusLabel = "풀참";
+                    }
                   }
-                }
-                
-                let attendanceHtml = "-";
-                if (memberObj) {
-                  const periods = getMemberAttendancePeriods(memberObj);
-                  const externalMeals = getMemberExternalMealPeriods(memberObj);
-                  const isUndecided = memberObj[7] === "undecided" || (family && family.status === "undecided");
                   
-                  const squares = renderDaySquares(periods, externalMeals, "", isUndecided);
-                  attendanceHtml = `
-                    <div class="family-attendance-summary" style="grid-template-columns: 1fr;">
-                      <div class="family-schedule-groups">
-                        <div class="family-schedule-group" style="grid-template-columns: 1fr;">
-                          <div class="family-day-squares">${squares}</div>
+                  let attendanceHtml = "-";
+                  if (memberObj) {
+                    const periods = getMemberAttendancePeriods(memberObj);
+                    const externalMeals = getMemberExternalMealPeriods(memberObj);
+                    const isUndecided = memberObj[7] === "undecided" || (family && family.status === "undecided");
+                    
+                    const squares = renderDaySquares(periods, externalMeals, "", isUndecided);
+                    attendanceHtml = `
+                      <div class="family-attendance-summary" style="grid-template-columns: 1fr;">
+                        <div class="family-schedule-groups">
+                          <div class="family-schedule-group" style="grid-template-columns: 1fr;">
+                            <div class="family-day-squares">${squares}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  `;
-                }
-                
-                const schoolStatusMap = {
-                  full: ["stay", "✓", "풀참"],
-                  partial: ["late", "◐", "부분참석"],
-                  absent: ["leave", "✕", "불참"],
-                  undecided: ["undecided", "?", "미정"]
-                };
-                const [badgeClass, symbol, labelText] = schoolStatusMap[status] || ["undecided", "?", "미정"];
+                    `;
+                  }
+                  
+                  const schoolStatusMap = {
+                    full: ["stay", "✓", "풀참"],
+                    partial: ["late", "◐", "부분참석"],
+                    absent: ["leave", "✕", "불참"],
+                    undecided: ["undecided", "?", "미정"]
+                  };
+                  const [badgeClass, symbol, labelText] = schoolStatusMap[status] || ["undecided", "?", "미정"];
 
-                return `
-                  <tr class="status-row-${badgeClass}">
-                    <td class="family-cell" data-label="자녀">
-                      <b>${child.name}</b>
-                      <span>${motherName ? `${motherName} · ` : ""}${family ? family.phone : "-"}</span>
-                    </td>
-                    <td data-label="소속 부서">
-                      <span class="member-pill child" style="font-weight: 800; font-size: 10px;">${child.group}</span>
-                      <span style="font-size: 10px; color: #718078;">(${child.mapping.label})</span>
-                    </td>
-                    <td data-label="현재 상태">
-                      <span class="status ${badgeClass}">${symbol} ${labelText}</span>
-                    </td>
-                    <td class="schedule-cell" data-label="참석 날짜">
-                      ${attendanceHtml}
-                    </td>
-                    <td class="table-row-action">
-                      <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
-                    </td>
-                  </tr>
-                `;
-              }).join("")}
-            </tbody>
-          </table>
+                  return `
+                    <tr class="status-row-${badgeClass}">
+                      <td class="family-cell" data-label="자녀">
+                        <b>${child.name}</b>
+                        <span>${motherName ? `${motherName} · ` : ""}${family ? family.phone : "-"}</span>
+                      </td>
+                      <td data-label="소속 부서">
+                        <span class="member-pill child" style="font-weight: 800; font-size: 10px;">${child.group}</span>
+                        <span style="font-size: 10px; color: #718078;">(${child.mapping.label})</span>
+                      </td>
+                      <td data-label="현재 상태">
+                        <span class="status ${badgeClass}">${symbol} ${labelText}</span>
+                      </td>
+                      <td class="schedule-cell" data-label="참석 날짜">
+                        ${attendanceHtml}
+                      </td>
+                      <td class="table-row-action">
+                        <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
   }
 
   container.innerHTML = deptCardsHtml + listHtml;
