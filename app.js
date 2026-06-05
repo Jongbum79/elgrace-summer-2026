@@ -717,7 +717,14 @@ function renderFamilies() {
   `;
   document.querySelector("#familyCount").innerHTML = statsHtml;
   document.querySelector("#familyTableBody").innerHTML = visibleFamilies.map((family) => {
-    const [statusText, statusClass] = statusMap[family.status];
+    const [statusText, statusClass] = statusMap[family.status] || [family.status, "undecided"];
+    const statusSymbol = {
+      stay: "✓",
+      late: "◐",
+      leave: "✕",
+      absent: "✕",
+      undecided: "?"
+    }[family.status] || "";
     const brotherAndSister = family.members.filter(m => m[1] === "성인 남성" || m[1] === "성인 여성");
     const children = family.members.filter(m => m[1] !== "성인 남성" && m[1] !== "성인 여성");
 
@@ -757,7 +764,7 @@ function renderFamilies() {
     }).join("");
 
     return `
-      <tr>
+      <tr class="status-row-${family.status}">
         <td class="family-cell" data-label="가족">
           <b>${family.name}</b>
           <span>${family.leader} · ${family.phone}</span>
@@ -776,7 +783,7 @@ function renderFamilies() {
             <div>🏠 <span style="font-weight: 700; color: var(--forest);">${family.room || '미배정'}</span></div>
           </div>
         </td>
-        <td data-label="현재 상태"><span class="status ${statusClass}">${statusText}</span></td>
+        <td data-label="현재 상태"><span class="status ${statusClass}">${statusSymbol} ${statusText}</span></td>
         <td class="table-row-action"><button class="row-menu" data-family-id="${family.id}" aria-label="${family.name} 상세보기">···</button></td>
       </tr>`;
   }).join("");
@@ -1195,10 +1202,8 @@ function renderOrgChart(genderMode) {
     const badgeClass = `badge-${att.status}`;
     const btnClass = `${btnClassPrefix}-member-btn`;
     const isLeader = roleLabel ? "leader" : "";
-    const regClass = att.status !== "unregistered" && att.status !== "not_in_db"
-      ? `registered ${att.status === "absent" ? "absent" : att.status === "undecided" ? "undecided" : "present"}` 
-      : "";
-      
+    const regClass = att.status;
+       
     const showLabel = roleLabel && roleLabel !== "조장";
     
     // Check if this node matches the active filter
@@ -1207,8 +1212,10 @@ function renderOrgChart(genderMode) {
       
     return `
       <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}" style="${displayStyle}">
-        <span><b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}</span>
-        <span class="org-badge ${badgeClass}">${att.label}</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span class="org-status-dot badge-${att.status}"></span>
+          <b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}
+        </span>
       </div>
     `;
   }
@@ -1272,6 +1279,7 @@ function renderOrgChart(genderMode) {
   }
   
   container.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderSisterGroups() {
@@ -1601,6 +1609,7 @@ function renderAll() {
       renderOrgChart(currentOrgMode);
     }
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 function getMemberSelectedPeriods(member) {
@@ -2100,6 +2109,7 @@ async function refreshParticipantsData() {
       }, 500);
     }
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 function openPage(view) {
@@ -2116,6 +2126,7 @@ function openPage(view) {
   if (view === "chatbot") {
     initChatbotView();
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 document.addEventListener("click", (event) => {
@@ -2402,6 +2413,7 @@ document.addEventListener("click", (event) => {
       closeSisterGroupDrawer();
     }
   }
+  if (window.lucide) lucide.createIcons();
 });
 
 document.addEventListener("pointerdown", (event) => {
@@ -3458,20 +3470,19 @@ function renderSchoolView() {
     
     return `
       <div class="school-department-row">
-        <h4 style="margin: 0; color: #334155; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 8px; height: 14px; background: ${dept.color}; border-radius: 3px; display: inline-block;"></span>
-          <span>${dept.label}</span>
-          <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${dept.children.length}명)</span>
-        </h4>
+        <h3 class="school-dept-title" style="margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="width: 8px; height: 16px; background: ${dept.color}; border-radius: 3px; display: inline-block;"></span>
+          <span>${dept.label} / ${dept.children.length} students</span>
+        </h3>
         <div class="school-cards-container">
           ${sortedGroups.map(group => {
             group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
             
             return `
-              <div class="school-card" style="border-color: ${group.mapping.color}30; background-color: ${group.mapping.color}05;">
-                <div class="school-card-header" style="background-color: ${group.mapping.color};">
+              <div class="school-card" style="border-top: 3px solid ${group.mapping.color};">
+                <div class="school-card-header" style="color: ${group.mapping.color}; font-weight: 700; background: transparent; padding: 0 0 6px 0; text-shadow: none; border-bottom: 1px solid var(--line); border-radius: 0;">
                   <span>${group.label}</span>
-                  <span style="font-size: 9px; opacity: 0.95;">${group.members.length}명</span>
+                  <span style="font-size: 10px; color: var(--muted); font-weight: 500;">${group.members.length} students</span>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
                   ${group.members.map(member => {
@@ -3669,6 +3680,7 @@ function renderSchoolView() {
   }
 
   container.innerHTML = deptCardsHtml + listHtml;
+  if (window.lucide) lucide.createIcons();
 }
 
 function downloadSchoolList() {

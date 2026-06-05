@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="./styles.css?v=20260606_0300" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
   </head>
   <body class="desktop-mode">
     <div class="app-shell">
@@ -24,22 +25,22 @@
 
         <nav class="main-nav" aria-label="주 메뉴">
           <a class="nav-item active" href="#" data-view="attendance">
-            <span class="nav-icon">⌂</span><span>홈</span>
+            <i data-lucide="house" class="nav-icon"></i><span>홈</span>
           </a>
           <a class="nav-item" href="#" data-view="participants">
-            <span class="nav-icon">👪</span><span>참석자 관리</span>
+            <i data-lucide="users" class="nav-icon"></i><span>참석자 관리</span>
           </a>
           <a class="nav-item" href="#" data-view="rooms">
-            <span class="nav-icon">🚪</span><span>방 배정</span>
+            <i data-lucide="bed-double" class="nav-icon"></i><span>방 배정</span>
           </a>
           <a class="nav-item" href="#" data-view="meals">
-            <span class="nav-icon">🍚</span><span>식사 관리</span>
+            <i data-lucide="utensils-crossed" class="nav-icon"></i><span>식사 관리</span>
           </a>
           <a class="nav-item" href="#" data-view="schedule">
-            <span class="nav-icon">◷</span><span>전체 일정</span>
+            <i data-lucide="calendar-days" class="nav-icon"></i><span>전체 일정</span>
           </a>
           <a class="nav-item" href="#" data-view="chatbot">
-            <span class="nav-icon">✦</span><span>AI 운영 챗봇</span>
+            <i data-lucide="sparkles" class="nav-icon"></i><span>AI 운영 챗봇</span>
           </a>
         </nav>
 
@@ -49,7 +50,7 @@
             <b>84%</b>
           </div>
           <div class="progress-track"><span></span></div>
-          <button class="nav-help">? <span>도움말 및 문의</span></button>
+          <button class="nav-help"><i data-lucide="circle-help" class="nav-icon" style="margin-right: 6px;"></i><span>도움말 및 문의</span></button>
         </div>
       </aside>
 

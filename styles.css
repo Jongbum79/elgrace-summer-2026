@@ -423,10 +423,21 @@ td { padding: 14px 20px; border-bottom: 1px solid var(--soft-line); font-size: 1
 .family-day-segment.external-meal { color: white; background: #8b6ab3; }
 .family-day-segment.empty { color: #a1ada8; background: white; }
 .family-day-segment.unavailable { color: #d0d8d5; background: #eef1f0; text-decoration: line-through; }
-.status { display: inline-block; width: fit-content; text-align: center; padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-.status.stay { color: var(--forest); background: var(--sage); }
-.status.late { color: #8C6615; background: #FAF3E5; }
-.status.leave { color: #64748B; background: #F1F5F9; }
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border-left: 3px solid currentColor;
+}
+.status.stay { color: #3F7D58; background: rgba(63, 125, 88, 0.08); }
+.status.late { color: #C98A2E; background: rgba(201, 138, 46, 0.08); }
+.status.leave { color: #C66A6A; background: rgba(198, 106, 106, 0.08); }
+.status.absent { color: #C66A6A; background: rgba(198, 106, 106, 0.08); }
+.status.undecided { color: #888888; background: rgba(184, 184, 184, 0.12); }
 .fee-badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 4px; margin-right: 8px; }
 .fee-badge.pending { color: #8C6615; background: #FAF3E5; border: 1px solid #F3E6C9; }
 .fee-badge.paid { color: var(--forest); background: #E6F4EB; border: 1px solid #CCEAD6; }
@@ -1313,6 +1324,101 @@ body.mobile-mode .org-filter-row .filter-chip {
   color: #8C6615;
   background: #FAF8F3;
   border: 1px dashed #E5D5BA;
+}
+
+/* 가족 테이블 행 좌측 4px 상태 바 */
+tr.status-row-stay td:first-child { border-left: 4px solid #3F7D58 !important; }
+tr.status-row-late td:first-child { border-left: 4px solid #C98A2E !important; }
+tr.status-row-leave td:first-child { border-left: 4px solid #C66A6A !important; }
+tr.status-row-absent td:first-child { border-left: 4px solid #C66A6A !important; }
+tr.status-row-undecided td:first-child { border-left: 4px solid #B8B8B8 !important; }
+
+/* 조직도 노드 좌측 4px 상태 바 */
+.org-leader-node.full, .org-member-node.full { border-left: 4px solid #3F7D58 !important; }
+.org-leader-node.partial, .org-member-node.partial { border-left: 4px solid #C98A2E !important; }
+.org-leader-node.absent, .org-member-node.absent { border-left: 4px solid #C66A6A !important; }
+.org-leader-node.undecided, .org-member-node.undecided { border-left: 4px solid #B8B8B8 !important; }
+.org-leader-node.unregistered, .org-member-node.unregistered { border-left: 4px solid #E2E8F0 !important; }
+.org-leader-node.not_in_db, .org-member-node.not_in_db { border-left: 4px solid #E2E8F0 !important; }
+
+/* 경량 히트맵 스타일 */
+.family-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: fit-content;
+  margin: 6px 0;
+}
+.heatmap-dates {
+  display: flex;
+  gap: 5px;
+}
+.heatmap-date {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  width: 14px;
+  text-align: center;
+}
+.heatmap-squares {
+  display: flex;
+  gap: 5px;
+}
+.heatmap-square {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.heatmap-square:hover {
+  transform: scale(1.15);
+}
+
+/* 조직도 상태 도트 */
+.org-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.org-status-dot.badge-full { background-color: #3F7D58; }
+.org-status-dot.badge-partial { background-color: #C98A2E; }
+.org-status-dot.badge-absent { background-color: #C66A6A; }
+.org-status-dot.badge-undecided { background-color: #B8B8B8; }
+.org-status-dot.badge-unregistered { background-color: #E2E8F0; }
+.org-status-dot.badge-not_in_db { background-color: #E2E8F0; }
+
+/* 사이드바 Lucide 아이콘 styling */
+.nav-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.85px;
+  stroke: currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-item .nav-icon {
+  color: #6B7280;
+}
+.nav-item.active .nav-icon,
+.nav-item:hover .nav-icon {
+  color: var(--forest);
+}
+
+/* Next Generation 헤더 및 텍스트 스타일 보완 */
+.school-dept-title {
+  color: var(--forest) !important;
+  font-size: 18px !important;
+  font-weight: 800;
+}
+.school-card-header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 
