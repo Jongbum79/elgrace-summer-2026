@@ -881,15 +881,10 @@ function matchesOrgFilter(name, filter, groupFilter = null) {
   }
 
   const att = getMemberAttendanceStatus(name, groupFilter);
-  const family = getFamilyByMemberName(name, groupFilter);
   
   if (filter === "all") return true;
 
   if (filter === "attended") {
-    if (family) {
-      const famStatus = getFamilyAttendanceStatus(family);
-      return famStatus === "full" || famStatus === "partial";
-    }
     return att.status === "full" || att.status === "partial";
   }
 
@@ -898,30 +893,18 @@ function matchesOrgFilter(name, filter, groupFilter = null) {
   if (filter === "not_in_db") return att.status === "not_in_db";
 
   if (filter === "full") {
-    if (family) {
-      return getFamilyAttendanceStatus(family) === "full";
-    }
     return att.status === "full";
   }
 
   if (filter === "partial") {
-    if (family) {
-      return getFamilyAttendanceStatus(family) === "partial";
-    }
     return att.status === "partial";
   }
 
   if (filter === "absent") {
-    if (family) {
-      return getFamilyAttendanceStatus(family) === "absent";
-    }
     return att.status === "absent";
   }
 
   if (filter === "undecided") {
-    if (family) {
-      return getFamilyAttendanceStatus(family) === "undecided";
-    }
     return att.status === "undecided";
   }
 
@@ -1001,91 +984,77 @@ function renderOrgChart(genderMode) {
     ? "전체 자매조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다."
     : "전체 형제조원들의 조장-조원 구조 및 실시간 참석 상태(풀참/부분참석/불참)를 시각화한 조직도입니다.";
     
-  const orgFamilies = new Set();
-  const unregisteredPeople = new Set();
+  const allPeople = new Set();
   const groupFilter = isSister ? "성인 여성" : "성인 남성";
   
-  function collectFamily(name) {
-    const f = getFamilyByMemberName(name, groupFilter);
-    if (f) {
-      orgFamilies.add(f);
-    } else {
-      unregisteredPeople.add(name);
-    }
-  }
-  
   groupsData.forEach((group) => {
-    collectFamily(group.leader);
-    group.members.forEach((m) => collectFamily(m));
+    allPeople.add(group.leader);
+    group.members.forEach((m) => allPeople.add(m));
   });
-  staffData.coordinators.forEach((c) => collectFamily(c.name));
-  staffData.otherGroups.forEach((m) => collectFamily(m));
+  staffData.coordinators.forEach((c) => allPeople.add(c.name));
+  staffData.otherGroups.forEach((m) => allPeople.add(m));
   
-  let fullFamilies = 0;
-  let partialFamilies = 0;
-  let absentFamilies = 0;
-  let undecidedFamilies = 0;
+  let totalPeopleCount = 0;
+  let fullPeople = 0;
+  let partialPeople = 0;
+  let absentPeople = 0;
+  let undecidedPeople = 0;
+  let unregisteredPeopleCount = 0;
+  let notInDbPeopleCount = 0;
   
-  orgFamilies.forEach((family) => {
-    const status = getFamilyAttendanceStatus(family);
-    if (status === "full") {
-      fullFamilies++;
-    } else if (status === "partial") {
-      partialFamilies++;
-    } else if (status === "undecided") {
-      undecidedFamilies++;
-    } else if (status === "absent") {
-      absentFamilies++;
-    }
-  });
-  
-  let unregisteredFamilies = 0;
-  let notInDbFamilies = 0;
-  unregisteredPeople.forEach((name) => {
+  allPeople.forEach((name) => {
     const att = getMemberAttendanceStatus(name, groupFilter);
-    if (att.status === "unregistered") {
-      unregisteredFamilies++;
+    totalPeopleCount++;
+    if (att.status === "full") {
+      fullPeople++;
+    } else if (att.status === "partial") {
+      partialPeople++;
+    } else if (att.status === "undecided") {
+      undecidedPeople++;
+    } else if (att.status === "absent") {
+      absentPeople++;
+    } else if (att.status === "unregistered") {
+      unregisteredPeopleCount++;
     } else if (att.status === "not_in_db") {
-      notInDbFamilies++;
+      notInDbPeopleCount++;
     }
   });
   
-  const totalFamiliesSum = orgFamilies.size + unregisteredFamilies + notInDbFamilies;
-  const attendedFamilies = fullFamilies + partialFamilies;
+  const attendedPeople = fullPeople + partialPeople;
 
   statsBar.innerHTML = `
     <div class="org-stats-row">
       <div class="org-stats-item ${orgActiveFilter === 'all' ? 'active' : ''}" data-org-filter="all">
-        <strong>🏫 전체 가족:</strong>&nbsp;<b>${totalFamiliesSum}가족</b>
+        <strong>🏫 전체 인원:</strong>&nbsp;<b>${totalPeopleCount}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'attended' ? 'active' : ''}" data-org-filter="attended">
-        <span class="org-badge" style="background: #cbd5e1; color: #334155; font-size: 10px; font-weight: 700;">전체참석</span>&nbsp;<b>${attendedFamilies}가족</b>
+        <span class="org-badge" style="background: #cbd5e1; color: #334155; font-size: 10px; font-weight: 700;">전체참석</span>&nbsp;<b>${attendedPeople}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'full' ? 'active' : ''}" data-org-filter="full">
-        <span class="org-badge badge-full">풀참 가족</span>&nbsp;<b>${fullFamilies}가족</b>
+        <span class="org-badge badge-full">풀참</span>&nbsp;<b>${fullPeople}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'partial' ? 'active' : ''}" data-org-filter="partial">
-        <span class="org-badge badge-partial">부분참석 가족</span>&nbsp;<b>${partialFamilies}가족</b>
+        <span class="org-badge badge-partial">부분참석</span>&nbsp;<b>${partialPeople}명</b>
       </div>
     </div>
     <div class="org-stats-row">
       <div class="org-stats-item ${orgActiveFilter === 'absent' ? 'active' : ''}" data-org-filter="absent">
-        <span class="org-badge badge-absent">불참 가족</span>&nbsp;<b>${absentFamilies}가족</b>
+        <span class="org-badge badge-absent">불참</span>&nbsp;<b>${absentPeople}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'undecided' ? 'active' : ''}" data-org-filter="undecided">
-        <span class="org-badge badge-undecided">미정 가족</span>&nbsp;<b>${undecidedFamilies}가족</b>
+        <span class="org-badge badge-undecided">미정</span>&nbsp;<b>${undecidedPeople}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'unregistered' ? 'active' : ''}" data-org-filter="unregistered">
-        <span class="org-badge badge-unregistered">미등록</span>&nbsp;<b>${unregisteredFamilies}가족</b>
+        <span class="org-badge badge-unregistered">미등록</span>&nbsp;<b>${unregisteredPeopleCount}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'not_in_db' ? 'active' : ''}" data-org-filter="not_in_db">
-        <span class="org-badge badge-not_in_db">미입력</span>&nbsp;<b>${notInDbFamilies}가족</b>
+        <span class="org-badge badge-not_in_db">미입력</span>&nbsp;<b>${notInDbPeopleCount}명</b>
       </div>
     </div>
   `;
