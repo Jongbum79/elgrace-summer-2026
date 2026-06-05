@@ -2001,6 +2001,7 @@ function updateAttendanceFromFamilies() {
 }
 
 function renderAll() {
+  if (!retreatDates || retreatDates.length === 0 || !selectedDate) return;
   updateAttendanceFromFamilies();
   renderDateTabs();
   document.querySelector("#selectedDateLabel").textContent = retreatDates.find((date) => date.key === selectedDate).label;
@@ -2498,7 +2499,9 @@ function setViewMode(mode, remember = true) {
     button.classList.toggle("active", button.dataset.mode === mode);
   });
   if (remember) localStorage.setItem("retreat-view-mode", mode);
-  renderAll();
+  if (typeof retreatDates !== "undefined" && retreatDates && retreatDates.length > 0) {
+    renderAll();
+  }
 }
 
 async function refreshParticipantsData() {
