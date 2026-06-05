@@ -770,7 +770,6 @@ function renderMealCard(meal) {
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="child"><span>어린이</span><b>${childCount}명</b></button>
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="preschool"><span>미취학</span><b>${preschoolCount}명</b></button>
       </div>
-      <div class="meal-action"><button class="view-meal-detail" data-meal-id="${meal.id}">상세 명단 보기 <span>→</span></button></div>
     </div>`;
 }
 
