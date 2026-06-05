@@ -1422,3 +1422,16 @@ tr.status-row-undecided td:first-child { border-left: 4px solid #B8B8B8 !importa
 }
 
 
+
+/* Stats card & Mode tabs Lucide Icon updates */
+.stat-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.85px;
+}
+.mode-tab .tab-icon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.85px;
+  margin-right: 4px;
+}

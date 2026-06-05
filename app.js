@@ -364,7 +364,7 @@ function renderStats() {
       expected: currentExpected,
       percent: getPercentStr(currentActual, currentExpected),
       caption: `선택 시간 ${record.time}`,
-      icon: "👥",
+      icon: "user-check",
       isRatio: true
     },
     {
@@ -373,7 +373,7 @@ function renderStats() {
       expected: enterExpected,
       percent: getPercentStr(enterActual, enterExpected),
       caption: enterCaption,
-      icon: "📥",
+      icon: "log-in",
       isRatio: true
     },
     {
@@ -382,7 +382,7 @@ function renderStats() {
       expected: exitExpected,
       percent: getPercentStr(exitActual, exitExpected),
       caption: exitCaption,
-      icon: "📤",
+      icon: "log-out",
       isRatio: true
     },
     {
@@ -390,7 +390,7 @@ function renderStats() {
       value: peak,
       unit: "명",
       caption: `${data.find((item) => total(item) === peak).time} 예상`,
-      icon: "📈",
+      icon: "trending-up",
       isRatio: false
     }
   ];
@@ -401,7 +401,7 @@ function renderStats() {
         <article class="stat-card">
           <div class="stat-top">
             <span>${item.label}</span>
-            <span class="stat-icon">${item.icon}</span>
+            <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
           </div>
           <div>
             <div class="stat-value">
@@ -416,7 +416,7 @@ function renderStats() {
         <article class="stat-card">
           <div class="stat-top">
             <span>${item.label}</span>
-            <span class="stat-icon">${item.icon}</span>
+            <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
           </div>
           <div>
             <div class="stat-value">
