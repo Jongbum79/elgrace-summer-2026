@@ -358,41 +358,76 @@ function renderStats() {
     : "일정표에 따른 퇴소 완료 예정";
 
   const stats = [
-    [
-      "현재 참석 인원", 
-      `${currentActual}/${currentExpected}`, 
-      `명 (${getPercentStr(currentActual, currentExpected)}%)`, 
-      `선택 시간 ${record.time}`, 
-      "♙"
-    ],
-    [
-      "오늘 입소 예정", 
-      `${enterActual}/${enterExpected}`, 
-      `명 (${getPercentStr(enterActual, enterExpected)}%)`, 
-      enterCaption, 
-      "↘"
-    ],
-    [
-      "오늘 퇴소 예정", 
-      `${exitActual}/${exitExpected}`, 
-      `명 (${getPercentStr(exitActual, exitExpected)}%)`, 
-      exitCaption, 
-      "↗"
-    ],
-    [
-      "오늘 최대 인원", 
-      peak, 
-      "명", 
-      `${data.find((item) => total(item) === peak).time} 예상`, 
-      "◷"
-    ],
+    {
+      label: "현재 참석 인원",
+      actual: currentActual,
+      expected: currentExpected,
+      percent: getPercentStr(currentActual, currentExpected),
+      caption: `선택 시간 ${record.time}`,
+      icon: "👥",
+      isRatio: true
+    },
+    {
+      label: "오늘 입소 예정",
+      actual: enterActual,
+      expected: enterExpected,
+      percent: getPercentStr(enterActual, enterExpected),
+      caption: enterCaption,
+      icon: "📥",
+      isRatio: true
+    },
+    {
+      label: "오늘 퇴소 예정",
+      actual: exitActual,
+      expected: exitExpected,
+      percent: getPercentStr(exitActual, exitExpected),
+      caption: exitCaption,
+      icon: "📤",
+      isRatio: true
+    },
+    {
+      label: "오늘 최대 인원",
+      value: peak,
+      unit: "명",
+      caption: `${data.find((item) => total(item) === peak).time} 예상`,
+      icon: "📈",
+      isRatio: false
+    }
   ];
   
-  document.querySelector("#statsGrid").innerHTML = stats.map(([label, value, unit, caption, icon]) => `
-    <article class="stat-card">
-      <div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div>
-      <div class="stat-value">${value}<small>${unit}</small><span class="stat-caption">${caption}</span></div>
-    </article>`).join("");
+  document.querySelector("#statsGrid").innerHTML = stats.map((item) => {
+    if (item.isRatio) {
+      return `
+        <article class="stat-card">
+          <div class="stat-top">
+            <span>${item.label}</span>
+            <span class="stat-icon">${item.icon}</span>
+          </div>
+          <div>
+            <div class="stat-value">
+              <span style="color: var(--forest); font-weight: 800;">${item.actual}</span><span style="color: #bbb; font-weight: 500; font-size: 24px;"> / ${item.expected}</span><small style="font-size: 13px; font-weight: 600; color: var(--gold); margin-left: 4px; letter-spacing: 0;">(${item.percent}%)</small>
+            </div>
+            <span class="stat-caption">${item.caption}</span>
+          </div>
+        </article>
+      `;
+    } else {
+      return `
+        <article class="stat-card">
+          <div class="stat-top">
+            <span>${item.label}</span>
+            <span class="stat-icon">${item.icon}</span>
+          </div>
+          <div>
+            <div class="stat-value">
+              <span style="font-weight: 800; color: var(--ink);">${item.value}</span><small style="font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 2px;">${item.unit}</small>
+            </div>
+            <span class="stat-caption">${item.caption}</span>
+          </div>
+        </article>
+      `;
+    }
+  }).join("");
 }
 
 function renderFlowChart() {
@@ -409,19 +444,33 @@ function renderFlowChart() {
   const y = (value) => top + (height - top - bottom) * (1 - value / max);
   const points = data.map((item, index) => `${x(index)},${y(total(item))}`).join(" ");
   const area = `${left},${height - bottom} ${points} ${x(data.length - 1)},${height - bottom}`;
+  
+  const defs = `
+    <defs>
+      <linearGradient id="chartAreaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#184E3A" stop-opacity="0.18" />
+        <stop offset="100%" stop-color="#184E3A" stop-opacity="0.01" />
+      </linearGradient>
+    </defs>
+  `;
+  
   const grid = [0, 150, 300, 450].map((value) => `
-    <line x1="${left}" y1="${y(value)}" x2="${width - right}" y2="${y(value)}" stroke="#edf2ef" />
-    <text x="0" y="${y(value) + 4}" fill="#93a099" font-size="10">${value}</text>`).join("");
+    <line x1="${left}" y1="${y(value)}" x2="${width - right}" y2="${y(value)}" stroke="var(--soft-line)" stroke-dasharray="3 3" />
+    <text x="0" y="${y(value) + 4}" fill="#93a099" font-size="10" font-weight="500">${value}</text>`).join("");
+  
   const labels = data.map((item, index) => `
-    <text x="${x(index)}" y="${height - 7}" text-anchor="middle" fill="#819088" font-size="10">${item.time}</text>`).join("");
+    <text x="${x(index)}" y="${height - 7}" text-anchor="middle" fill="#819088" font-size="10" font-weight="500">${item.time}</text>`).join("");
+  
   const dots = data.map((item, index) => `
-    <circle cx="${x(index)}" cy="${y(total(item))}" r="${index === selectedSlot ? 6 : 4}" fill="${index === selectedSlot ? "#f7a45c" : "#1e5a45"}" stroke="white" stroke-width="3" />
-    ${index === selectedSlot ? `<rect x="${x(index) - 23}" y="${y(total(item)) - 34}" width="46" height="21" rx="5" fill="#1e5a45" /><text x="${x(index)}" y="${y(total(item)) - 19}" text-anchor="middle" fill="white" font-size="10" font-weight="700">${total(item)}명</text>` : ""}`).join("");
+    <circle cx="${x(index)}" cy="${y(total(item))}" r="${index === selectedSlot ? 6 : 4}" fill="${index === selectedSlot ? "#D6A94E" : "#184E3A"}" stroke="white" stroke-width="2.5" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08));" />
+    ${index === selectedSlot ? `<rect x="${x(index) - 23}" y="${y(total(item)) - 34}" width="46" height="21" rx="6" fill="#184E3A" /><text x="${x(index)}" y="${y(total(item)) - 20}" text-anchor="middle" fill="white" font-size="10" font-weight="700">${total(item)}명</text>` : ""}`).join("");
+  
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.innerHTML = `
+    ${defs}
     ${grid}
-    <polygon points="${area}" fill="rgba(129,169,142,.12)" />
-    <polyline points="${points}" fill="none" stroke="#1e5a45" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <polygon points="${area}" fill="url(#chartAreaGrad)" />
+    <polyline points="${points}" fill="none" stroke="#184E3A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
     ${dots}${labels}`;
 }
 
@@ -434,16 +483,25 @@ function renderBreakdown() {
   const record = currentRecord();
   const count = total(record);
   let offset = 0;
+  const softColors = {
+    adult: "#184E3A",       // Deep Forest
+    youth: "#5F8B77",       // Medium Forest Sage
+    elementary: "#9ABFB0",  // Sage
+    preschool: "#DDE8E1"    // Soft Sage Cream
+  };
   const gradients = categories.map((category) => {
     const start = offset;
     offset += record[category.key] / count * 100 || 0;
-    return `${category.color} ${start}% ${offset}%`;
+    const color = softColors[category.key] || category.color;
+    return `${color} ${start}% ${offset}%`;
   });
   document.querySelector("#donutChart").style.background = `conic-gradient(${gradients.join(",")})`;
   document.querySelector("#donutTotal").textContent = count;
   document.querySelector("#breakdownTime").textContent = `${retreatDates.find((date) => date.key === selectedDate).label.replace("요일", "")} ${record.time} 기준`;
-  document.querySelector("#breakdownList").innerHTML = categories.map((category) => `
-    <div class="breakdown-item"><i style="background:${category.color}"></i><span>${category.label}</span><b>${record[category.key]}명</b></div>`).join("");
+  document.querySelector("#breakdownList").innerHTML = categories.map((category) => {
+    const color = softColors[category.key] || category.color;
+    return `<div class="breakdown-item"><i style="background:${color}"></i><span>${category.label}</span><b>${record[category.key]}명</b></div>`;
+  }).join("");
 }
 
 function getFilteredFamilies() {
