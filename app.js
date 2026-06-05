@@ -283,11 +283,21 @@ function renderStats() {
   const record = currentRecord();
   const peak = Math.max(...data.map(total));
   
-  let enter = 0;
-  let exit = 0;
+  const targetDateStr = selectedDate;
+  const [targetMonth, targetDay] = targetDateStr.split("-").map(Number);
+  const targetYear = Number(retreatConfig.start.slice(0, 4));
+  const slotTimeStr = slots[selectedSlot];
+  const slotDateTime = parseMemberDate(`${targetMonth}/${targetDay} ${slotTimeStr}`);
+  
+  let currentExpected = 0;
+  let currentActual = 0;
+  
+  let enterExpected = 0;
+  let enterActual = 0;
   let lateArrivals = 0;
   
-  const targetDateStr = selectedDate;
+  let exitExpected = 0;
+  let exitActual = 0;
   
   if (families && families.length) {
     families.forEach((family) => {
@@ -298,39 +308,86 @@ function renderStats() {
         const arrival = parseMemberDate(member[2]);
         const departure = parseMemberDate(member[3]);
         
+        // A. 현재 참석 인원 판별
+        if (arrival <= slotDateTime && slotDateTime < departure) {
+          currentExpected++;
+          if (family.status === "stay") {
+            currentActual++;
+          }
+        }
+        
+        // B. 오늘 입소 예정 판별
         const arrivalDateStr = String(arrival.getMonth() + 1).padStart(2, "0") + "-" + 
           String(arrival.getDate()).padStart(2, "0");
           
-        const departureDateStr = String(departure.getMonth() + 1).padStart(2, "0") + "-" + 
-          String(departure.getDate()).padStart(2, "0");
-          
         if (arrivalDateStr === targetDateStr) {
-          enter++;
+          enterExpected++;
           if (arrival.getHours() >= 18) {
             lateArrivals++;
           }
+          if (family.status === "stay") {
+            enterActual++;
+          }
         }
+        
+        // C. 오늘 퇴소 예정 판별
+        const departureDateStr = String(departure.getMonth() + 1).padStart(2, "0") + "-" + 
+          String(departure.getDate()).padStart(2, "0");
+          
         if (departureDateStr === targetDateStr) {
-          exit++;
+          exitExpected++;
+          if (family.status === "leave") {
+            exitActual++;
+          }
         }
       });
     });
   }
   
-  const enterCaption = enter === 0 
+  const getPercentStr = (actual, expected) => {
+    if (expected === 0) return "0.0";
+    return ((actual / expected) * 100).toFixed(1);
+  };
+  
+  const enterCaption = enterExpected === 0 
     ? "입소 예정인 구성원 없음" 
     : (lateArrivals > 0 ? `오후 6시 이후 입소: ${lateArrivals}명 포함` : "일정표에 따른 입소 완료 예정");
     
-  const exitCaption = exit === 0 
+  const exitCaption = exitExpected === 0 
     ? "퇴소 예정인 구성원 없음" 
     : "일정표에 따른 퇴소 완료 예정";
 
   const stats = [
-    ["현재 참석 인원", total(record), "명", `선택 시간 ${record.time}`, "♙"],
-    ["오늘 입소 예정", enter, "명", enterCaption, "↘"],
-    ["오늘 퇴소 예정", exit, "명", exitCaption, "↗"],
-    ["오늘 최대 인원", peak, "명", `${data.find((item) => total(item) === peak).time} 예상`, "◷"],
+    [
+      "현재 참석 인원", 
+      `${currentActual}/${currentExpected}`, 
+      `명 (${getPercentStr(currentActual, currentExpected)}%)`, 
+      `선택 시간 ${record.time}`, 
+      "♙"
+    ],
+    [
+      "오늘 입소 예정", 
+      `${enterActual}/${enterExpected}`, 
+      `명 (${getPercentStr(enterActual, enterExpected)}%)`, 
+      enterCaption, 
+      "↘"
+    ],
+    [
+      "오늘 퇴소 예정", 
+      `${exitActual}/${exitExpected}`, 
+      `명 (${getPercentStr(exitActual, exitExpected)}%)`, 
+      exitCaption, 
+      "↗"
+    ],
+    [
+      "오늘 최대 인원", 
+      peak, 
+      "명", 
+      `${data.find((item) => total(item) === peak).time} 예상`, 
+      "◷"
+    ],
   ];
+  
   document.querySelector("#statsGrid").innerHTML = stats.map(([label, value, unit, caption, icon]) => `
     <article class="stat-card">
       <div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div>
