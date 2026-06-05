@@ -3208,6 +3208,7 @@ function renderSchoolView() {
   let stats = {
     youth: 0,
     elem: 0,
+    junior: 0,
     kinder: 0,
     toddler: 0
   };
@@ -3215,7 +3216,8 @@ function renderSchoolView() {
   activeChildren.forEach(child => {
     const cat = child.mapping.category;
     if (cat === "중고등부") stats.youth++;
-    else if (cat === "초등부" || cat === "유년부") stats.elem++;
+    else if (cat === "초등부") stats.elem++;
+    else if (cat === "유년부") stats.junior++;
     else if (cat === "유치부1" || cat === "유치부2" || child.group === "유치부") stats.kinder++;
     else stats.toddler++;
   });
@@ -3239,11 +3241,13 @@ function renderSchoolView() {
     <span style="color: #cbd5e1; align-self: center;">|</span>
     <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">🔵 중고등부: &nbsp;${stats.youth}명</span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">🟡 초등/유년부: &nbsp;${stats.elem}명</span>
+    <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">🟡 초등부: &nbsp;${stats.elem}명</span>
+    <span style="color: #cbd5e1; align-self: center;">|</span>
+    <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">🟢 유년부: &nbsp;${stats.junior}명</span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
     <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">🔴 유치부: &nbsp;${stats.kinder}명</span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
-    <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">🟢 유아부: &nbsp;${stats.toddler}명</span>
+    <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">🧸 유아부: &nbsp;${stats.toddler}명</span>
     <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
     <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
       <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
@@ -3288,7 +3292,8 @@ function renderSchoolView() {
     if (selectedSchoolDeptFilter !== "all") {
       let matched = false;
       if (selectedSchoolDeptFilter === "youth" && dept.key === "중고등부") matched = true;
-      if (selectedSchoolDeptFilter === "elem" && (dept.key === "초등부" || dept.key === "유년부")) matched = true;
+      if (selectedSchoolDeptFilter === "elem" && dept.key === "초등부") matched = true;
+      if (selectedSchoolDeptFilter === "junior" && dept.key === "유년부") matched = true;
       if (selectedSchoolDeptFilter === "kinder" && dept.key === "유치부") matched = true;
       if (selectedSchoolDeptFilter === "toddler" && dept.key === "유아") matched = true;
       if (!matched) return "";
@@ -3346,9 +3351,9 @@ function renderSchoolView() {
                     const parentShortName = member.leader.replace(" 가족", "");
                     const showAge = dept.key === "유치부" ? `${member.mapping.label.replace("세", "")}, ` : "";
                     return `
-                      <span class="school-member-pill" style="font-size: 10px; padding: 2px 4px; background: #ffffff; border: 1px solid #e2e8e5; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; width: 100%; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="가족: ${member.familyName}">
+                      <span class="school-member-pill" style="font-size: 11.5px; padding: 3px 5px; background: #ffffff; border: 1px solid #e2e8e5; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 1.5px; width: 100%; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="가족: ${member.familyName}">
                         <strong style="color: #334155; font-weight: 800; white-space: nowrap;">${member.name}</strong>
-                        <span style="color: #94a3b8; font-size: 9px; font-weight: 500; white-space: nowrap;">(${showAge}${parentShortName})</span>
+                        <span style="color: #94a3b8; font-size: 10px; font-weight: 500; white-space: nowrap;">(${showAge}${parentShortName})</span>
                       </span>
                     `;
                   }).join("")}
@@ -3388,7 +3393,8 @@ function downloadSchoolList() {
         if (selectedSchoolDeptFilter !== "all") {
           let matched = false;
           if (selectedSchoolDeptFilter === "youth" && group === "중고등부") matched = true;
-          if (selectedSchoolDeptFilter === "elem" && (group === "초등부" || group === "유년부")) matched = true;
+          if (selectedSchoolDeptFilter === "elem" && group === "초등부") matched = true;
+          if (selectedSchoolDeptFilter === "junior" && group === "유년부") matched = true;
           if (selectedSchoolDeptFilter === "kinder" && group === "유치부") matched = true;
           if (selectedSchoolDeptFilter === "toddler" && group === "유아") matched = true;
           if (!matched) return;
@@ -3456,7 +3462,7 @@ function downloadSchoolList() {
     }
   }
   
-  const deptMap = { youth: "중고등부", elem: "초등유년부", kinder: "유치부", toddler: "유아부" };
+  const deptMap = { youth: "중고등부", elem: "초등부", junior: "유년부", kinder: "유치부", toddler: "유아부" };
   const deptLabel = selectedSchoolDeptFilter !== "all" ? `_${deptMap[selectedSchoolDeptFilter]}` : "";
   const fileName = `교회학교${deptLabel}${timeLabel}_명단.xlsx`;
   const worksheet = XLSX.utils.json_to_sheet(data);
