@@ -3351,160 +3351,163 @@ function renderSchoolView() {
   
   listChildren.sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
-  const listHtml = `
-    <style>
-      .school-list-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 8px;
-        white-space: nowrap;
-      }
-      body.desktop-mode .school-list-table th,
-      body.desktop-mode .school-list-table td {
-        width: auto !important;
-        min-width: 0 !important;
-        padding: 10px 12px !important;
-      }
-      body.desktop-mode .school-list-table th:nth-child(1),
-      body.desktop-mode .school-list-table td:nth-child(1) {
-        width: 200px !important;
-        min-width: 200px !important;
-      }
-      body.desktop-mode .school-list-table th:nth-child(2),
-      body.desktop-mode .school-list-table td:nth-child(2) {
-        width: 130px !important;
-        min-width: 130px !important;
-      }
-      body.desktop-mode .school-list-table th:nth-child(3),
-      body.desktop-mode .school-list-table td:nth-child(3) {
-        width: 90px !important;
-        min-width: 90px !important;
-      }
-      body.desktop-mode .school-list-table th:nth-child(4),
-      body.desktop-mode .school-list-table td:nth-child(4) {
-        width: 210px !important;
-        min-width: 210px !important;
-      }
-      body.desktop-mode .school-list-table th:nth-child(5),
-      body.desktop-mode .school-list-table td:nth-child(5) {
-        width: 50px !important;
-        min-width: 50px !important;
-      }
-      
-      .school-attendance-badge {
-        display: inline-block;
-        padding: 5px 8px;
-        border-radius: 15px;
-        font-size: 10px;
-        font-weight: 800;
-        text-align: center;
-        min-width: 54px;
-        box-sizing: border-box;
-      }
-      .school-attendance-badge.full {
-        color: #347150;
-        background: #e2f3e8;
-      }
-      .school-attendance-badge.partial {
-        color: #ad672f;
-        background: #fff0df;
-      }
-      .school-attendance-badge.absent {
-        color: #64748b;
-        background: #f1f5f9;
-      }
-      .school-attendance-badge.undecided {
-        color: #687873;
-        background: #eef2f0;
-      }
-    </style>
-    <div class="school-list-table-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
-      <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-        <span>📋 자녀 상세 명단</span>
-        <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
-      </h3>
-      <div class="table-wrap">
-        <table class="school-list-table">
-          <thead>
-            <tr>
-              <th>자녀 정보</th>
-              <th>소속 부서</th>
-              <th>현재 상태</th>
-              <th>참석 날짜</th>
-              <th>상세</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${listChildren.map(child => {
-              const family = families.find(f => f.name === child.familyName);
-              const mother = family ? family.members.find(m => m[1] === "성인 여성") : null;
-              const motherName = mother ? mother[0] : "";
-              
-              const memberObj = family ? family.members.find(m => normalizeName(m[0]) === normalizeName(child.name)) : null;
-              let status = "partial";
-              let statusLabel = "부분참석";
-              if (!memberObj) {
-                status = "absent";
-                statusLabel = "불참";
-              } else if (memberObj[7] === "undecided" || (family && family.status === "undecided")) {
-                status = "undecided";
-                statusLabel = "미정";
-              } else {
-                const periods = getMemberAttendancePeriods(memberObj);
-                if (periods.length === 0) {
+  let listHtml = "";
+  if (selectedSchoolDeptFilter !== "all") {
+    listHtml = `
+      <style>
+        .school-list-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          white-space: nowrap;
+        }
+        body.desktop-mode .school-list-table th,
+        body.desktop-mode .school-list-table td {
+          width: auto !important;
+          min-width: 0 !important;
+          padding: 10px 12px !important;
+        }
+        body.desktop-mode .school-list-table th:nth-child(1),
+        body.desktop-mode .school-list-table td:nth-child(1) {
+          width: 200px !important;
+          min-width: 200px !important;
+        }
+        body.desktop-mode .school-list-table th:nth-child(2),
+        body.desktop-mode .school-list-table td:nth-child(2) {
+          width: 130px !important;
+          min-width: 130px !important;
+        }
+        body.desktop-mode .school-list-table th:nth-child(3),
+        body.desktop-mode .school-list-table td:nth-child(3) {
+          width: 90px !important;
+          min-width: 90px !important;
+        }
+        body.desktop-mode .school-list-table th:nth-child(4),
+        body.desktop-mode .school-list-table td:nth-child(4) {
+          width: 210px !important;
+          min-width: 210px !important;
+        }
+        body.desktop-mode .school-list-table th:nth-child(5),
+        body.desktop-mode .school-list-table td:nth-child(5) {
+          width: 50px !important;
+          min-width: 50px !important;
+        }
+        
+        .school-attendance-badge {
+          display: inline-block;
+          padding: 5px 8px;
+          border-radius: 15px;
+          font-size: 10px;
+          font-weight: 800;
+          text-align: center;
+          min-width: 54px;
+          box-sizing: border-box;
+        }
+        .school-attendance-badge.full {
+          color: #347150;
+          background: #e2f3e8;
+        }
+        .school-attendance-badge.partial {
+          color: #ad672f;
+          background: #fff0df;
+        }
+        .school-attendance-badge.absent {
+          color: #64748b;
+          background: #f1f5f9;
+        }
+        .school-attendance-badge.undecided {
+          color: #687873;
+          background: #eef2f0;
+        }
+      </style>
+      <div class="school-list-table-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
+        <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+          <span>📋 자녀 상세 명단</span>
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
+        </h3>
+        <div class="table-wrap">
+          <table class="school-list-table">
+            <thead>
+              <tr>
+                <th>자녀 정보</th>
+                <th>소속 부서</th>
+                <th>현재 상태</th>
+                <th>참석 날짜</th>
+                <th>상세</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${listChildren.map(child => {
+                const family = families.find(f => f.name === child.familyName);
+                const mother = family ? family.members.find(m => m[1] === "성인 여성") : null;
+                const motherName = mother ? mother[0] : "";
+                
+                const memberObj = family ? family.members.find(m => normalizeName(m[0]) === normalizeName(child.name)) : null;
+                let status = "partial";
+                let statusLabel = "부분참석";
+                if (!memberObj) {
                   status = "absent";
                   statusLabel = "불참";
-                } else if (isMemberFullAttendance(memberObj)) {
-                  status = "full";
-                  statusLabel = "풀참";
+                } else if (memberObj[7] === "undecided" || (family && family.status === "undecided")) {
+                  status = "undecided";
+                  statusLabel = "미정";
+                } else {
+                  const periods = getMemberAttendancePeriods(memberObj);
+                  if (periods.length === 0) {
+                    status = "absent";
+                    statusLabel = "불참";
+                  } else if (isMemberFullAttendance(memberObj)) {
+                    status = "full";
+                    statusLabel = "풀참";
+                  }
                 }
-              }
-              
-              let attendanceHtml = "-";
-              if (memberObj) {
-                const periods = getMemberAttendancePeriods(memberObj);
-                const externalMeals = getMemberExternalMealPeriods(memberObj);
-                const isUndecided = memberObj[7] === "undecided" || (family && family.status === "undecided");
                 
-                const squares = renderDaySquares(periods, externalMeals, "", isUndecided);
-                attendanceHtml = `
-                  <div class="family-attendance-summary" style="grid-template-columns: 1fr;">
-                    <div class="family-schedule-groups">
-                      <div class="family-schedule-group" style="grid-template-columns: 1fr;">
-                        <div class="family-day-squares">${squares}</div>
+                let attendanceHtml = "-";
+                if (memberObj) {
+                  const periods = getMemberAttendancePeriods(memberObj);
+                  const externalMeals = getMemberExternalMealPeriods(memberObj);
+                  const isUndecided = memberObj[7] === "undecided" || (family && family.status === "undecided");
+                  
+                  const squares = renderDaySquares(periods, externalMeals, "", isUndecided);
+                  attendanceHtml = `
+                    <div class="family-attendance-summary" style="grid-template-columns: 1fr;">
+                      <div class="family-schedule-groups">
+                        <div class="family-schedule-group" style="grid-template-columns: 1fr;">
+                          <div class="family-day-squares">${squares}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  `;
+                }
+                
+                return `
+                  <tr>
+                    <td class="family-cell" data-label="자녀">
+                      <b>${child.name}</b>
+                      <span>${motherName ? `${motherName} · ` : ""}${family ? family.phone : "-"}</span>
+                    </td>
+                    <td data-label="소속 부서">
+                      <span class="member-pill child" style="font-weight: 800; font-size: 10px;">${child.group}</span>
+                      <span style="font-size: 10px; color: #718078;">(${child.mapping.label})</span>
+                    </td>
+                    <td data-label="현재 상태">
+                      <span class="school-attendance-badge ${status}">${statusLabel}</span>
+                    </td>
+                    <td class="schedule-cell" data-label="참석 날짜">
+                      ${attendanceHtml}
+                    </td>
+                    <td class="table-row-action">
+                      <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
+                    </td>
+                  </tr>
                 `;
-              }
-              
-              return `
-                <tr>
-                  <td class="family-cell" data-label="자녀">
-                    <b>${child.name}</b>
-                    <span>${motherName ? `${motherName} · ` : ""}${family ? family.phone : "-"}</span>
-                  </td>
-                  <td data-label="소속 부서">
-                    <span class="member-pill child" style="font-weight: 800; font-size: 10px;">${child.group}</span>
-                    <span style="font-size: 10px; color: #718078;">(${child.mapping.label})</span>
-                  </td>
-                  <td data-label="현재 상태">
-                    <span class="school-attendance-badge ${status}">${statusLabel}</span>
-                  </td>
-                  <td class="schedule-cell" data-label="참석 날짜">
-                    ${attendanceHtml}
-                  </td>
-                  <td class="table-row-action">
-                    <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
-                  </td>
-                </tr>
-              `;
-            }).join("")}
-          </tbody>
-        </table>
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  }
 
   container.innerHTML = deptCardsHtml + listHtml;
 }
