@@ -704,7 +704,7 @@ function renderFamilies() {
   });
   
   const statsHtml = `
-    <strong>🏠 ${visibleFamilies.length}가족</strong>
+    <strong><i data-lucide="home" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px; color: var(--forest);"></i>${visibleFamilies.length}가족</strong>
     <span class="stats-sep">|</span> 장년부 ${adultCount}명
     <span class="stats-sep">|</span> 대학부 ${collegeCount}명
     <span class="stats-sep">|</span> 유초등부 ${childCount}명
@@ -779,9 +779,15 @@ function renderFamilies() {
         <td class="schedule-cell" data-label="참석 날짜">${renderFamilyAttendance(family)}</td>
         <td data-label="회비 / 방배정">
           <div style="font-size: 11px; color: #5c7066; display: flex; flex-direction: column; gap: 4px;">
-            <div>💰 <b>${(family.fee || 0).toLocaleString()}원</b></div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <i data-lucide="coins" style="width: 13px; height: 13px; stroke-width: 1.85px; color: #5c7066;"></i>
+              <b>${(family.fee || 0).toLocaleString()}원</b>
+            </div>
             <div><span class="fee-badge ${family.feeStatus || 'pending'}" style="margin: 0;">${(family.feeStatus === 'paid' ? '완납' : '납부 예정')}</span></div>
-            <div>🏠 <span style="font-weight: 700; color: var(--forest);">${family.room || '미배정'}</span></div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <i data-lucide="bed-double" style="width: 13px; height: 13px; stroke-width: 1.85px; color: var(--forest);"></i>
+              <span style="font-weight: 700; color: var(--forest);">${family.room || '미배정'}</span>
+            </div>
           </div>
         </td>
         <td data-label="현재 상태"><span class="status ${statusClass}">${statusSymbol} ${statusText}</span></td>
@@ -1162,7 +1168,7 @@ function renderOrgChart(genderMode) {
   statsBar.innerHTML = `
     <div class="org-stats-row">
       <div class="org-stats-item ${orgActiveFilter === 'all' ? 'active' : ''}" data-org-filter="all">
-        <strong>🏫 전체 인원:</strong>&nbsp;<b>${totalPeopleCount}명</b>
+        <strong><i data-lucide="users" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>전체 인원:</strong>&nbsp;<b>${totalPeopleCount}명</b>
       </div>
       <span class="org-stats-sep" style="color: #cbd5e1; align-self: center;">|</span>
       <div class="org-stats-item ${orgActiveFilter === 'attended' ? 'active' : ''}" data-org-filter="attended">
@@ -1234,7 +1240,7 @@ function renderOrgChart(genderMode) {
     html += `
       <div class="org-group-card">
         <div class="org-group-name">
-          <span>${isSister ? "👩" : "👨"} ${group.id} (${group.leader})</span>
+          <span><i data-lucide="users" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>${group.id} (${group.leader})</span>
         </div>
         <div class="org-leader-box">
           ${makeNodeHtml(group.leader, "조장", isSister ? "sister" : "brother")}
@@ -1256,7 +1262,7 @@ function renderOrgChart(genderMode) {
     html += `
       <div class="org-group-card">
         <div class="org-group-name">
-          <span>👑 코디 및 기타 스태프</span>
+          <span><i data-lucide="crown" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>코디 및 기타 스태프</span>
         </div>
         <div class="org-leader-box">
           ${staffData.coordinators.map((c) => makeNodeHtml(c.name, c.role, isSister ? "sister" : "brother")).join("")}
@@ -1272,7 +1278,7 @@ function renderOrgChart(genderMode) {
   if (!html) {
     html = `
       <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; background: #fafafa; border-radius: 8px; border: 1px dashed #dcdcdc;">
-        <span style="font-size: 32px; margin-bottom: 12px;">🔍</span>
+        <i data-lucide="search" style="width: 32px; height: 32px; stroke-width: 1.5px; color: var(--muted); margin-bottom: 12px;"></i>
         <p style="font-size: 13px; font-weight: 600; color: #555; margin: 0;">필터 조건에 맞는 조원이 없습니다.</p>
         <p style="font-size: 11px; color: #888; margin: 4px 0 0 0;">다른 필터 조건을 선택해 주세요.</p>
       </div>
@@ -1885,7 +1891,7 @@ function updateEstimatedFee() {
       <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
         <span>🛏️ 총 숙박수: ${nights}박</span>
         <span style="color: #cbd5e1;">|</span>
-        <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
+        <span><i data-lucide="utensils-crossed" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
@@ -3361,7 +3367,7 @@ function renderSchoolView() {
   statsBar.innerHTML = `
     <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}">
       ${selectedSchoolDeptFilter === "all" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
-      <strong>🏫 총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
+      <i data-lucide="baby" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i><strong>총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
     </span>
     <span style="color: #cbd5e1; align-self: center;">|</span>
     <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">
@@ -3390,9 +3396,9 @@ function renderSchoolView() {
     </span>
     <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
     <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
-      <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
+      <i data-lucide="clock" style="width: 12px; height: 12px; stroke-width: 2.2px; vertical-align: middle; margin-right: 4px; color: #475569;"></i><span style="font-size: 11px; font-weight: 800; color: #475569;">시간대 필터:</span>
       <div class="attendance-days" id="schoolTimeFilterDays" style="display: flex; gap: 4px;"></div>
-      <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px;">❌ 해제</button>
+      <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="x" style="width: 10px; height: 10px; stroke-width: 2.5px;"></i>해제</button>
     </div>
   `;
   renderSchoolTimeFilter();
@@ -3593,7 +3599,8 @@ function renderSchoolView() {
       </style>
       <div class="school-list-table-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
         <h3 style="font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-          <span>📋 자녀 상세 명단</span>
+          <i data-lucide="clipboard-list" style="width: 15px; height: 15px; stroke-width: 2px; vertical-align: middle; color: var(--forest);"></i>
+          <span>자녀 상세 명단</span>
           <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(${listChildren.length}명)</span>
         </h3>
         <div class="table-wrap">
@@ -3651,8 +3658,16 @@ function renderSchoolView() {
                   `;
                 }
                 
+                const schoolStatusMap = {
+                  full: ["stay", "✓", "풀참"],
+                  partial: ["late", "◐", "부분참석"],
+                  absent: ["leave", "✕", "불참"],
+                  undecided: ["undecided", "?", "미정"]
+                };
+                const [badgeClass, symbol, labelText] = schoolStatusMap[status] || ["undecided", "?", "미정"];
+
                 return `
-                  <tr>
+                  <tr class="status-row-${badgeClass}">
                     <td class="family-cell" data-label="자녀">
                       <b>${child.name}</b>
                       <span>${motherName ? `${motherName} · ` : ""}${family ? family.phone : "-"}</span>
@@ -3662,7 +3677,7 @@ function renderSchoolView() {
                       <span style="font-size: 10px; color: #718078;">(${child.mapping.label})</span>
                     </td>
                     <td data-label="현재 상태">
-                      <span class="school-attendance-badge ${status}">${statusLabel}</span>
+                      <span class="status ${badgeClass}">${symbol} ${labelText}</span>
                     </td>
                     <td class="schedule-cell" data-label="참석 날짜">
                       ${attendanceHtml}
