@@ -2477,6 +2477,62 @@ let driveViewMode = "grid";
 let driveSearchQuery = "";
 let gapiToken = localStorage.getItem("gapi_access_token") || "";
 let tokenClient = null;
+let driveCurrentUser = null;
+
+function normalizeDriveEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+async function fetchGoogleUserInfo(accessToken) {
+  const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google 사용자 정보를 가져오지 못했습니다. (${response.status})`);
+  }
+
+  return response.json();
+}
+
+function syncDriveAccessUi() {
+  const loginContainer = document.querySelector("#driveLoginContainer");
+  const contentContainer = document.querySelector("#driveContentContainer");
+  const message = document.querySelector("#driveLoginMessage");
+  const note = document.querySelector("#driveLoginAccessNote");
+  const uploadButton = document.querySelector("#btnDriveUpload");
+
+  if (message) {
+    if (gapiToken && driveCurrentUser) {
+      message.textContent = `${driveCurrentUser.name || driveCurrentUser.email} 계정으로 로그인되었습니다.`;
+    } else if (gapiToken) {
+      message.textContent = "구글 계정으로 로그인되었습니다.";
+    } else {
+      message.textContent = "문서 자료실을 이용하려면 구글 계정으로 로그인해야 합니다.";
+    }
+  }
+
+  if (note) {
+    note.textContent = "로그인한 계정의 Google Drive 공유 권한에 따라 읽기, 수정, 업로드가 결정됩니다.";
+  }
+
+  if (uploadButton) {
+    uploadButton.style.display = gapiToken ? "inline-flex" : "none";
+    uploadButton.disabled = !gapiToken;
+  }
+
+  if (!loginContainer || !contentContainer) return;
+
+  if (gapiToken) {
+    loginContainer.style.display = "none";
+    contentContainer.style.display = "block";
+  } else {
+    loginContainer.style.display = "flex";
+    contentContainer.style.display = "none";
+  }
+}
 
 async function loadDriveConfig() {
   try {
@@ -2519,6 +2575,7 @@ async function loadDriveConfig() {
   if (warningBanner) {
     warningBanner.style.display = driveOAuthClientId ? "none" : "flex";
   }
+  syncDriveAccessUi();
 }
 
 function initGoogleOAuth() {
@@ -2533,8 +2590,8 @@ function initGoogleOAuth() {
   }
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: driveOAuthClientId,
-    scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
-    callback: (response) => {
+    scope: "openid email profile https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
+    callback: async (response) => {
       if (response.error) {
         console.error("OAuth error:", response.error);
         showToast("구글 로그인 실패: " + response.error);
@@ -2543,8 +2600,22 @@ function initGoogleOAuth() {
       if (response.access_token) {
         gapiToken = response.access_token;
         localStorage.setItem("gapi_access_token", gapiToken);
-        showToast("구글 계정이 성공적으로 연동되었습니다.");
-        renderDriveView(driveActiveFolderId, driveFolderHistory[driveFolderHistory.length - 1]?.name);
+        driveCurrentUser = null;
+        syncDriveAccessUi();
+        try {
+          const userInfo = await fetchGoogleUserInfo(gapiToken);
+          driveCurrentUser = {
+            email: normalizeDriveEmail(userInfo.email),
+            name: userInfo.name || userInfo.email,
+          };
+          showToast(`${driveCurrentUser.name || driveCurrentUser.email} 계정으로 로그인되었습니다.`);
+        } catch (error) {
+          console.warn("Google user info lookup failed:", error);
+          showToast("구글 계정 로그인 완료");
+        } finally {
+          syncDriveAccessUi();
+          renderDriveView(driveActiveFolderId, driveFolderHistory[driveFolderHistory.length - 1]?.name);
+        }
       }
     },
   });
@@ -2567,7 +2638,7 @@ function loginToGoogle() {
   }
 }
 
-function logoutFromGoogle() {
+function logoutFromGoogle(silent = false) {
   if (gapiToken) {
     try {
       google.accounts.oauth2.revokeToken(gapiToken, () => {});
@@ -2576,23 +2647,14 @@ function logoutFromGoogle() {
     }
   }
   gapiToken = "";
+  driveCurrentUser = null;
   localStorage.removeItem("gapi_access_token");
-  showToast("로그아웃되었습니다.");
-  updateDriveUI();
+  if (!silent) showToast("로그아웃되었습니다.");
+  syncDriveAccessUi();
 }
 
 function updateDriveUI() {
-  const loginContainer = document.querySelector("#driveLoginContainer");
-  const contentContainer = document.querySelector("#driveContentContainer");
-  if (!loginContainer || !contentContainer) return;
-
-  if (gapiToken) {
-    loginContainer.style.display = "none";
-    contentContainer.style.display = "block";
-  } else {
-    loginContainer.style.display = "flex";
-    contentContainer.style.display = "none";
-  }
+  syncDriveAccessUi();
 }
 
 async function renderDriveView(folderId = null, folderName = "여름수련회_공유폴더") {
