@@ -2469,7 +2469,7 @@ function getFamilyFromForm(existingFamily = null) {
   };
 }
 
-let driveOAuthClientId = "";
+let driveOAuthClientId = "582144992351-iehddqkp7emjrkap1bh97p7fd5c3p8vf.apps.googleusercontent.com";
 let driveOAuthFolderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS";
 let driveActiveFolderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS";
 let driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
