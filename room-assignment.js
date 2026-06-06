@@ -68,17 +68,30 @@
     return String(family?.id ?? index);
   }
 
-    function getFamilyHeadcount(family) {
-      if (!family || !Array.isArray(family.members)) return 0;
-      return family.members.length || 0;
-    }
+  function getMemberName(member) {
+    if (Array.isArray(member)) return String(member[0] || "").trim();
+    return String(member?.name || "").trim();
+  }
 
-  function getFamilyGenderCounts(family) {
-    const counts = { brother: 0, sister: 0 };
+  function getMemberRole(member) {
+    if (Array.isArray(member)) return String(member[1] || "").trim();
+    return String(member?.role || member?.group || member?.type || "").trim();
+  }
+
+  function getFamilyHeadcount(family) {
+    if (!family || !Array.isArray(family.members)) return 0;
+    return family.members.filter((member) => getMemberName(member)).length || 0;
+  }
+
+  function getFamilyComposition(family) {
+    const counts = { brother: 0, sister: 0, child: 0, total: 0 };
     (family?.members || []).forEach((member) => {
-      const gender = normalizeText(member?.gender || member?.sex || "");
-      if (gender.includes("여") || gender.includes("자매") || gender.includes("female")) counts.sister += 1;
-      else counts.brother += 1;
+      if (!getMemberName(member)) return;
+      const role = getMemberRole(member);
+      counts.total += 1;
+      if (role === "성인 남성") counts.brother += 1;
+      else if (role === "성인 여성") counts.sister += 1;
+      else counts.child += 1;
     });
     return counts;
   }
@@ -376,7 +389,7 @@
     const [floorFilter, setFloorFilter] = useState("all");
     const [roomTypeFilter, setRoomTypeFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
-    const [familyStateFilter, setFamilyStateFilter] = useState("all");
+    const [familyStateFilter, setFamilyStateFilter] = useState("unassigned");
     const [saving, setSaving] = useState(false);
     const [dragState, setDragState] = useState(null);
     const [dropRoomId, setDropRoomId] = useState(null);
@@ -665,7 +678,15 @@
     function updateAssignment(familyId, roomValue) {
       setDraftAssignments((prev) => ({ ...prev, [familyId]: roomValue || "미배정" }));
       setToastHint(roomValue && roomValue !== "미배정" ? "배정 초안을 업데이트했습니다." : "배정 초안을 해제했습니다.");
-      setSelectedFamilyId(familyId);
+      if (roomValue && roomValue !== "미배정" && layoutState.data) {
+        const room = resolveRoom(layoutState.data, roomValue);
+        setSelectedRoomId(room?.id || null);
+        setSelectedFamilyId(null);
+        setMobileTab("rooms");
+      } else {
+        setSelectedFamilyId(familyId);
+        setSelectedRoomId(null);
+      }
     }
 
     function startDrag(family, event) {
@@ -1155,7 +1176,7 @@
       const roomLabel = room?.label || "미배정";
       const isSelected = selectedFamilyId === family._familyId;
       const isAssigned = Boolean(room);
-      const genderCounts = getFamilyGenderCounts(family);
+      const composition = getFamilyComposition(family);
 
       return h(
         "article",
@@ -1186,11 +1207,13 @@
               h("span", { className: cx("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", isAssigned ? "bg-slate-100 text-slate-600 ring-slate-200" : "bg-amber-50 text-amber-700 ring-amber-200") }, roomLabel)
             ),
             h("div", { className: "mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-500" },
-              h("span", null, `형제 ${genderCounts.brother}`),
+              h("span", null, `형제 ${composition.brother}`),
               h("span", { className: "text-slate-300" }, "|"),
-              h("span", null, `자매 ${genderCounts.sister}`),
+              h("span", null, `자매 ${composition.sister}`),
               h("span", { className: "text-slate-300" }, "|"),
-              h("span", null, `총 ${family._size}명`)
+              h("span", null, `자녀 ${composition.child}`),
+              h("span", { className: "text-slate-300" }, "|"),
+              h("span", null, `총 ${composition.total}명`)
             )
           ),
           h("button", {
