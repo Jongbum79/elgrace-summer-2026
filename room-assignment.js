@@ -266,6 +266,24 @@
     return text.length > length ? `${text.slice(0, length - 1)}…` : text;
   }
 
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function getPreferredRoomCapacities(size) {
+    if (size <= 1) return [1, 2, 4, 6, 12];
+    if (size === 2) return [2, 4, 6, 12];
+    if (size <= 4) return [4, 6, 12];
+    if (size <= 6) return [6, 12];
+    return [12, 6, 4, 2, 1];
+  }
+
+  function getRoomPreferenceTier(size, roomCapacity) {
+    const preferred = getPreferredRoomCapacities(size);
+    const tier = preferred.indexOf(roomCapacity);
+    return tier === -1 ? preferred.length : tier;
+  }
+
   function buildRoomFamilyMap(familiesList, draftAssignments, layoutIndex) {
     const byRoom = new Map();
     const orphaned = [];
@@ -316,8 +334,9 @@
       available,
       remainingAfter,
       score: [
+        getRoomPreferenceTier(familySize, roomBucket.room.capacity),
         remainingAfter,
-        roomBucket.headcount === 0 ? 1 : 0,
+        roomBucket.headcount > 0 ? 0 : 1,
         roomBucket.room.capacity,
         roomBucket.room.buildingOrder || 0,
         roomBucket.room.floor || 0,
@@ -351,6 +370,8 @@
     const [dragState, setDragState] = useState(null);
     const [dropRoomId, setDropRoomId] = useState(null);
     const [toastHint, setToastHint] = useState("");
+    const [autoAssigning, setAutoAssigning] = useState(false);
+    const [autoAssignProgress, setAutoAssignProgress] = useState({ index: 0, total: 0, family: "", room: "" });
     const dragRef = useRef({
       active: false,
       familyId: null,
@@ -400,7 +421,7 @@
     useEffect(() => {
       if (!window.lucide?.createIcons) return;
       window.lucide.createIcons();
-    }, [layoutState.data, draftToken, selectedRoomId, selectedFamilyId, mobileTab, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, dragState, saving, toastHint]);
+    }, [layoutState.data, draftToken, selectedRoomId, selectedFamilyId, mobileTab, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, dragState, saving, toastHint, autoAssigning, autoAssignProgress]);
 
     const roomBundle = useMemo(() => {
       if (!layoutState.data) {
@@ -804,88 +825,109 @@
       }
     }
 
-    function autoAssignRooms() {
-      if (!layoutState.data) return;
-      const next = { ...draftAssignments };
-      const assignedSet = new Set();
+    async function autoAssignRooms() {
+      if (!layoutState.data || autoAssigning) return;
+      setAutoAssigning(true);
+      setToastHint("자동 배정을 시작합니다.");
+      setAutoAssignProgress({ index: 0, total: 0, family: "", room: "" });
 
-      familiesList.forEach((family, index) => {
-        const familyId = getFamilyId(family, index);
-        const roomValue = getFamilyRoomValue({ ...family, id: familyId }, draftAssignments);
-        if (resolveRoom(layoutState.data, roomValue)) assignedSet.add(familyId);
-      });
-
-      const roomBuckets = new Map();
-      layoutState.data.rooms.forEach((room) => {
-        const bucket = roomBundle.byRoom.get(room.id) || {
-          room,
-          families: [],
-          headcount: 0,
-        };
-        roomBuckets.set(room.id, {
-          room,
-          families: [...bucket.families],
-          headcount: bucket.headcount || 0,
-        });
-      });
-
-      const candidates = familiesList
-        .map((family, index) => ({
-          family,
-          familyId: getFamilyId(family, index),
-          size: getFamilyHeadcount(family),
-          roomValue: getFamilyRoomValue({ ...family, id: getFamilyId(family, index) }, draftAssignments),
-        }))
-        .filter((item) => !resolveRoom(layoutState.data, item.roomValue))
-        .filter((item) => !["absent", "undecided"].includes(item.family.status))
-        .sort((a, b) => {
-          if (b.size !== a.size) return b.size - a.size;
-          const statusOrder = { stay: 0, late: 1, leave: 2, absent: 3, undecided: 4 };
-          if ((statusOrder[a.family.status] ?? 9) !== (statusOrder[b.family.status] ?? 9)) {
-            return (statusOrder[a.family.status] ?? 9) - (statusOrder[b.family.status] ?? 9);
-          }
-          return normalizeText(a.family.name).localeCompare(normalizeText(b.family.name));
+      try {
+        const next = { ...draftAssignments };
+        const roomBuckets = new Map();
+        layoutState.data.rooms.forEach((room) => {
+          const bucket = roomBundle.byRoom.get(room.id) || {
+            room,
+            families: [],
+            headcount: 0,
+          };
+          roomBuckets.set(room.id, {
+            room,
+            families: [...bucket.families],
+            headcount: bucket.headcount || 0,
+          });
         });
 
-      let placedCount = 0;
-
-      candidates.forEach((item) => {
-        const options = layoutState.data.rooms
-          .map((room) => {
-            const bucket = roomBuckets.get(room.id);
-            const available = room.capacity - (bucket?.headcount || 0);
-            return {
-              room,
-              bucket,
-              available,
-            };
-          })
-          .filter((option) => option.available >= item.size)
+        const candidates = familiesList
+          .map((family, index) => ({
+            family,
+            familyId: getFamilyId(family, index),
+            size: getFamilyHeadcount(family),
+            roomValue: getFamilyRoomValue({ ...family, id: getFamilyId(family, index) }, draftAssignments),
+          }))
+          .filter((item) => !resolveRoom(layoutState.data, item.roomValue))
+          .filter((item) => !["absent", "undecided"].includes(item.family.status))
           .sort((a, b) => {
-            const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, headcount: 0 }, item.size).score;
-            const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, headcount: 0 }, item.size).score;
-            for (let i = 0; i < scoreA.length; i += 1) {
-              if (scoreA[i] !== scoreB[i]) return scoreA[i] - scoreB[i];
+            if (b.size !== a.size) return b.size - a.size;
+            const statusOrder = { stay: 0, late: 1, leave: 2, absent: 3, undecided: 4 };
+            if ((statusOrder[a.family.status] ?? 9) !== (statusOrder[b.family.status] ?? 9)) {
+              return (statusOrder[a.family.status] ?? 9) - (statusOrder[b.family.status] ?? 9);
             }
-            return 0;
+            return normalizeText(a.family.name).localeCompare(normalizeText(b.family.name));
           });
 
-        const chosen = options[0];
-        if (!chosen) return;
-        next[item.familyId] = chosen.room.label;
-        const currentBucket = roomBuckets.get(chosen.room.id);
-        currentBucket.headcount += item.size;
-        currentBucket.families.push({
-          ...item.family,
-          _familyId: item.familyId,
-          _size: item.size,
-        });
-        placedCount += 1;
-      });
+        let placedCount = 0;
+        setAutoAssignProgress({ index: 0, total: candidates.length, family: "", room: "" });
 
-      setDraftAssignments(next);
-      setToastHint(`자동 배정 초안을 ${placedCount}가족에게 적용했습니다.`);
-      showToast(`자동 배정 초안을 ${placedCount}가족에게 적용했습니다.`);
+        for (let index = 0; index < candidates.length; index += 1) {
+          const item = candidates[index];
+          const options = layoutState.data.rooms
+            .map((room) => {
+              const bucket = roomBuckets.get(room.id);
+              const available = room.capacity - (bucket?.headcount || 0);
+              return {
+                room,
+                bucket,
+                available,
+              };
+            })
+            .filter((option) => option.available >= item.size)
+            .sort((a, b) => {
+              const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, headcount: 0 }, item.size).score;
+              const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, headcount: 0 }, item.size).score;
+              for (let i = 0; i < scoreA.length; i += 1) {
+                if (scoreA[i] !== scoreB[i]) return scoreA[i] - scoreB[i];
+              }
+              return 0;
+            });
+
+          const chosen = options[0];
+          setAutoAssignProgress({
+            index: index + 1,
+            total: candidates.length,
+            family: item.family.name,
+            room: chosen ? chosen.room.label : "배정 불가",
+          });
+          setSelectedFamilyId(item.familyId);
+          setSelectedRoomId(chosen ? chosen.room.id : null);
+
+          if (chosen) {
+            next[item.familyId] = chosen.room.label;
+            const currentBucket = roomBuckets.get(chosen.room.id);
+            currentBucket.headcount += item.size;
+            currentBucket.families.push({
+              ...item.family,
+              _familyId: item.familyId,
+              _size: item.size,
+            });
+            placedCount += 1;
+            setToastHint(`${item.family.name} → ${chosen.room.label}`);
+            setDraftAssignments({ ...next });
+          } else {
+            setToastHint(`${item.family.name}은(는) 배정 가능한 방이 없습니다.`);
+          }
+
+          await sleep(160);
+        }
+
+        setDraftAssignments(next);
+        setToastHint(`자동 배정 초안을 ${placedCount}가족에게 적용했습니다.`);
+        showToast(`자동 배정 초안을 ${placedCount}가족에게 적용했습니다.`);
+      } finally {
+        setSelectedRoomId(null);
+        setSelectedFamilyId(null);
+        setAutoAssigning(false);
+        setAutoAssignProgress({ index: 0, total: 0, family: "", room: "" });
+      }
     }
 
     function clearSelectedFamily() {
@@ -1353,21 +1395,28 @@
               h("button", {
                 type: "button",
                 onClick: autoAssignRooms,
-                className: "inline-flex items-center gap-2 rounded-full border border-[#1e5a45]/20 bg-white px-4 py-2 text-sm font-semibold text-[#1e5a45] shadow-sm transition hover:-translate-y-0.5 hover:border-[#1e5a45]/30 hover:shadow-md",
-              }, renderIcon("wand-sparkles", "h-4 w-4"), "자동 배정"),
+                disabled: autoAssigning,
+                className: cx(
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition",
+                  autoAssigning
+                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                    : "border-[#1e5a45]/20 bg-white text-[#1e5a45] hover:-translate-y-0.5 hover:border-[#1e5a45]/30 hover:shadow-md"
+                ),
+              }, autoAssigning ? renderIcon("loader-circle", "h-4 w-4 animate-spin") : renderIcon("wand-sparkles", "h-4 w-4"), autoAssigning ? "배정 중" : "자동 배정"),
               h("button", {
                 type: "button",
                 onClick: saveChanges,
-                disabled: saving || !isDirty,
+                disabled: saving || !isDirty || autoAssigning,
                 className: cx(
                   "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition",
-                  saving || !isDirty
+                  saving || !isDirty || autoAssigning
                     ? "cursor-not-allowed bg-slate-200 text-slate-500"
                     : "bg-[#1e5a45] text-white hover:-translate-y-0.5 hover:bg-[#184a39] hover:shadow-md"
                 ),
               }, saving ? renderIcon("loader-circle", "h-4 w-4 animate-spin") : renderIcon("save", "h-4 w-4"), saving ? "저장 중" : isDirty ? "변경 저장" : "저장 완료"),
               h("button", {
                 type: "button",
+                disabled: autoAssigning,
                 onClick: () => {
                   if (!confirm("현재 초안을 모두 초기화하고 기존 저장 상태로 되돌릴까요?")) return;
                   const next = buildDraftAssignments(familiesList);
@@ -1377,7 +1426,12 @@
                   setSelectedFamilyId(null);
                   setToastHint("방 배정 초안을 초기화했습니다.");
                 },
-                className: "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md",
+                className: cx(
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition",
+                  autoAssigning
+                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                    : "border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
+                ),
               }, renderIcon("rotate-ccw", "h-4 w-4"), "초안 초기화")
             )
           ),
@@ -1590,6 +1644,37 @@
           )
         )
       ),
+      autoAssigning
+        ? h(
+            "div",
+            {
+              className:
+                "pointer-events-none fixed left-1/2 top-6 z-[75] w-[min(92vw,520px)] -translate-x-1/2 rounded-full border border-[#1e5a45]/15 bg-white/95 px-4 py-3 shadow-[0_18px_50px_rgba(17,24,39,0.16)] backdrop-blur",
+            },
+            h("div", { className: "flex items-center gap-3" },
+              h("div", { className: "flex h-10 w-10 items-center justify-center rounded-full bg-[#1e5a45]/10 text-[#1e5a45]" },
+                renderIcon("wand-sparkles", "h-5 w-5 animate-pulse")
+              ),
+              h("div", { className: "min-w-0 flex-1" },
+                h("div", { className: "flex items-center justify-between gap-3" },
+                  h("p", { className: "truncate text-sm font-semibold text-slate-900" }, "스마트 자동 배정 진행 중"),
+                  h("p", { className: "shrink-0 text-xs font-medium text-slate-500" }, `${autoAssignProgress.index}/${autoAssignProgress.total}`)
+                ),
+                h("div", { className: "mt-2 h-2 overflow-hidden rounded-full bg-slate-100" },
+                  h("div", {
+                    className: "h-full rounded-full bg-[#1e5a45] transition-all duration-300",
+                    style: { width: `${autoAssignProgress.total ? (autoAssignProgress.index / autoAssignProgress.total) * 100 : 0}%` },
+                  })
+                ),
+                h("p", { className: "mt-2 truncate text-xs text-slate-500" },
+                  autoAssignProgress.family
+                    ? `${autoAssignProgress.family} → ${autoAssignProgress.room}`
+                    : "최적의 방을 계산하고 있습니다."
+                )
+              )
+            )
+          )
+        : null,
       dragState
         ? h(
             "div",
