@@ -396,6 +396,7 @@
     const [toastHint, setToastHint] = useState("");
     const [autoAssigning, setAutoAssigning] = useState(false);
     const [autoAssignProgress, setAutoAssignProgress] = useState({ index: 0, total: 0, family: "", room: "" });
+    const lastDropAtRef = useRef(0);
     const dragRef = useRef({
       active: false,
       familyId: null,
@@ -675,9 +676,10 @@
         .slice(0, 8);
     }, [layoutState.data, selectedFamily, roomBundle, refreshKey]);
 
-    function updateAssignment(familyId, roomValue) {
+    function updateAssignment(familyId, roomValue, options = {}) {
       setDraftAssignments((prev) => ({ ...prev, [familyId]: roomValue || "미배정" }));
       setToastHint(roomValue && roomValue !== "미배정" ? "배정 초안을 업데이트했습니다." : "배정 초안을 해제했습니다.");
+      if (options.preserveView) return;
       if (roomValue && roomValue !== "미배정" && layoutState.data) {
         const room = resolveRoom(layoutState.data, roomValue);
         setSelectedRoomId(room?.id || null);
@@ -723,6 +725,7 @@
       const roomElement = elements.find((element) => element?.dataset?.dropRoomId);
       const roomId = roomElement?.dataset?.dropRoomId || null;
       if (roomId && layoutState.data?.roomById.has(roomId)) {
+        lastDropAtRef.current = Date.now();
         const room = layoutState.data.roomById.get(roomId);
         const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
         if (family) {
@@ -732,7 +735,7 @@
           if (usedBeds + familySize > room.capacity) {
             showToast(`${room.label}은(는) 현재 ${room.capacity}명 정원입니다.`);
           } else {
-            updateAssignment(drag.familyId, room.label);
+            updateAssignment(drag.familyId, room.label, { preserveView: true });
             showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
           }
         }
@@ -1012,7 +1015,13 @@
           key: room.id,
           type: "button",
           "data-drop-room-id": room.id,
-          onClick: () => focusRoom(room.id),
+          onClick: () => {
+            if (Date.now() - lastDropAtRef.current < 350) return;
+            focusRoom(room.id);
+          },
+          onPointerUp: (event) => {
+            if (Date.now() - lastDropAtRef.current < 350) event.preventDefault();
+          },
           className: cx(
             "group relative flex min-h-[170px] flex-col rounded-[24px] border p-4 text-left shadow-sm transition-all duration-200",
             roomToneClass(status, selected, dragTarget),
@@ -1666,6 +1675,7 @@
           type: "button",
           "data-drop-room-id": room.id,
           onClick: () => {
+            if (Date.now() - lastDropAtRef.current < 350) return;
             focusRoom(room.id);
             setFamilySheetOpen(false);
           },
