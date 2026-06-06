@@ -1026,19 +1026,19 @@ body.desktop-mode .memo {
   border-color: #3F7D58;
 }
 .org-badge.badge-partial {
-  background-color: #C98A2E;
-  color: #FFFFFF;
-  border-color: #C98A2E;
+  background-color: #E4C07A;
+  color: #6F4F12;
+  border-color: #E4C07A;
 }
 .org-badge.badge-absent {
-  background-color: #C66A6A;
-  color: #FFFFFF;
-  border-color: #C66A6A;
+  background-color: #E0A0A0;
+  color: #7B3F3F;
+  border-color: #E0A0A0;
 }
 .org-badge.badge-undecided {
-  background-color: #B8B8B8;
-  color: #FFFFFF;
-  border-color: #B8B8B8;
+  background-color: #D0D0D0;
+  color: #5F5F5F;
+  border-color: #D0D0D0;
 }
 .org-badge.badge-unregistered {
   background-color: #E2E8F0;
