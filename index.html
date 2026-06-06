@@ -12,6 +12,22 @@
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
     />
     <link rel="stylesheet" href="./styles.css?v=20260606_2010" />
+    <script>
+      window.tailwind = {
+        config: {
+          theme: {
+            extend: {
+              fontFamily: {
+                sans: ["Pretendard", "system-ui", "sans-serif"],
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -325,6 +341,10 @@
 
           <div class="school-list-container" id="schoolListContainer"></div>
         </section>
+        </div>
+
+        <div class="page-view" id="roomsView">
+          <div id="roomAssignmentRoot" class="w-full"></div>
         </div>
 
         <div class="page-view" id="mealsView">
@@ -746,6 +766,7 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260606_1956"></script>
+    <script src="./app.js?v=20260606_2105"></script>
+    <script src="./room-assignment.js?v=20260606_2050"></script>
   </body>
 </html>

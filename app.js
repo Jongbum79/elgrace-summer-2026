@@ -48,6 +48,7 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 
 let families = [];
 let currentOrgMode = "family";
+let currentPageView = "attendance";
 let orgActiveFilter = "all";
 let selectedOrgTimeSlot = null;
 let selectedSchoolTimeSlot = null;
@@ -2020,6 +2021,9 @@ function renderAll() {
       renderOrgChart(currentOrgMode);
     }
   }
+  if (currentPageView === "rooms" && window.RoomAssignmentPage?.sync) {
+    window.RoomAssignmentPage.sync();
+  }
   if (window.lucide) lucide.createIcons();
 }
 
@@ -3069,10 +3073,11 @@ async function refreshParticipantsData() {
 
 
 function openPage(view) {
-  if (!["attendance", "participants", "meals", "chatbot", "docs"].includes(view)) {
+  if (!["attendance", "participants", "rooms", "meals", "chatbot", "docs"].includes(view)) {
     showToast("이 메뉴는 다음 단계에서 연결합니다.");
     return;
   }
+  currentPageView = view;
   document.querySelectorAll("[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   document.querySelectorAll(".page-view").forEach((page) => page.classList.remove("active"));
   document.querySelector(`#${view}View`).classList.add("active");
@@ -3085,6 +3090,9 @@ function openPage(view) {
   if (view === "docs") {
     driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
     renderDriveView();
+  }
+  if (view === "rooms" && window.RoomAssignmentPage?.sync) {
+    window.RoomAssignmentPage.sync();
   }
   if (window.lucide) lucide.createIcons();
 }
