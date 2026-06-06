@@ -485,8 +485,8 @@
                     <input id="driveSearchInput" type="search" placeholder="드라이브에서 파일 검색..." style="width: 200px; background: transparent; border: none; outline: none; font-size: 13px; color: #3c4043;" />
                   </label>
                   <div class="view-mode-switch" style="height: 38px; display: inline-flex; background: #f1f3f4; padding: 3px; border-radius: 8px; gap: 2px;">
-                    <button class="view-mode-button active" type="button" id="driveGridBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368; display: inline-flex;" title="그리드 뷰"><i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i></button>
-                    <button class="view-mode-button" type="button" id="driveListBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368; display: inline-flex;" title="리스트 뷰"><i data-lucide="list" style="width: 16px; height: 16px;"></i></button>
+                    <button class="drive-view-mode-button active" type="button" id="driveGridBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368; display: inline-flex;" title="그리드 뷰"><i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i></button>
+                    <button class="drive-view-mode-button" type="button" id="driveListBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368; display: inline-flex;" title="리스트 뷰"><i data-lucide="list" style="width: 16px; height: 16px;"></i></button>
                   </div>
                   <button class="view-mode-button" type="button" id="btnDriveSettings" style="border: none; background: #f1f3f4; padding: 8px; border-radius: 8px; cursor: pointer; color: #5f6368; height: 38px; display: inline-flex; align-items: center; justify-content: center;" title="설정"><i data-lucide="settings" style="width: 16px; height: 16px;"></i></button>
                   <button class="view-mode-button" type="button" id="btnDriveLogout" style="border: none; background: #fce8e6; padding: 0 12px; border-radius: 8px; cursor: pointer; color: #ea4335; height: 38px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700;" title="로그아웃"><i data-lucide="log-out" style="width: 14px; height: 14px;"></i>로그아웃</button>
@@ -597,6 +597,29 @@
     </nav>
 
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <div class="modal" id="driveActionModal" aria-hidden="true" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 10001; padding: 20px;">
+      <div style="background: white; border-radius: 18px; width: 100%; max-width: 460px; border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0,0,0,0.14); overflow: hidden;">
+        <div style="padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; background: #fafafa;">
+          <div>
+            <h3 id="driveActionTitle" style="margin: 0; font-size: 15px; font-weight: 800; color: #202124;">파일 작업</h3>
+            <p id="driveActionSubtitle" style="margin: 4px 0 0; font-size: 12px; color: #5f6368;">선택한 파일에 대한 작업을 수행합니다.</p>
+          </div>
+          <button id="driveActionClose" style="border: none; background: transparent; cursor: pointer; color: #5f6368; display: inline-flex; padding: 4px;" aria-label="닫기"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+        </div>
+        <div style="padding: 18px 22px; display: grid; gap: 10px;">
+          <label style="display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: #3c4043;">
+            대상 폴더 ID
+            <input id="driveActionFolderId" type="text" placeholder="이동/복사할 폴더 ID" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; outline: none; box-sizing: border-box;" />
+          </label>
+          <p style="margin: 0; font-size: 11px; color: #5f6368; line-height: 1.4;">이동/복사는 Google Drive 폴더 ID를 사용합니다. 대상 폴더의 권한이 있어야 합니다.</p>
+        </div>
+        <div style="padding: 14px 22px 20px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--line); background: #fafafa;">
+          <button id="driveActionCopyBtn" class="secondary-button" style="height: 36px; padding: 0 14px; font-size: 12.5px; font-weight: 700; border-radius: 6px;">복사</button>
+          <button id="driveActionMoveBtn" class="secondary-button" style="height: 36px; padding: 0 14px; font-size: 12.5px; font-weight: 700; border-radius: 6px;">이동</button>
+          <button id="driveActionTrashBtn" class="danger-button" style="height: 36px; padding: 0 14px; font-size: 12.5px; font-weight: 700; border-radius: 6px;">삭제</button>
+        </div>
+      </div>
+    </div>
     <aside class="detail-drawer meal-detail-drawer" id="mealDetailDrawer" aria-hidden="true">
       <button class="drawer-close" id="mealDrawerClose" aria-label="닫기">×</button>
       <p class="eyebrow">MEAL ATTENDANCE</p>

@@ -93,6 +93,7 @@ button { cursor: pointer; border: 0; }
 .view-mode-switch { display: flex; padding: 3px; border-radius: 18px; background: #edf2ef; }
 .view-mode-button { padding: 5px 12px; border-radius: 15px; color: #7d8a85; background: transparent; font-size: 10px; font-weight: 800; }
 .view-mode-button.active { color: white; background: var(--forest); }
+.drive-view-mode-button.active { color: white !important; background: var(--forest) !important; }
 .icon-button { position: relative; color: #486057; background: transparent; font-size: 22px; }
 .icon-button i { width: 6px; height: 6px; border-radius: 50%; position: absolute; top: 2px; right: 0; background: #e68164; border: 1px solid white; }
 .profile { display: flex; align-items: center; gap: 9px; }
@@ -2071,4 +2072,3 @@ body.mobile-mode .school-student-card {
   background: white !important;
   box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15) !important;
 }
-

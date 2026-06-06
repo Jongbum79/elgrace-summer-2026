@@ -2478,9 +2478,21 @@ let driveSearchQuery = "";
 let gapiToken = localStorage.getItem("gapi_access_token") || "";
 let tokenClient = null;
 let driveCurrentUser = null;
+let driveCurrentFiles = [];
+let driveCurrentActionFile = null;
+let driveCurrentActionType = null;
 
 function normalizeDriveEmail(email) {
   return String(email || "").trim().toLowerCase();
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 async function fetchGoogleUserInfo(accessToken) {
@@ -2531,6 +2543,111 @@ function syncDriveAccessUi() {
   } else {
     loginContainer.style.display = "flex";
     contentContainer.style.display = "none";
+  }
+}
+
+function openDriveActionModal(file, actionType = null) {
+  driveCurrentActionFile = file || null;
+  driveCurrentActionType = actionType;
+  const modal = document.querySelector("#driveActionModal");
+  const title = document.querySelector("#driveActionTitle");
+  const subtitle = document.querySelector("#driveActionSubtitle");
+  const folderInput = document.querySelector("#driveActionFolderId");
+  if (!modal || !title || !subtitle || !folderInput || !file) return;
+
+  title.textContent = file.name || "파일 작업";
+  if (actionType === "copy") {
+    subtitle.textContent = "복사할 대상 폴더 ID를 입력하세요.";
+  } else if (actionType === "move") {
+    subtitle.textContent = "이동할 대상 폴더 ID를 입력하세요.";
+  } else {
+    subtitle.textContent = "파일 작업을 선택하세요.";
+  }
+
+  folderInput.value = driveOAuthFolderId || driveActiveFolderId || "";
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeDriveActionModal() {
+  const modal = document.querySelector("#driveActionModal");
+  if (!modal) return;
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+  driveCurrentActionFile = null;
+  driveCurrentActionType = null;
+}
+
+async function performDriveFileAction(actionType, file, targetFolderId = "") {
+  if (!gapiToken) {
+    showToast("먼저 구글 계정으로 로그인해 주세요.");
+    return;
+  }
+  if (!file?.id) {
+    showToast("파일 정보를 찾지 못했습니다.");
+    return;
+  }
+
+  try {
+    if (actionType === "copy") {
+      if (!targetFolderId) {
+        showToast("대상 폴더 ID를 입력해주세요.");
+        return;
+      }
+      const endpoint = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}/copy?supportsAllDrives=true`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${gapiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: file.name,
+          parents: [targetFolderId],
+        }),
+      });
+      if (!response.ok) throw new Error((await response.text()) || "복사에 실패했습니다.");
+      showToast("파일을 복사했습니다.");
+    } else if (actionType === "move") {
+      if (!targetFolderId) {
+        showToast("대상 폴더 ID를 입력해주세요.");
+        return;
+      }
+      const sourceParent = Array.isArray(file.parents) && file.parents.length ? file.parents[0] : driveActiveFolderId;
+      const params = new URLSearchParams({
+        addParents: targetFolderId,
+        removeParents: sourceParent,
+        supportsAllDrives: "true",
+        fields: "id,parents",
+      });
+      const endpoint = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?${params.toString()}`;
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${gapiToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) throw new Error((await response.text()) || "이동에 실패했습니다.");
+      showToast("파일을 이동했습니다.");
+    } else if (actionType === "trash") {
+      const endpoint = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?supportsAllDrives=true`;
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${gapiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ trashed: true }),
+      });
+      if (!response.ok) throw new Error((await response.text()) || "삭제에 실패했습니다.");
+      showToast("파일을 휴지통으로 이동했습니다.");
+    }
+    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
+    await renderDriveView(currentFolder.id, currentFolder.name);
+  } catch (error) {
+    console.error("Drive file action failed:", error);
+    showToast("파일 작업 실패: " + error.message);
   }
 }
 
@@ -2702,8 +2819,14 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
 
   try {
     const q = `'${folderId}' in parents and trashed = false`;
-    const fields = "files(id,name,mimeType,size,modifiedTime,webViewLink,owners)";
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}`;
+    const fields = "files(id,name,mimeType,size,modifiedTime,webViewLink,owners,parents)";
+    const params = new URLSearchParams({
+      q,
+      fields,
+      includeItemsFromAllDrives: "true",
+      supportsAllDrives: "true",
+    });
+    const url = `https://www.googleapis.com/drive/v3/files?${params.toString()}`;
     
     const res = await fetch(url, {
       headers: {
@@ -2728,6 +2851,7 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
     const items = data.files || [];
     const folders = items.filter(f => f.mimeType === "application/vnd.google-apps.folder");
     const files = items.filter(f => f.mimeType !== "application/vnd.google-apps.folder");
+    driveCurrentFiles = files;
 
     if (folders.length > 0) {
       foldersSection.style.display = "block";
@@ -2790,7 +2914,7 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
             sizeStr = bytes > 1024 * 1024 ? (bytes / (1024 * 1024)).toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
           }
           return `
-            <div class="drive-file-card" style="background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer;">
+            <div class="drive-file-card" data-file-id="${file.id}" style="background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer;">
               <div style="height: 120px; background: ${conf.bgColor}; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(0,0,0,0.03); position: relative;">
                 <i data-lucide="${conf.icon}" style="width: 44px; height: 44px; color: ${conf.color}; stroke-width: 1.5px;"></i>
                 <span style="position: absolute; bottom: 8px; left: 12px; font-size: 9px; font-weight: 800; padding: 2px 6px; background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 4px; color: ${conf.color}; text-transform: uppercase;">${conf.label}</span>
@@ -2799,11 +2923,18 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
                 <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;" title="${file.name}">
                   ${file.name}
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #5f6368; border-top: 1px dashed #f1f3f4; padding-top: 8px; margin-top: auto;">
-                  <span>${sizeStr}</span>
-                  <a href="${file.webViewLink}" target="_blank" class="drive-download-btn" style="color: #1a73e8; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 700;">
-                    <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
-                  </a>
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11px; color: #5f6368; border-top: 1px dashed #f1f3f4; padding-top: 8px; margin-top: auto;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>${sizeStr}</span>
+                    <a href="${file.webViewLink}" target="_blank" class="drive-download-btn" style="color: #1a73e8; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 700;">
+                      <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
+                    </a>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button type="button" class="secondary-button drive-file-action-btn" data-action="copy" data-file-id="${file.id}" style="min-height: 30px; padding: 0 10px; font-size: 11px;">복사</button>
+                    <button type="button" class="secondary-button drive-file-action-btn" data-action="move" data-file-id="${file.id}" style="min-height: 30px; padding: 0 10px; font-size: 11px;">이동</button>
+                    <button type="button" class="danger-button drive-file-action-btn" data-action="trash" data-file-id="${file.id}" style="min-height: 30px; padding: 0 10px; font-size: 11px;">삭제</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2845,9 +2976,14 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
               <td style="padding: 12px 16px; color: #5f6368;">${modDate}</td>
               <td style="padding: 12px 16px; color: #5f6368;">${sizeStr}</td>
               <td style="padding: 12px 16px; text-align: right;">
-                <a href="${file.webViewLink}" target="_blank" style="color: #1a73e8; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                  <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
-                </a>
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap;">
+                  <a href="${file.webViewLink}" target="_blank" style="color: #1a73e8; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
+                  </a>
+                  <button type="button" class="secondary-button drive-file-action-btn" data-action="copy" data-file-id="${file.id}" style="min-height: 30px; padding: 0 10px; font-size: 11px;">복사</button>
+                  <button type="button" class="secondary-button drive-file-action-btn" data-action="move" data-file-id="${file.id}" style="min-height: 30px; padding: 0 10px; font-size: 11px;">이동</button>
+                  <button type="button" class="danger-button drive-file-action-btn" data-action="trash" data-file-id="${file.id}" style="min-height: 30px; padding: 0 10px; font-size: 11px;">삭제</button>
+                </div>
               </td>
             </tr>
           `;
@@ -2859,6 +2995,8 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
     showToast("드라이브 로딩 실패: " + err.message);
   }
 
+  document.querySelector("#driveGridBtn")?.classList.toggle("active", driveViewMode === "grid");
+  document.querySelector("#driveListBtn")?.classList.toggle("active", driveViewMode === "list");
   if (window.lucide) lucide.createIcons();
 }function toggleModal(open, family = null) {
   if (open) {
@@ -2947,13 +3085,21 @@ document.addEventListener("click", (event) => {
   const familyMenu = event.target.closest(".row-menu");
   const navItem = event.target.closest("[data-view]");
   const modeButton = event.target.closest(".view-mode-button");
+  const driveViewToggleBtn = event.target.closest(".drive-view-mode-button");
+  const driveFileActionBtn = event.target.closest(".drive-file-action-btn");
   const mealGroup = event.target.closest(".meal-group-button");
   const modeTab = event.target.closest(".mode-tab");
   const refreshBtn = event.target.closest("#refreshParticipantsButton");
   const orgTimeBtn = event.target.closest(".org-time-segment-btn");
   const clearOrgTimeFilter = event.target.closest("#clearOrgTimeFilter");
   
-  if (modeButton) setViewMode(modeButton.dataset.mode);
+  if (modeButton && !driveViewToggleBtn) setViewMode(modeButton.dataset.mode);
+  if (driveViewToggleBtn) {
+    event.preventDefault();
+    driveViewMode = driveViewToggleBtn.id === "driveListBtn" ? "list" : "grid";
+    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
+    renderDriveView(currentFolder.id, currentFolder.name);
+  }
   if (navItem) {
     event.preventDefault();
     const view = navItem.dataset.view;
@@ -2986,20 +3132,6 @@ document.addEventListener("click", (event) => {
       renderDriveView(folderId, folderName);
     }
   }
-  if (driveGridBtn) {
-    document.querySelector("#driveGridBtn").classList.add("active");
-    document.querySelector("#driveListBtn").classList.remove("active");
-    driveViewMode = "grid";
-    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
-    renderDriveView(currentFolder.id, currentFolder.name);
-  }
-  if (driveListBtn) {
-    document.querySelector("#driveGridBtn").classList.remove("active");
-    document.querySelector("#driveListBtn").classList.add("active");
-    driveViewMode = "list";
-    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
-    renderDriveView(currentFolder.id, currentFolder.name);
-  }
   if (driveRootBtn) {
     driveFolderHistory = [{ id: driveOAuthFolderId, name: "여름수련회_공유폴더" }];
     renderDriveView();
@@ -3016,6 +3148,24 @@ document.addEventListener("click", (event) => {
     const fileInput = document.querySelector("#driveFileInput");
     if (fileInput) fileInput.click();
   }
+  if (driveFileActionBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const fileId = driveFileActionBtn.dataset.fileId;
+    const action = driveFileActionBtn.dataset.action;
+    const file = driveCurrentFiles.find((item) => item.id === fileId);
+    if (!file) {
+      showToast("파일 정보를 찾지 못했습니다.");
+      return;
+    }
+    if (action === "trash") {
+      const confirmed = confirm(`"${file.name}" 파일을 휴지통으로 이동하시겠습니까?`);
+      if (!confirmed) return;
+      performDriveFileAction("trash", file);
+    } else {
+      openDriveActionModal(file, action);
+    }
+  }
   if (btnDriveLogin) {
     loginToGoogle();
   }
@@ -3027,6 +3177,34 @@ document.addEventListener("click", (event) => {
   if (btnCloseDriveSettings) {
     const modal = document.querySelector("#driveSettingsModal");
     if (modal) modal.style.display = "none";
+  }
+  if (event.target.closest("#driveActionClose") || event.target.closest("#driveActionModal")) {
+    const actionModal = document.querySelector("#driveActionModal");
+    if (actionModal && event.target.closest("#driveActionModal") === actionModal && event.target === actionModal) {
+      closeDriveActionModal();
+    }
+  }
+  if (event.target.closest("#driveActionClose")) {
+    closeDriveActionModal();
+  }
+  if (event.target.closest("#driveActionCopyBtn")) {
+    if (!driveCurrentActionFile) return;
+    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || "";
+    performDriveFileAction("copy", driveCurrentActionFile, targetFolderId);
+    closeDriveActionModal();
+  }
+  if (event.target.closest("#driveActionMoveBtn")) {
+    if (!driveCurrentActionFile) return;
+    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || "";
+    performDriveFileAction("move", driveCurrentActionFile, targetFolderId);
+    closeDriveActionModal();
+  }
+  if (event.target.closest("#driveActionTrashBtn")) {
+    if (!driveCurrentActionFile) return;
+    const confirmed = confirm(`"${driveCurrentActionFile.name}" 파일을 휴지통으로 이동하시겠습니까?`);
+    if (!confirmed) return;
+    performDriveFileAction("trash", driveCurrentActionFile);
+    closeDriveActionModal();
   }
   if (btnSaveDriveSettings) {
     const clientId = document.querySelector("#inputDriveClientId")?.value.trim() || "";
