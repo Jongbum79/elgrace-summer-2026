@@ -1137,6 +1137,231 @@
       );
     }
 
+    function getRoomTypeTone(room) {
+      const type = room?.room_type;
+      if (type === "single") return "bg-sky-50 text-sky-700 ring-sky-200";
+      if (type === "twin") return "bg-indigo-50 text-indigo-700 ring-indigo-200";
+      if (type === "ondol_4") return "bg-amber-50 text-amber-700 ring-amber-200";
+      if (type === "6_person") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+      if (type === "12_person") return "bg-rose-50 text-rose-700 ring-rose-200";
+      return "bg-slate-100 text-slate-600 ring-slate-200";
+    }
+
+    function getFloorColumnRange(floor) {
+      const columns = []
+        .concat((floor.rooms || []).map((room) => room.column))
+        .concat((floor.serviceSpaces || []).map((space) => space.column))
+        .filter((column) => Number.isFinite(Number(column)));
+      if (!columns.length) return { min: 1, max: 1, span: 1 };
+      const min = Math.min(...columns);
+      const max = Math.max(...columns);
+      return { min, max, span: Math.max(max - min + 1, 1) };
+    }
+
+    function sortByWorkbookPosition(a, b) {
+      if ((a.row || 0) !== (b.row || 0)) return (a.row || 0) - (b.row || 0);
+      return (a.column || 0) - (b.column || 0);
+    }
+
+    function splitFloorItems(floor) {
+      const corridorRow = floor.corridor_row || floor.corridorRow || 0;
+      const rooms = floor.rooms || [];
+      const serviceSpaces = floor.serviceSpaces || [];
+      const northRooms = rooms.filter((room) => room.corridor_relationship !== "south_of_corridor").sort(sortByWorkbookPosition);
+      const southRooms = rooms.filter((room) => room.corridor_relationship === "south_of_corridor").sort(sortByWorkbookPosition);
+      const northServices = serviceSpaces.filter((space) => space.type !== "corridor" && (!corridorRow || space.row < corridorRow)).sort(sortByWorkbookPosition);
+      const southServices = serviceSpaces.filter((space) => space.type !== "corridor" && corridorRow && space.row > corridorRow).sort(sortByWorkbookPosition);
+      const corridorServices = serviceSpaces.filter((space) => space.type === "corridor" || (corridorRow && space.row === corridorRow)).sort(sortByWorkbookPosition);
+      return { northRooms, southRooms, northServices, southServices, corridorServices };
+    }
+
+    function renderServiceCell(space, columnRange) {
+      const col = Math.max((space.column || columnRange.min) - columnRange.min + 1, 1);
+      const icon = space.label?.includes("계단") ? "stairs" : space.label?.includes("화장실") ? "shower-head" : space.label?.includes("세탁") ? "washing-machine" : "panel-top";
+      return h(
+        "div",
+        {
+          key: space.id || `${space.label}-${space.cell}`,
+          className: "flex min-h-[58px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/55 px-2 text-center text-[11px] font-semibold text-slate-400",
+          style: { gridColumn: `${col} / span 1` },
+          title: `${space.label || "공용공간"} · ${space.cell || ""}`,
+        },
+        h("span", { className: "flex flex-col items-center gap-1" },
+          renderIcon(icon, "h-3.5 w-3.5"),
+          h("span", null, space.label || "공용")
+        )
+      );
+    }
+
+    function renderMapRoomTile(room, bucket, density = "desktop") {
+      const selected = selectedRoomId === room.id;
+      const dragTarget = dropRoomId === room.id;
+      const familiesInRoom = bucket?.families || [];
+      const usedBeds = bucket?.headcount || 0;
+      const status = roomStatus(room, familiesInRoom.length, usedBeds);
+      const fillPercent = Math.min(100, Math.round((usedBeds / room.capacity) * 100));
+      const compact = density === "compact";
+
+      return h(
+        "button",
+        {
+          key: room.id,
+          type: "button",
+          "data-drop-room-id": room.id,
+          onClick: () => focusRoom(room.id),
+          className: cx(
+            "group relative flex flex-col overflow-hidden rounded-2xl border text-left shadow-sm transition-all duration-200",
+            compact ? "min-h-[124px] p-3" : "min-h-[152px] p-3.5",
+            roomToneClass(status, selected, dragTarget),
+            "hover:-translate-y-0.5 hover:shadow-lg"
+          ),
+          title: `${room.label} · ${toRoomBadge(room)} · ${room.cell || ""}`,
+        },
+        h("div", { className: "flex items-start justify-between gap-2" },
+          h("div", { className: "min-w-0" },
+            h("div", { className: "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500" },
+              renderIcon(room.room_type === "ondol_4" ? "house" : "bed-double", "h-3 w-3"),
+              h("span", { className: "truncate" }, room.cell || `${room.row || "-"}행`)
+            ),
+            h("div", { className: cx("mt-1 truncate font-semibold text-slate-950", compact ? "text-base" : "text-lg") }, room.label)
+          ),
+          h("span", { className: cx("shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, `${room.capacity}인`)
+        ),
+        h("div", { className: "mt-2 flex flex-wrap gap-1.5" },
+          h("span", { className: "rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200" }, toRoomBadge(room)),
+          h("span", { className: cx("rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", {
+            empty: "bg-slate-50 text-slate-500 ring-slate-200",
+            partial: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+            full: "bg-emerald-100 text-emerald-700 ring-emerald-300",
+            overflow: "bg-rose-50 text-rose-700 ring-rose-200",
+          }[status]) }, status === "empty" ? "빈방" : status === "partial" ? "사용중" : status === "full" ? "만실" : "초과")
+        ),
+        h("div", { className: "mt-3 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" },
+          h("div", {
+            className: cx("h-full rounded-full transition-all duration-300", {
+              empty: "bg-slate-300",
+              partial: "bg-emerald-400",
+              full: "bg-emerald-600",
+              overflow: "bg-rose-500",
+            }[status]),
+            style: { width: `${fillPercent}%` },
+          })
+        ),
+        h("div", { className: "mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500" },
+          h("span", null, `${usedBeds}/${room.capacity}명`),
+          h("span", null, usedBeds ? `잔여 ${Math.max(room.capacity - usedBeds, 0)}` : "드롭 가능")
+        ),
+        h("div", { className: "mt-2 flex min-h-[26px] flex-wrap gap-1.5" },
+          familiesInRoom.length
+            ? familiesInRoom.slice(0, compact ? 2 : 3).map((family) =>
+                h("span", {
+                  key: `${room.id}-${family._familyId}`,
+                  onPointerDown: (event) => startDrag(family, event),
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    focusFamily(family._familyId);
+                  },
+                  className: "inline-flex max-w-full touch-none items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm",
+                  title: "다른 방으로 드래그",
+                },
+                  h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45]" }),
+                  h("span", { className: "truncate" }, clampString(family.name.replace(" 가족", ""), compact ? 6 : 8))
+                )
+              )
+            : h("span", { className: "rounded-full border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[10px] font-medium text-slate-400" }, "비어 있음")
+        ),
+        familiesInRoom.length > (compact ? 2 : 3)
+          ? h("span", { className: "mt-1 text-[10px] font-semibold text-slate-400" }, `+${familiesInRoom.length - (compact ? 2 : 3)}가족`)
+          : null
+      );
+    }
+
+    function renderFloorRow(items, columnRange, keyPrefix, density = "desktop") {
+      if (!items.length) {
+        return h("div", {
+          key: `${keyPrefix}-empty`,
+          className: "min-h-[44px] rounded-2xl border border-dashed border-slate-200 bg-white/35",
+        });
+      }
+      return h(
+        "div",
+        {
+          key: keyPrefix,
+          className: "grid gap-2",
+          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(${density === "compact" ? "58px" : "72px"}, 1fr))` },
+        },
+        items.map((item) => {
+          const col = Math.max((item.column || columnRange.min) - columnRange.min + 1, 1);
+          if (item.type === "service_space") return renderServiceCell(item, columnRange);
+          return h(
+            "div",
+            { key: item.id, style: { gridColumn: `${col} / span 1` }, className: "min-w-0" },
+            renderMapRoomTile(item, roomBundle.byRoom.get(item.id), density)
+          );
+        })
+      );
+    }
+
+    function renderCorridorBand(floor, corridorServices, columnRange) {
+      return h(
+        "div",
+        {
+          className: "relative my-3 grid min-h-[48px] items-center rounded-[20px] border border-slate-200 bg-[linear-gradient(90deg,rgba(226,232,240,0.34),rgba(255,255,255,0.82),rgba(226,232,240,0.34))] px-3",
+          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(48px, 1fr))` },
+        },
+        h("div", { className: "pointer-events-none absolute inset-x-4 top-1/2 h-px bg-slate-300/70" }),
+        h("div", { className: "relative z-10 col-span-full mx-auto rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-500 shadow-sm" },
+          `${floor.label || `${floor.floor}층`} 복도`
+        ),
+        corridorServices.map((space) => {
+          const col = Math.max((space.column || columnRange.min) - columnRange.min + 1, 1);
+          return h("span", {
+            key: space.id || space.cell,
+            className: "relative z-20 justify-self-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200",
+            style: { gridColumn: `${col} / span 1` },
+          }, space.label?.replace(/\s+/g, " ") || "복도");
+        })
+      );
+    }
+
+    function renderFloorPlan(floor, density = "desktop") {
+      const columnRange = getFloorColumnRange(floor);
+      const { northRooms, southRooms, northServices, southServices, corridorServices } = splitFloorItems(floor);
+      const northItems = northRooms.concat(northServices.map((space) => ({ ...space, type: "service_space" }))).sort(sortByWorkbookPosition);
+      const southItems = southRooms.concat(southServices.map((space) => ({ ...space, type: "service_space" }))).sort(sortByWorkbookPosition);
+      const floorCapacity = (floor.rooms || []).reduce((sum, room) => sum + (room.capacity || 0), 0);
+      const usedBeds = (floor.rooms || []).reduce((sum, room) => sum + (roomBundle.byRoom.get(room.id)?.headcount || 0), 0);
+
+      return h(
+        "article",
+        {
+          key: `${floor.building || "building"}-${floor.floor}`,
+          className: "overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm",
+        },
+        h("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" },
+          h("div", null,
+            h("h5", { className: "text-sm font-semibold uppercase tracking-[0.2em] text-slate-500" }, floor.label || `${floor.floor}층`),
+            h("p", { className: "mt-1 text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 정원 ${floorCapacity}명 · 현재 ${usedBeds}명`)
+          ),
+          h("div", { className: "flex flex-wrap gap-1.5" },
+            ["single", "twin", "ondol_4", "6_person", "12_person"].map((type) => {
+              const count = (floor.rooms || []).filter((room) => room.room_type === type).length;
+              if (!count) return null;
+              const sample = (floor.rooms || []).find((room) => room.room_type === type);
+              return h("span", { key: type, className: cx("rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1", getRoomTypeTone(sample)) }, `${toRoomBadge(sample)} ${count}`);
+            })
+          )
+        ),
+        h("div", { className: "mt-4 overflow-x-auto rounded-[24px] border border-slate-100 bg-slate-50/70 p-3" },
+          h("div", { className: "min-w-[920px] space-y-2" },
+            renderFloorRow(northItems, columnRange, `${floor.floor}-north`, density),
+            renderCorridorBand(floor, corridorServices, columnRange),
+            renderFloorRow(southItems, columnRange, `${floor.floor}-south`, density)
+          )
+        )
+      );
+    }
+
     function renderInspector() {
       if (!layoutState.data) {
         return h("div", { className: "rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm" }, "방 배정 데이터를 불러오는 중입니다.");
@@ -1803,27 +2028,7 @@
                       h("span", { className: "rounded-full bg-[#1e5a45]/10 px-3 py-1 text-xs font-semibold text-[#1e5a45]" }, `${building.floors.length}개 층`)
                     ),
                     h("div", { className: "space-y-4" },
-                      building.floors.map((floor) =>
-                        h("article", {
-                          key: `${building.building}-${floor.floor}`,
-                          className: "rounded-[28px] border border-slate-200 bg-slate-50/80 p-4",
-                        },
-                          h("div", { className: "flex items-center justify-between gap-3" },
-                            h("div", null,
-                              h("h5", { className: "text-sm font-semibold uppercase tracking-[0.2em] text-slate-500" }, floor.label || `${floor.floor}층`),
-                              h("p", { className: "mt-1 text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 복도 기준 ${floor.corridor_row || "-"}행`)
-                            ),
-                            h("div", { className: "flex flex-wrap justify-end gap-2 text-xs text-slate-500" },
-                              (floor.serviceSpaces || []).slice(0, 4).map((space) =>
-                                h("span", { key: `${space.id}`, className: "rounded-full border border-slate-200 bg-white px-2.5 py-1" }, space.label)
-                              )
-                            )
-                          ),
-                          h("div", { className: "mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" },
-                            floor.rooms.map((room) => renderRoomCard(room, roomBundle.byRoom.get(room.id)))
-                          )
-                        )
-                      )
+                      building.floors.map((floor) => renderFloorPlan(floor))
                     )
                   )
                 )

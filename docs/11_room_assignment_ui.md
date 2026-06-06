@@ -92,6 +92,26 @@ Recommended layout:
 
 Each floor should be visually scannable in one viewport without excessive horizontal scrolling.
 
+### Excel-based floor plan
+The room map must not be a generic card grid when workbook position data is available.
+
+The implementation should render each floor from the generated Excel coordinates:
+- `row`
+- `column`
+- `corridor_row`
+- `corridor_relationship`
+- service spaces from the workbook
+
+Expected floor rendering:
+- rooms above the corridor are shown as the north-side row
+- the corridor is shown as a horizontal band
+- rooms below the corridor are shown as the south-side row
+- service spaces such as ELV, stairs, laundry, utility rooms, and bathrooms are shown in their workbook-relative positions
+- room type and capacity are shown inside each room tile
+- assigned families are shown inside the room tile and can be dragged to another room
+
+This preserves the workbook as the spatial source of truth and prevents hardcoded room-number layouts.
+
 ### Right panel: family assignment queue
 The family list should show:
 - families with `미배정`
@@ -487,4 +507,3 @@ This page should not:
 
 ## Implementation Reminder
 When this page is implemented later, it should reuse the generated room layout assets and preserve the project’s current business rules and permissions.
-
