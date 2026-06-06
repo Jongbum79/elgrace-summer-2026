@@ -75,6 +75,8 @@ def classify_room_type(raw_suffix: str | None, floor_default: str | None = None)
 
 
 def room_type_label(room_type: str, capacity: int) -> str:
+    if room_type == "unavailable":
+        return "사용불가"
     if room_type == "single":
         return "1인실"
     if room_type == "twin":
@@ -89,6 +91,8 @@ def room_type_label(room_type: str, capacity: int) -> str:
 
 
 def room_type_family(room_type: str) -> str:
+    if room_type == "unavailable":
+        return "service"
     if room_type in {"single", "twin"}:
         return "standard"
     if room_type == "ondol_4":
@@ -103,12 +107,47 @@ def room_type_family(room_type: str) -> str:
 def infer_default_type(room_entries: list[dict[str, Any]], section: Section) -> str:
     explicit_types = [entry["room_type"] for entry in room_entries if entry["source_kind"] == "explicit"]
     if not explicit_types:
-        # Workbook-specific heuristic: 휴락동 3층 unlabeled rooms are 온돌 4인실.
-        if section.building == "휴락동" and section.floor == 3:
+        # Workbook-specific heuristic: 휴락동 2층/3층 unlabeled rooms are 온돌 4인실.
+        if section.building == "휴락동" and section.floor in {2, 3}:
             return "ondol_4"
         return "twin"
     counts = Counter(explicit_types)
     return counts.most_common(1)[0][0]
+
+
+def apply_workbook_overrides(room: dict[str, Any], section: Section) -> None:
+    """Apply workbook layout rules that are implied by position rather than suffix text."""
+    if section.building == "휴락동" and section.floor == 4 and room["corridor_relationship"] == "south_of_corridor":
+        room["room_type"] = "ondol_4"
+        room["capacity"] = 4
+        room["room_type_label"] = room_type_label("ondol_4", 4)
+        room["room_type_family"] = room_type_family("ondol_4")
+        room["source_kind"] = "position_override"
+
+
+def apply_service_room_overrides(section_rooms: list[dict[str, Any]], section_spaces: list[dict[str, Any]]) -> None:
+    """Mark rooms blocked by service labels that occupy the same workbook column."""
+    service_by_position = {(space["row"], space["column"]): space for space in section_spaces if space["type"] == "service_space"}
+    blocking_labels = {"당직실", "비품실", "미화원실"}
+
+    for room in section_rooms:
+        blocking_space = None
+        for adjacent_row in (room["row"] + 1, room["row"] - 1):
+            space = service_by_position.get((adjacent_row, room["column"]))
+            if space and normalize_text(space["label"]) in blocking_labels:
+                blocking_space = space
+                break
+
+        if not blocking_space:
+            continue
+
+        room["room_type"] = "unavailable"
+        room["capacity"] = 0
+        room["room_type_label"] = str(blocking_space["label"]).strip()
+        room["room_type_family"] = room_type_family("unavailable")
+        room["source_kind"] = "service_override"
+        room["unavailable"] = True
+        room["unavailable_reason"] = str(blocking_space["label"]).strip()
 
 
 def find_sections(ws) -> list[Section]:
@@ -231,6 +270,11 @@ def extract_room_entries(ws, sections: list[Section]) -> tuple[list[dict[str, An
                 if section.corridor_row and entry["row"] > section.corridor_row
                 else "unknown"
             )
+            apply_workbook_overrides(entry, section)
+
+        apply_service_room_overrides(section_rooms, section_spaces)
+
+        for entry in section_rooms:
             rooms.append(entry)
 
         spaces.extend(section_spaces)
@@ -268,12 +312,17 @@ def group_structure(rooms: list[dict[str, Any]], spaces: list[dict[str, Any]], s
                             "room_number": room["room_number"],
                             "room_label": room["room_label"],
                             "room_type": room["room_type"],
+                            "room_type_label": room["room_type_label"],
+                            "room_type_family": room["room_type_family"],
                             "capacity": room["capacity"],
                             "corridor_relationship": room["corridor_relationship"],
                             "cell": room["cell"],
                             "row": room["row"],
                             "column": room["column"],
                             "source_text": room["source_text"],
+                            "source_kind": room["source_kind"],
+                            "unavailable": room.get("unavailable", False),
+                            "unavailable_reason": room.get("unavailable_reason", ""),
                         }
                         for room in floor_rooms
                     ],
@@ -310,9 +359,12 @@ def build_room_rules_md(structure: dict[str, Any], rooms: list[dict[str, Any]]) 
         "4. When a room has no explicit suffix, the floor default is used.",
         "5. The floor default is the most common explicit room type found in that floor block.",
         "6. If a floor has no explicit room-type labels, workbook-specific heuristics are applied.",
-        "   - `휴락동 3층` unlabeled rooms are interpreted as `4인실 온돌`.",
+        "   - `휴락동 2층` and `휴락동 3층` unlabeled rooms are interpreted as `4인실 온돌`.",
         "   - other unlabeled rooms fall back to `2인실`.",
-        "7. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.",
+        "7. Position-specific workbook overrides are applied after default inference.",
+        "   - `휴락동 4층` rooms south of the corridor are interpreted as `4인실 온돌`.",
+        "8. Rooms adjacent to same-column service labels such as `당직실`, `비품실`, or `미화원실` are marked as unavailable.",
+        "9. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.",
         "",
         "## Current workbook findings",
     ]
@@ -364,6 +416,7 @@ def write_outputs(out_dir: Path, rooms: list[dict[str, Any]], spaces: list[dict[
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
+            lineterminator="\n",
             fieldnames=[
                 "building",
                 "floor",
@@ -378,6 +431,8 @@ def write_outputs(out_dir: Path, rooms: list[dict[str, Any]], spaces: list[dict[
                 "column",
                 "source_text",
                 "source_kind",
+                "unavailable",
+                "unavailable_reason",
             ],
         )
         writer.writeheader()
@@ -397,6 +452,8 @@ def write_outputs(out_dir: Path, rooms: list[dict[str, Any]], spaces: list[dict[
                     "column": room["column"],
                     "source_text": room["source_text"],
                     "source_kind": room["source_kind"],
+                    "unavailable": room.get("unavailable", False),
+                    "unavailable_reason": room.get("unavailable_reason", ""),
                 }
             )
 

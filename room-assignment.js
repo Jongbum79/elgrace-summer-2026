@@ -29,6 +29,7 @@
     partial: "border-emerald-200 bg-emerald-50/50",
     full: "border-emerald-300 bg-emerald-100/70",
     overflow: "border-rose-300 bg-rose-50",
+    unavailable: "border-slate-200 bg-slate-100/80 opacity-80",
     selected: "ring-2 ring-[#1e5a45]/20 border-[#1e5a45]",
     drop: "ring-2 ring-emerald-400 border-emerald-400 scale-[1.01]",
   };
@@ -261,6 +262,7 @@
   }
 
   function roomStatus(room, occupancyCount, usedBeds) {
+    if (room?.unavailable || room?.capacity <= 0) return "unavailable";
     if (occupancyCount <= 0) return "empty";
     if (usedBeds > room.capacity) return "overflow";
     if (usedBeds === room.capacity) return "full";
@@ -282,6 +284,16 @@
 
   function toRoomBadge(room) {
     return room?.room_type_label || ROOM_TYPE_LABELS[room?.room_type] || `${room?.capacity || 0}인실`;
+  }
+
+  function toCompactRoomBadge(room) {
+    if (room?.unavailable) return room.unavailable_reason || room.room_type_label || "사용불가";
+    if (room?.room_type === "single") return "1인 침대";
+    if (room?.room_type === "twin") return "2인 침대";
+    if (room?.room_type === "ondol_4") return "4인 온돌";
+    if (room?.room_type === "6_person") return "6인실";
+    if (room?.room_type === "12_person") return "12인실";
+    return toRoomBadge(room);
   }
 
   function clampString(value, length) {
@@ -489,6 +501,7 @@
       layoutState.data.rooms.forEach((room) => {
         const bucket = roomBundle.byRoom.get(room.id);
         const usedBeds = bucket?.headcount || 0;
+        if (room.unavailable || room.capacity <= 0) return;
         totalCapacity += room.capacity;
         assignedBeds += usedBeds;
         if (usedBeds <= 0) emptyRooms += 1;
@@ -729,14 +742,18 @@
         const room = layoutState.data.roomById.get(roomId);
         const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
         if (family) {
-          const bucket = roomBundle.byRoom.get(roomId);
-          const usedBeds = bucket?.headcount || 0;
-          const familySize = getFamilyHeadcount(family);
-          if (usedBeds + familySize > room.capacity) {
-            showToast(`${room.label}은(는) 현재 ${room.capacity}명 정원입니다.`);
+          if (room.unavailable || room.capacity <= 0) {
+            showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
           } else {
-            updateAssignment(drag.familyId, room.label, { preserveView: true });
-            showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
+            const bucket = roomBundle.byRoom.get(roomId);
+            const usedBeds = bucket?.headcount || 0;
+            const familySize = getFamilyHeadcount(family);
+            if (usedBeds + familySize > room.capacity) {
+              showToast(`${room.label}은(는) 현재 ${room.capacity}명 정원입니다.`);
+            } else {
+              updateAssignment(drag.familyId, room.label, { preserveView: true });
+              showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
+            }
           }
         }
       }
@@ -782,7 +799,7 @@
           const bucket = roomBundle.byRoom.get(roomId);
           const usedBeds = bucket?.headcount || 0;
           const familySize = getFamilyHeadcount(family);
-          setDropRoomId(usedBeds + familySize <= room.capacity ? roomId : null);
+          setDropRoomId(!room.unavailable && room.capacity > 0 && usedBeds + familySize <= room.capacity ? roomId : null);
         } else {
           setDropRoomId(null);
         }
@@ -1007,25 +1024,18 @@
       const familiesInRoom = bucket?.families || [];
       const usedBeds = bucket?.headcount || 0;
       const status = roomStatus(room, familiesInRoom.length, usedBeds);
-      const fillPercent = Math.min(100, Math.round((usedBeds / room.capacity) * 100));
+      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((usedBeds / room.capacity) * 100)) : 0;
+      const canAssign = !room.unavailable && room.capacity > 0;
 
       return h(
-        "button",
+        "div",
         {
           key: room.id,
-          type: "button",
-          "data-drop-room-id": room.id,
-          onClick: () => {
-            if (Date.now() - lastDropAtRef.current < 350) return;
-            focusRoom(room.id);
-          },
-          onPointerUp: (event) => {
-            if (Date.now() - lastDropAtRef.current < 350) event.preventDefault();
-          },
+          "data-drop-room-id": canAssign ? room.id : undefined,
           className: cx(
             "group relative flex min-h-[170px] flex-col rounded-[24px] border p-4 text-left shadow-sm transition-all duration-200",
             roomToneClass(status, selected, dragTarget),
-            "hover:-translate-y-0.5 hover:shadow-lg"
+            canAssign ? "hover:-translate-y-0.5 hover:shadow-lg" : "cursor-not-allowed"
           ),
         },
         h("div", { className: "flex items-start justify-between gap-3" },
@@ -1239,6 +1249,7 @@
 
     function getRoomTypeTone(room) {
       const type = room?.room_type;
+      if (room?.unavailable || type === "unavailable") return "bg-slate-100 text-slate-500 ring-slate-200";
       if (type === "single") return "bg-sky-50 text-sky-700 ring-sky-200";
       if (type === "twin") return "bg-indigo-50 text-indigo-700 ring-indigo-200";
       if (type === "ondol_4") return "bg-amber-50 text-amber-700 ring-amber-200";
@@ -1275,20 +1286,41 @@
       return { northRooms, southRooms, northServices, southServices, corridorServices };
     }
 
+    function groupServiceSpacesForRow(spaces) {
+      const blockingLabels = new Set(["당직실", "비품실", "미화원실"]);
+      const byColumn = new Map();
+      spaces
+        .filter((space) => !blockingLabels.has(normalizeText(space.label)))
+        .forEach((space) => {
+          const key = space.column;
+          if (!byColumn.has(key)) {
+            byColumn.set(key, {
+              ...space,
+              type: "service_stack",
+              labels: [],
+            });
+          }
+          byColumn.get(key).labels.push(space.label);
+        });
+      return [...byColumn.values()].sort(sortByWorkbookPosition);
+    }
+
     function renderServiceCell(space, columnRange) {
       const col = Math.max((space.column || columnRange.min) - columnRange.min + 1, 1);
-      const icon = space.label?.includes("계단") ? "stairs" : space.label?.includes("화장실") ? "shower-head" : space.label?.includes("세탁") ? "washing-machine" : "panel-top";
+      const labels = space.labels || [space.label];
+      const text = labels.filter(Boolean).join(" / ");
+      const icon = text.includes("계단") ? "stairs" : text.includes("화장실") ? "shower-head" : text.includes("세탁") ? "washing-machine" : "panel-top";
       return h(
         "div",
         {
           key: space.id || `${space.label}-${space.cell}`,
-          className: "flex min-h-[64px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/55 px-2 text-center text-[11px] font-semibold text-slate-400",
+          className: "flex h-full min-h-[108px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/55 px-2 text-center text-[10px] font-semibold leading-4 text-slate-400",
           style: { gridColumn: `${col} / span 1` },
-          title: `${space.label || "공용공간"} · ${space.cell || ""}`,
+          title: `${text || "공용공간"} · ${space.cell || ""}`,
         },
         h("span", { className: "flex flex-col items-center gap-1" },
           renderIcon(icon, "h-3.5 w-3.5"),
-          h("span", null, space.label || "공용")
+          labels.map((label) => h("span", { key: label }, label || "공용"))
         )
       );
     }
@@ -1299,44 +1331,40 @@
       const familiesInRoom = bucket?.families || [];
       const usedBeds = bucket?.headcount || 0;
       const status = roomStatus(room, familiesInRoom.length, usedBeds);
-      const fillPercent = Math.min(100, Math.round((usedBeds / room.capacity) * 100));
+      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((usedBeds / room.capacity) * 100)) : 0;
       const compact = density === "compact";
+      const canAssign = !room.unavailable && room.capacity > 0;
 
       return h(
-        "button",
+        "div",
         {
           key: room.id,
-          type: "button",
-          "data-drop-room-id": room.id,
-          onClick: () => focusRoom(room.id),
+          "data-drop-room-id": canAssign ? room.id : undefined,
           className: cx(
             "group relative flex flex-col rounded-2xl border text-left shadow-sm transition-all duration-200",
-            compact ? "min-h-[128px] p-3" : "min-h-[148px] p-3",
+            compact ? "min-h-[112px] p-3" : "min-h-[116px] p-3",
             roomToneClass(status, selected, dragTarget),
-            "hover:-translate-y-0.5 hover:shadow-lg"
+            canAssign ? "hover:-translate-y-0.5 hover:shadow-lg" : "cursor-not-allowed"
           ),
           title: `${room.label} · ${toRoomBadge(room)} · ${room.cell || ""}`,
         },
         h("div", { className: "flex items-start justify-between gap-2" },
           h("div", { className: "min-w-0" },
-            h("div", { className: "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500" },
-              renderIcon(room.room_type === "ondol_4" ? "house" : "bed-double", "h-3 w-3"),
-              h("span", { className: "truncate" }, room.cell || `${room.row || "-"}행`)
-            ),
-            h("div", { className: cx("mt-1 truncate font-semibold text-slate-950", compact ? "text-base" : "text-lg") }, room.label)
+            h("div", { className: cx("truncate font-semibold text-slate-950", compact ? "text-base" : "text-lg") }, room.label),
+            h("div", { className: "mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500" },
+              renderIcon(room.room_type === "ondol_4" ? "square" : "bed-double", "h-3.5 w-3.5"),
+              h("span", { className: "truncate" }, toCompactRoomBadge(room))
+            )
           ),
-          h("span", { className: cx("shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, `${room.capacity}인`)
-        ),
-        h("div", { className: "mt-2 flex flex-wrap gap-1" },
-          h("span", { className: "rounded-full bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200" }, toRoomBadge(room)),
           h("span", { className: cx("rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", {
             empty: "bg-slate-50 text-slate-500 ring-slate-200",
             partial: "bg-emerald-50 text-emerald-700 ring-emerald-200",
             full: "bg-emerald-100 text-emerald-700 ring-emerald-300",
             overflow: "bg-rose-50 text-rose-700 ring-rose-200",
-          }[status]) }, status === "empty" ? "빈방" : status === "partial" ? "사용중" : status === "full" ? "만실" : "초과")
+            unavailable: "bg-slate-100 text-slate-500 ring-slate-200",
+          }[status]) }, status === "empty" ? "미배정" : status === "partial" ? "배정중" : status === "full" ? "배정 완료" : status === "unavailable" ? "사용불가" : "초과")
         ),
-        h("div", { className: "mt-2.5 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" },
+        canAssign ? h("div", { className: "mt-2.5 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" },
           h("div", {
             className: cx("h-full rounded-full transition-all duration-300", {
               empty: "bg-slate-300",
@@ -1346,11 +1374,11 @@
             }[status]),
             style: { width: `${fillPercent}%` },
           })
-        ),
-        h("div", { className: "mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500" },
+        ) : null,
+        canAssign ? h("div", { className: "mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500" },
           h("span", null, `${usedBeds}/${room.capacity}명`),
           h("span", null, usedBeds ? `잔여 ${Math.max(room.capacity - usedBeds, 0)}` : "드롭 가능")
-        ),
+        ) : h("div", { className: "mt-2 text-[10px] font-semibold text-slate-500" }, room.unavailable_reason || "사용할 수 없는 공간"),
         h("div", { className: "mt-2 flex min-h-[24px] flex-wrap gap-1" },
           familiesInRoom.length
             ? familiesInRoom.slice(0, compact ? 2 : 3).map((family) =>
@@ -1392,7 +1420,7 @@
         },
         items.map((item) => {
           const col = Math.max((item.column || columnRange.min) - columnRange.min + 1, 1);
-          if (item.type === "service_space") return renderServiceCell(item, columnRange);
+          if (item.type === "service_space" || item.type === "service_stack") return renderServiceCell(item, columnRange);
           return h(
             "div",
             { key: item.id, style: { gridColumn: `${col} / span 1` }, className: "min-w-0" },
@@ -1428,9 +1456,9 @@
       const columnRange = getFloorColumnRange(floor);
       const planMinWidth = Math.max(columnRange.span * (density === "compact" ? 86 : 118), density === "compact" ? 860 : 1320);
       const { northRooms, southRooms, northServices, southServices, corridorServices } = splitFloorItems(floor);
-      const northItems = northRooms.concat(northServices.map((space) => ({ ...space, type: "service_space" }))).sort(sortByWorkbookPosition);
-      const southItems = southRooms.concat(southServices.map((space) => ({ ...space, type: "service_space" }))).sort(sortByWorkbookPosition);
-      const floorCapacity = (floor.rooms || []).reduce((sum, room) => sum + (room.capacity || 0), 0);
+      const northItems = northRooms.concat(groupServiceSpacesForRow(northServices)).sort(sortByWorkbookPosition);
+      const southItems = southRooms.concat(groupServiceSpacesForRow(southServices)).sort(sortByWorkbookPosition);
+      const floorCapacity = (floor.rooms || []).reduce((sum, room) => sum + (room.unavailable ? 0 : room.capacity || 0), 0);
       const usedBeds = (floor.rooms || []).reduce((sum, room) => sum + (roomBundle.byRoom.get(room.id)?.headcount || 0), 0);
 
       return h(
@@ -1445,7 +1473,7 @@
             h("p", { className: "mt-1 text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 정원 ${floorCapacity}명 · 현재 ${usedBeds}명`)
           ),
           h("div", { className: "flex flex-wrap gap-1.5" },
-            ["single", "twin", "ondol_4", "6_person", "12_person"].map((type) => {
+            ["single", "twin", "ondol_4", "6_person", "12_person", "unavailable"].map((type) => {
               const count = (floor.rooms || []).filter((room) => room.room_type === type).length;
               if (!count) return null;
               const sample = (floor.rooms || []).find((room) => room.room_type === type);
@@ -1665,20 +1693,15 @@
       const familiesInRoom = bucket?.families || [];
       const usedBeds = bucket?.headcount || 0;
       const status = roomStatus(room, familiesInRoom.length, usedBeds);
-      const fillPercent = Math.min(100, Math.round((usedBeds / room.capacity) * 100));
+      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((usedBeds / room.capacity) * 100)) : 0;
       const remaining = Math.max(room.capacity - usedBeds, 0);
+      const canAssign = !room.unavailable && room.capacity > 0;
 
       return h(
-        "button",
+        "div",
         {
           key: room.id,
-          type: "button",
-          "data-drop-room-id": room.id,
-          onClick: () => {
-            if (Date.now() - lastDropAtRef.current < 350) return;
-            focusRoom(room.id);
-            setFamilySheetOpen(false);
-          },
+          "data-drop-room-id": canAssign ? room.id : undefined,
           className: cx(
             "min-h-[138px] w-full rounded-lg border p-3 text-left shadow-sm transition active:scale-[0.98]",
             roomToneClass(status, selected, dragTarget)
@@ -1689,7 +1712,7 @@
             h("div", { className: "truncate text-[11px] font-semibold text-slate-500" }, room.floorLabel || `${room.floor}층`),
             h("div", { className: "mt-1 truncate text-[18px] font-semibold leading-5 text-slate-950" }, room.label)
           ),
-          h("span", { className: "shrink-0 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200" }, `${room.capacity}인`)
+          h("span", { className: "shrink-0 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200" }, canAssign ? `${room.capacity}인` : "불가")
         ),
         h("div", { className: "mt-3 h-2 overflow-hidden rounded-full bg-slate-100" },
           h("div", {

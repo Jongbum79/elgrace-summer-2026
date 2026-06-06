@@ -17,15 +17,18 @@ This file documents how the room layout assets were inferred from the Excel work
 4. When a room has no explicit suffix, the floor default is used.
 5. The floor default is the most common explicit room type found in that floor block.
 6. If a floor has no explicit room-type labels, workbook-specific heuristics are applied.
-   - `휴락동 3층` unlabeled rooms are interpreted as `4인실 온돌`.
+   - `휴락동 2층` and `휴락동 3층` unlabeled rooms are interpreted as `4인실 온돌`.
    - other unlabeled rooms fall back to `2인실`.
-7. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.
+7. Position-specific workbook overrides are applied after default inference.
+   - `휴락동 4층` rooms south of the corridor are interpreted as `4인실 온돌`.
+8. Rooms adjacent to same-column service labels such as `당직실`, `비품실`, or `미화원실` are marked as unavailable.
+9. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.
 
 ## Current workbook findings
 ### 휴락동
-- 4층: 25개 방, corridor row 7, room types: 1인실 3개, 2인실 22개
+- 4층: 25개 방, corridor row 7, room types: 1인실 3개, 2인실 8개, 4인실 온돌 14개
 - 3층: 25개 방, corridor row 17, room types: 4인실 온돌 25개
-- 2층: 23개 방, corridor row 27, room types: 2인실 23개
+- 2층: 23개 방, corridor row 27, room types: 4인실 온돌 18개, 당직실 2개, 미화원실 1개, 비품실 2개
 
 ### 동락홀
 - 2층: 10개 방, corridor row 37, room types: 12인실 2개, 6인실 8개
