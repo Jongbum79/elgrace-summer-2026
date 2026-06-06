@@ -78,6 +78,7 @@ const sisterGroupsData = [
   { id: "22조", leader: "박금향", members: ["신선화", "김은혜A", "이주연", "나하나"] },
   { id: "23조", leader: "김주선", members: ["이근실", "지명덕", "조미애", "유성애"] },
   { id: "24조", leader: "김상배", members: ["유현진", "김소희", "이보경"] },
+  { id: "재직 가족", leader: "이은설", members: ["우혜은"] },
 ];
 
 const sisterStaffData = {
