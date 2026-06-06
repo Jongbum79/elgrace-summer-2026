@@ -2591,6 +2591,17 @@ function initGoogleOAuth() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: driveOAuthClientId,
     scope: "openid email profile https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
+    prompt: "select_account",
+    error_callback: (err) => {
+      console.error("Google OAuth popup error:", err);
+      if (err?.type === "popup_failed_to_open") {
+        showToast("로그인 창을 열지 못했습니다. 팝업 차단 또는 브라우저 보안 설정을 확인해 주세요.");
+      } else if (err?.type === "popup_closed") {
+        showToast("로그인 창이 닫혔습니다. 다시 로그인해 주세요.");
+      } else {
+        showToast("구글 로그인 중 오류가 발생했습니다.");
+      }
+    },
     callback: async (response) => {
       if (response.error) {
         console.error("OAuth error:", response.error);
@@ -2632,7 +2643,7 @@ function loginToGoogle() {
     initGoogleOAuth();
   }
   if (tokenClient) {
-    tokenClient.requestAccessToken();
+    tokenClient.requestAccessToken({ prompt: "select_account" });
   } else {
     showToast("Google SDK 초기화 중입니다. 잠시 후 다시 시도해 주세요.");
   }
