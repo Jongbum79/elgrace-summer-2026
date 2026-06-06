@@ -2469,6 +2469,183 @@ function getFamilyFromForm(existingFamily = null) {
   };
 }
 
+let driveActiveFolderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS";
+let driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
+let driveViewMode = "grid";
+let driveSearchQuery = "";
+let driveLoadedItems = [];
+
+async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", folderName = "여름수련회_공유폴더") {
+  const foldersContainer = document.querySelector(".drive-folders-grid");
+  const filesGrid = document.querySelector("#driveFilesGrid");
+  const filesListBody = document.querySelector("#driveFilesListBody");
+  const filesListContainer = document.querySelector("#driveFilesListContainer");
+  const foldersSection = document.querySelector("#driveFoldersContainer");
+  const activeFolderLabel = document.querySelector("#activeFolderLabel");
+  const filesSectionTitle = document.querySelector("#filesSectionTitle");
+  const warningBanner = document.querySelector("#driveApiKeyWarningBanner");
+  
+  if (!foldersContainer || !filesGrid || !filesListBody || !filesListContainer || !foldersSection || !activeFolderLabel || !filesSectionTitle) return;
+  
+  driveActiveFolderId = folderId;
+  
+  // Render Breadcrumbs
+  let breadcrumbHtml = "";
+  driveFolderHistory.forEach((item, index) => {
+    const isActive = index === driveFolderHistory.length - 1;
+    breadcrumbHtml += `<span class="breadcrumb-item ${isActive ? '' : 'active'}" data-history-idx="${index}" style="${isActive ? 'color: #5f6368;' : 'font-weight: 700; color: #1a73e8; cursor: pointer;'}">${item.name}</span>`;
+    if (!isActive) {
+      breadcrumbHtml += `<span class="breadcrumb-separator" style="color: #dadce0; user-select: none; margin: 0 4px;">&gt;</span>`;
+    }
+  });
+  document.querySelector(".drive-breadcrumbs").innerHTML = breadcrumbHtml;
+
+  try {
+    const res = await fetch(`/api/drive-files?folderId=${folderId}`);
+    const data = await res.json();
+    
+    if (data.warning === "NO_API_KEY") {
+      if (warningBanner) warningBanner.style.display = "flex";
+    } else {
+      if (warningBanner) warningBanner.style.display = "none";
+    }
+    
+    const items = data.files || [];
+    const folders = items.filter(f => f.mimeType === "application/vnd.google-apps.folder");
+    const files = items.filter(f => f.mimeType !== "application/vnd.google-apps.folder");
+    
+    if (folders.length > 0) {
+      foldersSection.style.display = "block";
+      foldersContainer.innerHTML = folders.map(folder => {
+        return `
+          <div class="drive-folder-card" data-folder-id="${folder.id}" data-folder-name="${folder.name}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <i data-lucide="folder" style="width: 20px; height: 20px; stroke-width: 2px; color: #1a73e8; fill: #e8f0fe;"></i>
+            <div style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              <div style="font-size: 13.5px; font-weight: 700; color: #3c4043;">${folder.name}</div>
+              <div style="font-size: 11px; color: #5f6368; margin-top: 2px;">폴더</div>
+            </div>
+            <i data-lucide="more-vertical" style="width: 14px; height: 14px; color: #5f6368; cursor: pointer;"></i>
+          </div>
+        `;
+      }).join("");
+    } else {
+      foldersSection.style.display = "none";
+    }
+    
+    let filteredFiles = files;
+    if (driveSearchQuery) {
+      filteredFiles = filteredFiles.filter(f => f.name.toLowerCase().includes(driveSearchQuery.toLowerCase()));
+    }
+    
+    filesSectionTitle.textContent = driveActiveFolderId === "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS" ? "최근 파일 / 전체 파일" : `${folderName} 내 파일`;
+    
+    const typeConfigs = {
+      "application/pdf": { icon: "file-text", color: "#ea4335", bgColor: "#fce8e6", label: "PDF" },
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { icon: "file-spreadsheet", color: "#0f9d58", bgColor: "#e6f4ea", label: "Excel" },
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { icon: "file-text", color: "#4285f4", bgColor: "#e8f0fe", label: "Word" }
+    };
+    
+    const getFileConfig = (mimeType, name) => {
+      if (typeConfigs[mimeType]) return typeConfigs[mimeType];
+      if (name.endsWith(".xlsx")) return typeConfigs["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+      if (name.endsWith(".docx")) return typeConfigs["application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if (name.endsWith(".pdf")) return typeConfigs["application/pdf"];
+      return { icon: "file", color: "#5f6368", bgColor: "#f1f3f4", label: "File" };
+    };
+    
+    if (driveViewMode === "grid") {
+      filesGrid.style.display = "grid";
+      filesListContainer.style.display = "none";
+      
+      if (filteredFiles.length === 0) {
+        filesGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; background: #fafafa; border-radius: 12px; border: 1px dashed #dcdcdc; width: 100%;">
+            <i data-lucide="search" style="width: 32px; height: 32px; stroke-width: 1.5px; color: var(--muted); margin-bottom: 12px;"></i>
+            <p style="font-size: 13px; font-weight: 600; color: #555; margin: 0;">조건에 맞는 파일이 없습니다.</p>
+          </div>
+        `;
+      } else {
+        filesGrid.innerHTML = filteredFiles.map(file => {
+          const conf = getFileConfig(file.mimeType, file.name);
+          let sizeStr = "-";
+          if (file.size) {
+            const bytes = parseInt(file.size);
+            sizeStr = bytes > 1024 * 1024 ? (bytes / (1024 * 1024)).toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
+          }
+          const modDate = file.modifiedTime ? file.modifiedTime.slice(0, 10) : "-";
+          return `
+            <div class="drive-file-card" style="background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer;">
+              <div style="height: 120px; background: ${conf.bgColor}; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(0,0,0,0.03); position: relative;">
+                <i data-lucide="${conf.icon}" style="width: 44px; height: 44px; color: ${conf.color}; stroke-width: 1.5px;"></i>
+                <span style="position: absolute; bottom: 8px; left: 12px; font-size: 9px; font-weight: 800; padding: 2px 6px; background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 4px; color: ${conf.color}; text-transform: uppercase;">${conf.label}</span>
+              </div>
+              <div style="padding: 12px 14px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;" title="${file.name}">
+                  ${file.name}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #5f6368; border-top: 1px dashed #f1f3f4; padding-top: 8px; margin-top: auto;">
+                  <span>${sizeStr}</span>
+                  <a href="${file.webViewLink}" target="_blank" class="drive-download-btn" style="color: #1a73e8; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 700;">
+                    <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+    } else {
+      filesGrid.style.display = "none";
+      filesListContainer.style.display = "block";
+      
+      if (filteredFiles.length === 0) {
+        filesListBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: var(--muted);">
+              <div style="display: flex; flex-direction: column; align-items: center;">
+                <i data-lucide="search" style="width: 24px; height: 24px; margin-bottom: 8px;"></i>
+                <span>조건에 맞는 파일이 없습니다.</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      } else {
+        filesListBody.innerHTML = filteredFiles.map(file => {
+          const conf = getFileConfig(file.mimeType, file.name);
+          let sizeStr = "-";
+          if (file.size) {
+            const bytes = parseInt(file.size);
+            sizeStr = bytes > 1024 * 1024 ? (bytes / (1024 * 1024)).toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
+          }
+          const modDate = file.modifiedTime ? file.modifiedTime.slice(0, 10) : "-";
+          const ownerName = file.owners && file.owners[0] ? file.owners[0].displayName : "공유 사용자";
+          return `
+            <tr style="border-bottom: 1px solid var(--line); color: #3c4043; transition: background 0.15s;">
+              <td style="padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                <i data-lucide="${conf.icon}" style="width: 18px; height: 18px; color: ${conf.color};"></i>
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;" title="${file.name}">${file.name}</span>
+              </td>
+              <td style="padding: 12px 16px; color: #5f6368;">${ownerName}</td>
+              <td style="padding: 12px 16px; color: #5f6368;">${modDate}</td>
+              <td style="padding: 12px 16px; color: #5f6368;">${sizeStr}</td>
+              <td style="padding: 12px 16px; text-align: right;">
+                <a href="${file.webViewLink}" target="_blank" style="color: #1a73e8; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+  } catch (err) {
+    console.error("Drive load failed:", err);
+    showToast("드라이브 로딩 실패");
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
 function toggleModal(open, family = null) {
   if (open) {
     editingFamilyId = family?.id || null;
@@ -2526,155 +2703,7 @@ async function refreshParticipantsData() {
   if (window.lucide) lucide.createIcons();
 }
 
-const driveFilesData = [
-  { name: "2026_여름수련회_기획안.pdf", type: "pdf", size: "2.4 MB", folder: "기획 및 행정", date: "2026-06-01", owner: "조봄이와", url: "https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "수련회_예산안_및_집행계획.xlsx", type: "xlsx", size: "1.8 MB", folder: "예산 및 재정", date: "2026-05-28", owner: "김상배", url: "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "숙소배정표_최종본.xlsx", type: "xlsx", size: "950 KB", folder: "기획 및 행정", date: "2026-06-05", owner: "윤선욱", url: "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "식사수요조사_결과보고.docx", type: "docx", size: "1.2 MB", folder: "안내 및 매뉴얼", date: "2026-06-02", owner: "김미현", url: "https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "수련회_안내문_및_준비물.pdf", type: "pdf", size: "3.1 MB", folder: "안내 및 매뉴얼", date: "2026-06-04", owner: "장세연", url: "https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "찬양콘서트_콘티_및_악보.pdf", type: "pdf", size: "8.5 MB", folder: "프로그램 & 악보", date: "2026-06-03", owner: "이지은A", url: "https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "안전관리_및_비상연락망.pdf", type: "pdf", size: "850 KB", folder: "안내 및 매뉴얼", date: "2026-05-30", owner: "박철진", url: "https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" },
-  { name: "조별성경공부_가이드북.pdf", type: "pdf", size: "4.2 MB", folder: "프로그램 & 악보", date: "2026-06-02", owner: "박철진", url: "https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKv3dBt28vJUX078y1/edit?usp=sharing" }
-];
 
-let driveActiveFolder = null;
-let driveViewMode = "grid";
-let driveSearchQuery = "";
-
-function renderDriveView() {
-  const foldersContainer = document.querySelector(".drive-folders-grid");
-  const filesGrid = document.querySelector("#driveFilesGrid");
-  const filesListBody = document.querySelector("#driveFilesListBody");
-  const filesListContainer = document.querySelector("#driveFilesListContainer");
-  const foldersSection = document.querySelector("#driveFoldersContainer");
-  const activeFolderLabel = document.querySelector("#activeFolderLabel");
-  const filesSectionTitle = document.querySelector("#filesSectionTitle");
-  
-  if (!foldersContainer || !filesGrid || !filesListBody || !filesListContainer || !foldersSection || !activeFolderLabel || !filesSectionTitle) return;
-  
-  const allFolders = [...new Set(driveFilesData.map(f => f.folder))];
-  
-  if (driveActiveFolder) {
-    activeFolderLabel.textContent = driveActiveFolder;
-    activeFolderLabel.style.color = "#202124";
-    activeFolderLabel.style.fontWeight = "700";
-    foldersSection.style.display = "none";
-    filesSectionTitle.textContent = `${driveActiveFolder} 폴더 내 파일`;
-  } else {
-    activeFolderLabel.textContent = "여름수련회_공유폴더";
-    activeFolderLabel.style.color = "#5f6368";
-    activeFolderLabel.style.fontWeight = "normal";
-    foldersSection.style.display = "block";
-    filesSectionTitle.textContent = "최근 파일 / 전체 파일";
-  }
-
-  if (!driveActiveFolder) {
-    foldersContainer.innerHTML = allFolders.map(folderName => {
-      const folderFiles = driveFilesData.filter(f => f.folder === folderName);
-      return `
-        <div class="drive-folder-card" data-folder="${folderName}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-          <i data-lucide="folder" style="width: 20px; height: 20px; stroke-width: 2px; color: #1a73e8; fill: #e8f0fe;"></i>
-          <div style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            <div style="font-size: 13.5px; font-weight: 700; color: #3c4043;">${folderName}</div>
-            <div style="font-size: 11px; color: #5f6368; margin-top: 2px;">파일 ${folderFiles.length}개</div>
-          </div>
-          <i data-lucide="more-vertical" style="width: 14px; height: 14px; color: #5f6368; cursor: pointer;"></i>
-        </div>
-      `;
-    }).join("");
-  }
-
-  let filteredFiles = driveFilesData;
-  if (driveActiveFolder) {
-    filteredFiles = filteredFiles.filter(f => f.folder === driveActiveFolder);
-  }
-  if (driveSearchQuery) {
-    filteredFiles = filteredFiles.filter(f => f.name.toLowerCase().includes(driveSearchQuery.toLowerCase()));
-  }
-
-  const typeConfigs = {
-    pdf: { icon: "file-text", color: "#ea4335", bgColor: "#fce8e6", label: "PDF" },
-    xlsx: { icon: "file-spreadsheet", color: "#0f9d58", bgColor: "#e6f4ea", label: "Excel" },
-    docx: { icon: "file-text", color: "#4285f4", bgColor: "#e8f0fe", label: "Word" }
-  };
-
-  const getFileConfig = (type) => typeConfigs[type] || { icon: "file", color: "#5f6368", bgColor: "#f1f3f4", label: "File" };
-
-  if (driveViewMode === "grid") {
-    filesGrid.style.display = "grid";
-    filesListContainer.style.display = "none";
-    
-    if (filteredFiles.length === 0) {
-      filesGrid.innerHTML = `
-        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; background: #fafafa; border-radius: 12px; border: 1px dashed #dcdcdc; width: 100%;">
-          <i data-lucide="search" style="width: 32px; height: 32px; stroke-width: 1.5px; color: var(--muted); margin-bottom: 12px;"></i>
-          <p style="font-size: 13px; font-weight: 600; color: #555; margin: 0;">조건에 맞는 파일이 없습니다.</p>
-        </div>
-      `;
-    } else {
-      filesGrid.innerHTML = filteredFiles.map(file => {
-        const conf = getFileConfig(file.type);
-        return `
-          <div class="drive-file-card" style="background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer;">
-            <div style="height: 120px; background: ${conf.bgColor}; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(0,0,0,0.03); position: relative;">
-              <i data-lucide="${conf.icon}" style="width: 44px; height: 44px; color: ${conf.color}; stroke-width: 1.5px;"></i>
-              <span style="position: absolute; bottom: 8px; left: 12px; font-size: 9px; font-weight: 800; padding: 2px 6px; background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 4px; color: ${conf.color}; text-transform: uppercase;">${conf.label}</span>
-            </div>
-            <div style="padding: 12px 14px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
-              <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;" title="${file.name}">
-                ${file.name}
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #5f6368; border-top: 1px dashed #f1f3f4; padding-top: 8px; margin-top: auto;">
-                <span>${file.size}</span>
-                <a href="${file.url}" target="_blank" class="drive-download-btn" style="color: #1a73e8; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 700;">
-                  <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
-                </a>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-  } else {
-    filesGrid.style.display = "none";
-    filesListContainer.style.display = "block";
-    
-    if (filteredFiles.length === 0) {
-      filesListBody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <i data-lucide="search" style="width: 24px; height: 24px; margin-bottom: 8px;"></i>
-              <span>조건에 맞는 파일이 없습니다.</span>
-            </div>
-          </td>
-        </tr>
-      `;
-    } else {
-      filesListBody.innerHTML = filteredFiles.map(file => {
-        const conf = getFileConfig(file.type);
-        return `
-          <tr style="border-bottom: 1px solid var(--line); color: #3c4043; transition: background 0.15s;">
-            <td style="padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700;">
-              <i data-lucide="${conf.icon}" style="width: 18px; height: 18px; color: ${conf.color};"></i>
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;" title="${file.name}">${file.name}</span>
-            </td>
-            <td style="padding: 12px 16px; color: #5f6368;">${file.owner}</td>
-            <td style="padding: 12px 16px; color: #5f6368;">${file.date}</td>
-            <td style="padding: 12px 16px; color: #5f6368;">${file.size}</td>
-            <td style="padding: 12px 16px; text-align: right;">
-              <a href="${file.url}" target="_blank" style="color: #1a73e8; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>열기
-              </a>
-            </td>
-          </tr>
-        `;
-      }).join("");
-    }
-  }
-
-  if (window.lucide) lucide.createIcons();
-}
 
 function openPage(view) {
   if (!["attendance", "participants", "meals", "chatbot", "docs"].includes(view)) {
@@ -2691,6 +2720,7 @@ function openPage(view) {
     initChatbotView();
   }
   if (view === "docs") {
+    driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
     renderDriveView();
   }
   if (window.lucide) lucide.createIcons();
@@ -2725,26 +2755,46 @@ document.addEventListener("click", (event) => {
   const driveGridBtn = event.target.closest("#driveGridBtn");
   const driveListBtn = event.target.closest("#driveListBtn");
   const driveRootBtn = event.target.closest("#btnDriveRoot");
+  const breadcrumbItem = event.target.closest(".breadcrumb-item.active");
+  const driveUploadBtn = event.target.closest("#btnDriveUpload");
   
   if (driveFolder) {
-    driveActiveFolder = driveFolder.dataset.folder;
-    renderDriveView();
+    const folderId = driveFolder.dataset.folderId;
+    const folderName = driveFolder.dataset.folderName;
+    if (folderId) {
+      driveFolderHistory.push({ id: folderId, name: folderName });
+      renderDriveView(folderId, folderName);
+    }
   }
   if (driveGridBtn) {
     document.querySelector("#driveGridBtn").classList.add("active");
     document.querySelector("#driveListBtn").classList.remove("active");
     driveViewMode = "grid";
-    renderDriveView();
+    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
+    renderDriveView(currentFolder.id, currentFolder.name);
   }
   if (driveListBtn) {
     document.querySelector("#driveGridBtn").classList.remove("active");
     document.querySelector("#driveListBtn").classList.add("active");
     driveViewMode = "list";
-    renderDriveView();
+    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
+    renderDriveView(currentFolder.id, currentFolder.name);
   }
   if (driveRootBtn) {
-    driveActiveFolder = null;
+    driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
     renderDriveView();
+  }
+  if (breadcrumbItem) {
+    const idx = parseInt(breadcrumbItem.dataset.historyIdx);
+    if (!isNaN(idx) && idx >= 0 && idx < driveFolderHistory.length) {
+      driveFolderHistory = driveFolderHistory.slice(0, idx + 1);
+      const targetFolder = driveFolderHistory[idx];
+      renderDriveView(targetFolder.id, targetFolder.name);
+    }
+  }
+  if (driveUploadBtn) {
+    const fileInput = document.querySelector("#driveFileInput");
+    if (fileInput) fileInput.click();
   }
 
   if (refreshBtn) {
@@ -3057,7 +3107,43 @@ document.addEventListener("pointercancel", () => { dateDrag = null; });
 document.querySelector("#searchInput").addEventListener("input", renderFamilies);
 document.querySelector("#driveSearchInput")?.addEventListener("input", (e) => {
   driveSearchQuery = e.target.value;
-  renderDriveView();
+  const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
+  renderDriveView(currentFolder.id, currentFolder.name);
+});
+document.querySelector("#driveFileInput")?.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("folderId", driveActiveFolderId);
+
+  showToast("파일을 업로드하는 중...");
+
+  try {
+    const res = await fetch("/api/drive-upload", {
+      method: "POST",
+      body: formData,
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data.error || data.success === false) {
+      throw new Error(data.error || data.message || "Upload failed");
+    }
+
+    showToast("파일이 성공적으로 업로드되었습니다.");
+    e.target.value = "";
+    
+    const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
+    renderDriveView(currentFolder.id, currentFolder.name);
+  } catch (err) {
+    console.error("Upload error:", err);
+    showToast("파일 업로드 실패: " + err.message);
+  }
 });
 document.querySelector("#memberFormList").addEventListener("change", (event) => {
   if (event.target.classList.contains("new-member-group")) {
