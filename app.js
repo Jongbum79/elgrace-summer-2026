@@ -4093,6 +4093,7 @@ loadRetreatConfig()
       loadDriveConfig().then(() => { initGoogleOAuth(); })
     ]);
     renderAll();
+    window.appInitialized = true;
   })
   .catch((error) => {
     document.querySelector("#retreatTitle").textContent = "수련회 설정 확인 필요";
