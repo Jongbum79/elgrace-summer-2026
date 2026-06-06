@@ -1401,12 +1401,12 @@ tr.status-row-undecided td:first-child { border-left: 4px solid #B8B8B8 !importa
   display: inline-block;
   flex-shrink: 0;
 }
-.org-status-dot.badge-full { background-color: #3F7D58; }
-.org-status-dot.badge-partial { background-color: #C98A2E; }
-.org-status-dot.badge-absent { background-color: #C66A6A; }
-.org-status-dot.badge-undecided { background-color: #B8B8B8; }
-.org-status-dot.badge-unregistered { background-color: #E2E8F0; }
-.org-status-dot.badge-not_in_db { background-color: #E2E8F0; }
+.org-status-dot.badge-full { background-color: #7FA18A; }
+.org-status-dot.badge-partial { background-color: #D8B36A; }
+.org-status-dot.badge-absent { background-color: #D89A9A; }
+.org-status-dot.badge-undecided { background-color: #CBCBCB; }
+.org-status-dot.badge-unregistered { background-color: #EDF2F7; }
+.org-status-dot.badge-not_in_db { background-color: #EDF2F7; }
 
 /* 사이드바 Lucide 아이콘 styling */
 .nav-icon {
