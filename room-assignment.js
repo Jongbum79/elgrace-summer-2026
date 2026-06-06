@@ -6,7 +6,7 @@
 
   const h = React.createElement;
   const { useEffect, useMemo, useRef, useState } = React;
-  const ROOM_LAYOUT_URL = "./assets/room_layout.json";
+  const ROOM_LAYOUT_URL = "./assets/building_structure.json";
 
   const STATUS_LABELS = {
     stay: "입소 완료",
