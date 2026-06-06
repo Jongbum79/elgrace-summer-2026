@@ -341,19 +341,13 @@
       [0, 1, 2].map(nightIdx => {
         const nightHead = nightHeads[nightIdx];
         const nightFill = room.capacity > 0 ? Math.min(100, Math.round((nightHead / room.capacity) * 100)) : 0;
-        const segmentStatus = nightHead === 0 ? "empty" : nightHead < room.capacity ? "partial" : nightHead === room.capacity ? "full" : "overflow";
         return h("div", {
           key: nightIdx,
           className: "h-2 flex-1 rounded-full bg-slate-100 ring-1 ring-slate-200/50 overflow-hidden relative",
           title: `7월 ${27 + nightIdx}일 숙박: ${nightHead}/${room.capacity}명`
         },
           h("div", {
-            className: cx("h-full rounded-full transition-all duration-300", {
-              empty: "bg-transparent",
-              partial: "bg-emerald-400",
-              full: "bg-emerald-600",
-              overflow: "bg-rose-500",
-            }[segmentStatus]),
+            className: cx("h-full rounded-full bg-emerald-600 transition-all duration-300"),
             style: { width: `${nightFill}%` }
           })
         );
@@ -846,22 +840,32 @@
       const drag = dragRef.current;
       if (!drag.active) return;
       const elements = document.elementsFromPoint(clientX, clientY);
-      const roomElement = elements.find((element) => element?.dataset?.dropRoomId);
-      const roomId = roomElement?.dataset?.dropRoomId || null;
-      if (roomId && layoutState.data?.roomById.has(roomId)) {
+      const isDropQueue = elements.some((el) => el?.dataset?.dropQueue || el?.closest("[data-drop-queue]"));
+      if (isDropQueue) {
         lastDropAtRef.current = Date.now();
-        const room = layoutState.data.roomById.get(roomId);
         const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
         if (family) {
-          if (room.unavailable || room.capacity <= 0) {
-            showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
-          } else {
-            const bucket = roomBundle.byRoom.get(roomId);
-            if (!canFamilyFitInRoom(family, room, bucket?.families || [])) {
-              showToast(`${room.label}의 날짜별 정원을 초과합니다.`);
+          updateAssignment(drag.familyId, "미배정", { preserveView: true });
+          showToast(`${family.name}의 배정을 해제했습니다.`);
+        }
+      } else {
+        const roomElement = elements.find((element) => element?.dataset?.dropRoomId);
+        const roomId = roomElement?.dataset?.dropRoomId || null;
+        if (roomId && layoutState.data?.roomById.has(roomId)) {
+          lastDropAtRef.current = Date.now();
+          const room = layoutState.data.roomById.get(roomId);
+          const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
+          if (family) {
+            if (room.unavailable || room.capacity <= 0) {
+              showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
             } else {
-              updateAssignment(drag.familyId, room.label, { preserveView: true });
-              showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
+              const bucket = roomBundle.byRoom.get(roomId);
+              if (!canFamilyFitInRoom(family, room, bucket?.families || [])) {
+                showToast(`${room.label}의 날짜별 정원을 초과합니다.`);
+              } else {
+                updateAssignment(drag.familyId, room.label, { preserveView: true });
+                showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
+              }
             }
           }
         }
@@ -1171,8 +1175,8 @@
           )
         ),
         h("div", { className: "mt-4 space-y-3" },
-          canAssign && showOccupancy ? renderNightProgressBar(room, familiesInRoom) : null,
-          canAssign && showOccupancy ? h("div", { className: "flex items-center justify-between text-[11px] font-medium text-slate-500" },
+          canAssign ? renderNightProgressBar(room, familiesInRoom) : null,
+          canAssign && room.capacity >= 6 ? h("div", { className: "flex items-center justify-between text-[11px] font-medium text-slate-500" },
             h("span", null, `입실 ${maxOccupancy}명`),
             h("span", null, `잔여 ${Math.max(room.capacity - maxOccupancy, 0)}명`)
           ) : null,
@@ -1448,11 +1452,11 @@
             ) }, maxOccupancy > 0 ? "배정" : "미배정") : null
           ),
           h("div", { className: "flex flex-wrap items-center gap-1" },
-            h("span", { className: cx("inline-flex max-w-full rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, toCompactRoomBadge(room))
+            toCompactRoomBadge(room) !== room.label ? h("span", { className: cx("inline-flex max-w-full rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, toCompactRoomBadge(room)) : null
           )
         ),
-        canAssign && showOccupancy ? renderNightProgressBar(room, familiesInRoom) : null,
-        canAssign && showOccupancy ? h("div", { className: "mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500" },
+        canAssign ? renderNightProgressBar(room, familiesInRoom) : null,
+        canAssign && room.capacity >= 6 ? h("div", { className: "mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500" },
           h("span", null, `${maxOccupancy}/${room.capacity}명`),
           h("span", null, maxOccupancy ? `잔여 ${Math.max(room.capacity - maxOccupancy, 0)}` : "드롭 가능")
         ) : null,
@@ -1470,7 +1474,7 @@
                   title: "다른 방으로 드래그",
                 },
                   h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45] shrink-0" }),
-                  h("span", { className: "whitespace-normal break-all text-left" }, family.name.replace(" 가족", ""))
+                  h("span", { className: "whitespace-nowrap truncate text-left" }, family.name.replace(" 가족", ""))
                 )
               )
             : h("span", { className: "rounded-full border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[10px] font-medium text-slate-400" }, "비어 있음")
@@ -1490,7 +1494,7 @@
         {
           key: keyPrefix,
           className: "grid gap-2.5",
-          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(${density === "compact" ? "74px" : "104px"}, 1fr))` },
+          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(${density === "compact" ? "74px" : "116px"}, 1fr))` },
         },
         items.map((item) => {
           const col = Math.max((item.column || columnRange.min) - columnRange.min + 1, 1);
@@ -1509,7 +1513,7 @@
         "div",
         {
           className: "relative my-3 grid min-h-[52px] items-center rounded-[20px] border border-slate-200 bg-[linear-gradient(90deg,rgba(226,232,240,0.34),rgba(255,255,255,0.82),rgba(226,232,240,0.34))] px-3",
-          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(104px, 1fr))` },
+          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(116px, 1fr))` },
         },
         h("div", { className: "pointer-events-none absolute inset-x-4 top-1/2 h-px bg-slate-300/70" }),
         h("div", { className: "relative z-10 col-span-full mx-auto rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-500 shadow-sm" },
@@ -1788,8 +1792,8 @@
           ),
           h("span", { className: "text-[10px] font-medium text-slate-500" }, `정원 ${room.capacity}명`)
         ),
-        canAssign && showOccupancy ? renderNightProgressBar(room, familiesInRoom) : null,
-        canAssign && showOccupancy ? h("div", { className: "mt-2 flex items-center justify-between text-[11px] font-medium text-slate-500" },
+        canAssign ? renderNightProgressBar(room, familiesInRoom) : null,
+        canAssign && room.capacity >= 6 ? h("div", { className: "mt-2 flex items-center justify-between text-[11px] font-medium text-slate-500" },
           h("span", null, `${maxOccupancy}/${room.capacity}명`),
           h("span", null, remaining ? `+${remaining}` : "완료")
         ) : !canAssign ? h("div", { className: "mt-2 text-[10px] font-semibold text-slate-500" }, room.unavailable_reason || "사용할 수 없는 공간") : null,
@@ -1798,7 +1802,7 @@
             ? familiesInRoom.map((family) =>
                 h("span", {
                   key: `${room.id}-${family._familyId}`,
-                  className: "max-w-full rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 whitespace-normal break-all text-left",
+                  className: "max-w-full rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 whitespace-nowrap truncate text-left",
                 }, family.name.replace(" 가족", ""))
               )
             : h("span", { className: "rounded-md border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-400" }, "비어 있음")
@@ -2186,12 +2190,7 @@
               type: "button",
               onClick: () => setMobileTab("families"),
               className: cx("rounded-full px-3 py-2 text-sm font-semibold transition", mobileTab === "families" ? "bg-[#1e5a45] text-white" : "border border-slate-200 bg-white text-slate-600"),
-            }, "가족 대기열"),
-            h("button", {
-              type: "button",
-              onClick: () => setMobileTab("inspector"),
-              className: cx("rounded-full px-3 py-2 text-sm font-semibold transition", mobileTab === "inspector" ? "bg-[#1e5a45] text-white" : "border border-slate-200 bg-white text-slate-600"),
-            }, "인스펙터")
+            }, "가족 대기열")
           )
         ),
         h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-cols-[minmax(0,1fr)_300px]" },
@@ -2261,28 +2260,23 @@
                 : h("div", { className: "mt-4 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-sm text-slate-500" }, "인식 오류가 있는 가족이 없습니다.")
             )
           ),
-          h("div", { className: cx("space-y-5", mobileTab !== "rooms" ? "block" : "hidden lg:block") },
-            h("div", { className: cx("rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-4 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto", mobileTab === "families" ? "block" : "hidden lg:block") },
-              h("div", {
-                className: "mt-0 space-y-4",
-              },
-                h("div", { className: "flex items-center justify-between" },
-                  h("h3", { className: "text-lg font-semibold text-slate-900" }, "가족 대기열"),
-                  h("span", { className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" }, `${filteredFamilies.length}가족`)
-                ),
-                h("div", { className: "space-y-2" },
-                  filteredFamilies.length
-                    ? filteredFamilies.map((family) => renderQueueFamilyCard(family))
-                    : h("div", { className: "rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500" }, "조건에 맞는 가족이 없습니다.")
-                )
-              )
-            ),
-            h("div", { className: cx("rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm", mobileTab === "inspector" ? "block" : "hidden lg:block") },
+          h("div", {
+            "data-drop-queue": "true",
+            className: cx(
+              "lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-60px)] lg:overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm",
+              mobileTab !== "rooms" ? "block" : "hidden lg:block"
+            )
+          },
+            h("div", { className: "mt-0 space-y-4" },
               h("div", { className: "flex items-center justify-between" },
-                h("h3", { className: "text-lg font-semibold text-slate-900" }, "세부 인스펙터"),
-                h("span", { className: "rounded-full bg-[#1e5a45]/10 px-3 py-1 text-xs font-semibold text-[#1e5a45]" }, "선택 정보")
+                h("h3", { className: "text-lg font-semibold text-slate-900" }, "가족 대기열"),
+                h("span", { className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" }, `${filteredFamilies.length}가족`)
               ),
-              h("div", { className: "mt-4" }, renderInspector())
+              h("div", { className: "space-y-2" },
+                filteredFamilies.length
+                  ? filteredFamilies.map((family) => renderQueueFamilyCard(family))
+                  : h("div", { className: "rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500" }, "조건에 맞는 가족이 없습니다.")
+              )
             )
           )
         )
