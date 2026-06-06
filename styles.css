@@ -838,7 +838,7 @@ body.desktop-mode .memo {
   font-size: 12px;
   color: var(--muted);
 }
-.org-controls-container {
+.org-controls-container, .school-controls-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -849,7 +849,7 @@ body.desktop-mode .memo {
   border-radius: 8px;
   border: 1px solid var(--soft-line);
 }
-.org-controls-container .org-stats-bar {
+.org-controls-container .org-stats-bar, .school-controls-container .school-stats-bar {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -861,11 +861,15 @@ body.desktop-mode .memo {
   font-size: 13px;
   color: var(--ink);
 }
-.org-stats-row {
+.org-stats-row, .school-stats-row {
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+.school-stats-sep {
+  color: #cbd5e1;
+  align-self: center;
 }
 .org-stats-item {
   cursor: pointer;
@@ -1072,6 +1076,16 @@ body.mobile-mode .org-controls-container .org-stats-bar {
   padding: 0;
   font-size: 11px;
   gap: 6px;
+}
+body.mobile-mode .school-controls-container {
+  border: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin-bottom: 12px !important;
+}
+body.mobile-mode .school-stats-sep {
+  display: none !important;
 }
 body.mobile-mode .org-stats-row {
   display: flex;

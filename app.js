@@ -3814,40 +3814,37 @@ function renderSchoolView() {
     `;
   } else {
     statsBar.innerHTML = `
-      <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}">
-        ${selectedSchoolDeptFilter === "all" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
-        <i data-lucide="baby" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i><strong>총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
-      </span>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
-      <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">
-        ${selectedSchoolDeptFilter === "youth" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block;"></span>'}
-        중고등부:&nbsp;${stats.youth}명
-      </span>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
-      <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">
-        ${selectedSchoolDeptFilter === "elem" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #A37B24; display: inline-block;"></span>'}
-        초등부:&nbsp;${stats.elem}명
-      </span>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
-      <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">
-        ${selectedSchoolDeptFilter === "junior" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
-        유년부:&nbsp;${stats.junior}명
-      </span>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
-      <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">
-        ${selectedSchoolDeptFilter === "kinder" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #AC6D80; display: inline-block;"></span>'}
-        유치부:&nbsp;${stats.kinder}명
-      </span>
-      <span style="color: #cbd5e1; align-self: center;">|</span>
-      <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">
-        ${selectedSchoolDeptFilter === "toddler" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #5F8B77; display: inline-block;"></span>'}
-        유아부:&nbsp;${stats.toddler}명
-      </span>
-      <span style="color: #cbd5e1; align-self: center; margin: 0 4px;">|</span>
-      <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; margin-left: 4px;">
-        <i data-lucide="clock" style="width: 12px; height: 12px; stroke-width: 2.2px; vertical-align: middle; margin-right: 4px; color: #475569;"></i><span style="font-size: 11px; font-weight: 800; color: #475569;">시간대 필터:</span>
-        <div class="attendance-days" id="schoolTimeFilterDays" style="display: flex; gap: 4px;"></div>
-        <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="x" style="width: 10px; height: 10px; stroke-width: 2.5px;"></i>해제</button>
+      <div class="school-stats-row">
+        <span class="school-stat-filter-chip" data-filter="all" style="${getSpanStyle("all")}">
+          ${selectedSchoolDeptFilter === "all" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
+          <i data-lucide="baby" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i><strong>총 참석 자녀:</strong>&nbsp;${activeChildren.length}명
+        </span>
+        <span class="school-stats-sep">|</span>
+        <span class="school-stat-filter-chip" data-filter="youth" style="${getSpanStyle("youth")}">
+          ${selectedSchoolDeptFilter === "youth" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block;"></span>'}
+          중고등부:&nbsp;${stats.youth}명
+        </span>
+        <span class="school-stats-sep">|</span>
+        <span class="school-stat-filter-chip" data-filter="elem" style="${getSpanStyle("elem")}">
+          ${selectedSchoolDeptFilter === "elem" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #A37B24; display: inline-block;"></span>'}
+          초등부:&nbsp;${stats.elem}명
+        </span>
+      </div>
+      <div class="school-stats-row">
+        <span class="school-stat-filter-chip" data-filter="junior" style="${getSpanStyle("junior")}">
+          ${selectedSchoolDeptFilter === "junior" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #184E3A; display: inline-block;"></span>'}
+          유년부:&nbsp;${stats.junior}명
+        </span>
+        <span class="school-stats-sep">|</span>
+        <span class="school-stat-filter-chip" data-filter="kinder" style="${getSpanStyle("kinder")}">
+          ${selectedSchoolDeptFilter === "kinder" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #AC6D80; display: inline-block;"></span>'}
+          유치부:&nbsp;${stats.kinder}명
+        </span>
+        <span class="school-stats-sep">|</span>
+        <span class="school-stat-filter-chip" data-filter="toddler" style="${getSpanStyle("toddler")}">
+          ${selectedSchoolDeptFilter === "toddler" ? '<span style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff; display: inline-block;"></span>' : '<span style="width: 8px; height: 8px; border-radius: 50%; background: #5F8B77; display: inline-block;"></span>'}
+          유아부:&nbsp;${stats.toddler}명
+        </span>
       </div>
     `;
     renderSchoolTimeFilter();
