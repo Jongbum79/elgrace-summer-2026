@@ -21,13 +21,13 @@ This file documents how the room layout assets were inferred from the Excel work
    - other unlabeled rooms fall back to `2인실`.
 7. Position-specific workbook overrides are applied after default inference.
    - `휴락동 4층` rooms south of the corridor are interpreted as `4인실 온돌`.
-8. Rooms adjacent to same-column service labels such as `당직실`, `비품실`, or `미화원실` are marked as unavailable.
+8. Rooms adjacent to same-column service labels such as `당직실`, `비품실`, `미화원실`, or `조리원실` are marked as unavailable.
 9. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.
 
 ## Current workbook findings
 ### 휴락동
 - 4층: 25개 방, corridor row 7, room types: 1인실 3개, 2인실 8개, 4인실 온돌 14개
-- 3층: 25개 방, corridor row 17, room types: 4인실 온돌 25개
+- 3층: 25개 방, corridor row 17, room types: 4인실 온돌 24개, 조리원실 1개
 - 2층: 23개 방, corridor row 27, room types: 4인실 온돌 18개, 당직실 2개, 미화원실 1개, 비품실 2개
 
 ### 동락홀

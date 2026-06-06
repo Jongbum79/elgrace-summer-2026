@@ -1,6 +1,6 @@
 {
   "source": "숙소배정표.xlsx",
-  "generated_at": "2026-06-06T15:15:46.707550+00:00",
+  "generated_at": "2026-06-06T15:23:48.244907+00:00",
   "rooms": [
     {
       "section_index": 0,
@@ -673,18 +673,20 @@
       "floor": 3,
       "room_number": 322,
       "room_label": "322호",
-      "room_type": "ondol_4",
-      "capacity": 4,
-      "room_type_label": "4인실 온돌",
-      "room_type_family": "ondol",
-      "source_kind": "inferred",
+      "room_type": "unavailable",
+      "capacity": 0,
+      "room_type_label": "조리원실",
+      "room_type_family": "service",
+      "source_kind": "service_override",
       "source_text": "322호",
       "cell": "Q13",
       "row": 13,
       "column": 17,
       "corridor_row": 17,
       "corridor_relationship": "north_of_corridor",
-      "source_sheet": "숙소배정표"
+      "source_sheet": "숙소배정표",
+      "unavailable": true,
+      "unavailable_reason": "조리원실"
     },
     {
       "section_index": 1,

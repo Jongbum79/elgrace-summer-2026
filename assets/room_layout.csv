@@ -34,7 +34,7 @@ building,floor,room_number,room_label,room_type,room_type_label,capacity,corrido
 휴락동,3,325,325호,ondol_4,4인실 온돌,4,north_of_corridor,N13,13,14,325호,inferred,False,
 휴락동,3,324,324호,ondol_4,4인실 온돌,4,north_of_corridor,O13,13,15,324호,inferred,False,
 휴락동,3,323,323호,ondol_4,4인실 온돌,4,north_of_corridor,P13,13,16,323호,inferred,False,
-휴락동,3,322,322호,ondol_4,4인실 온돌,4,north_of_corridor,Q13,13,17,322호,inferred,False,
+휴락동,3,322,322호,unavailable,조리원실,0,north_of_corridor,Q13,13,17,322호,service_override,True,조리원실
 휴락동,3,308,308호,ondol_4,4인실 온돌,4,south_of_corridor,D18,18,4,308호,inferred,False,
 휴락동,3,309,309호,ondol_4,4인실 온돌,4,south_of_corridor,E18,18,5,309호,inferred,False,
 휴락동,3,310,310호,ondol_4,4인실 온돌,4,south_of_corridor,F18,18,6,310호,inferred,False,

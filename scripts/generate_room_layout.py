@@ -128,7 +128,7 @@ def apply_workbook_overrides(room: dict[str, Any], section: Section) -> None:
 def apply_service_room_overrides(section_rooms: list[dict[str, Any]], section_spaces: list[dict[str, Any]]) -> None:
     """Mark rooms blocked by service labels that occupy the same workbook column."""
     service_by_position = {(space["row"], space["column"]): space for space in section_spaces if space["type"] == "service_space"}
-    blocking_labels = {"당직실", "비품실", "미화원실"}
+    blocking_labels = {"당직실", "비품실", "미화원실", "조리원실"}
 
     for room in section_rooms:
         blocking_space = None
@@ -363,7 +363,7 @@ def build_room_rules_md(structure: dict[str, Any], rooms: list[dict[str, Any]]) 
         "   - other unlabeled rooms fall back to `2인실`.",
         "7. Position-specific workbook overrides are applied after default inference.",
         "   - `휴락동 4층` rooms south of the corridor are interpreted as `4인실 온돌`.",
-        "8. Rooms adjacent to same-column service labels such as `당직실`, `비품실`, or `미화원실` are marked as unavailable.",
+        "8. Rooms adjacent to same-column service labels such as `당직실`, `비품실`, `미화원실`, or `조리원실` are marked as unavailable.",
         "9. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.",
         "",
         "## Current workbook findings",
