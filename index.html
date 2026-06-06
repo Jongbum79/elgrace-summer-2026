@@ -87,7 +87,7 @@
               <button class="view-mode-button" type="button" data-mode="mobile">모바일</button>
             </div>
             <button class="icon-button" aria-label="알림">
-              <span>♢</span><i></i>
+              <i data-lucide="bell"></i><em aria-hidden="true"></em>
             </button>
 
           </div>
@@ -104,8 +104,8 @@
                 <h2 class="hero-title">2026 SUMMER RETREAT</h2>
                 <p class="hero-desc">모임이 예배가 되고, 예배가 소망이 되는 시간. 우리 함께 은혜로운 수련회를 만들어갑니다.</p>
                 <div class="hero-meta">
-                  <span>📍 크라운해태 연수원</span>
-                  <span>📅 7.27 - 7.30</span>
+                  <span><i data-lucide="map-pin"></i>크라운해태 연수원</span>
+                  <span><i data-lucide="calendar-days"></i>7.27 - 7.30</span>
                 </div>
               </div>
               <a href="#" class="hero-cta" data-view="schedule">수련회 일정 보기 →</a>
@@ -114,7 +114,7 @@
 
           <section class="retreat-switcher">
             <div class="retreat-meta">
-              <span class="calendar-icon">📅</span>
+              <span class="calendar-icon"><i data-lucide="calendar-days"></i></span>
               <div>
                 <b id="retreatTitle" style="font-size: 15px; font-weight: 700;">수련회 정보를 불러오는 중입니다</b>
                 <span id="retreatMeta">일정 및 장소 확인 중</span>
@@ -308,11 +308,11 @@
 
             <!-- Right Side: Time Filter -->
             <div id="orgTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; background: #f7f9f8; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8e5; flex-shrink: 0; height: fit-content;">
-              <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
+              <span style="font-size: 10px; font-weight: 800; color: #475569; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i>시간대 필터:</span>
               <div class="attendance-days" id="orgTimeFilterDays" style="display: flex; gap: 4px;">
                 <!-- 동적으로 날짜별 아/점/저 세그먼트 버튼들이 생성됨 -->
               </div>
-              <button id="clearOrgTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px;">❌ 해제</button>
+              <button id="clearOrgTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="x" style="width: 10px; height: 10px; stroke-width: 2.5px;"></i>해제</button>
             </div>
           </div>
           <div class="org-chart-grid" id="orgChartContainer"></div>
@@ -333,7 +333,7 @@
 
             <!-- Right Side: Time Filter -->
             <div id="schoolTimeFilterContainer" style="display: inline-flex; align-items: center; gap: 6px; background: #f7f9f8; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8e5; flex-shrink: 0; height: fit-content;">
-              <span style="font-size: 10px; font-weight: 800; color: #475569;">⏳ 시간대 필터:</span>
+              <span style="font-size: 10px; font-weight: 800; color: #475569; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i>시간대 필터:</span>
               <div class="attendance-days" id="schoolTimeFilterDays" style="display: flex; gap: 4px;"></div>
               <button id="clearSchoolTimeFilter" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; height: 26px; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="x" style="width: 10px; height: 10px; stroke-width: 2.5px;"></i>해제</button>
             </div>
