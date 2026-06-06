@@ -642,7 +642,7 @@ body.mobile-mode .schedule-cell { overflow-x: auto; }
 body.mobile-mode .family-attendance-summary { min-width: max-content; }
 body.mobile-mode .table-row-action { display: block; padding: 0; }
 body.mobile-mode .table-row-action::before { display: none; }
-body.mobile-mode .row-menu { position: absolute; top: 8px; right: 10px; }
+body.mobile-mode .table-row-action .row-menu { position: absolute; top: 8px; right: 10px; }
 body.mobile-mode .memo { max-width: none; }
 body.mobile-mode .meal-summary-bar { padding-right: 0; }
 body.mobile-mode .meal-summary-numbers { justify-content: space-around; padding: 12px; border-top: 1px solid var(--soft-line); }

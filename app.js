@@ -812,7 +812,7 @@ function renderFamilies() {
           <div class="family-card-header">
             <div class="header-left">
               <div class="family-title-row">
-                <span class="family-name">${family.name}가족</span>
+                <span class="family-name">${family.name.endsWith("가족") ? family.name : family.name + "가족"}</span>
                 <span class="member-count-badge">${memberCount}명</span>
               </div>
               <div class="family-meta-row">
