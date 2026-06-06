@@ -360,6 +360,7 @@
     const [selectedRoomId, setSelectedRoomId] = useState(null);
     const [selectedFamilyId, setSelectedFamilyId] = useState(null);
     const [mobileTab, setMobileTab] = useState("rooms");
+    const [familySheetOpen, setFamilySheetOpen] = useState(true);
     const [query, setQuery] = useState("");
     const [buildingFilter, setBuildingFilter] = useState("all");
     const [floorFilter, setFloorFilter] = useState("all");
@@ -421,7 +422,7 @@
     useEffect(() => {
       if (!window.lucide?.createIcons) return;
       window.lucide.createIcons();
-    }, [layoutState.data, draftToken, selectedRoomId, selectedFamilyId, mobileTab, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, dragState, saving, toastHint, autoAssigning, autoAssignProgress]);
+    }, [layoutState.data, draftToken, selectedRoomId, selectedFamilyId, mobileTab, familySheetOpen, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, dragState, saving, toastHint, autoAssigning, autoAssignProgress]);
 
     const roomBundle = useMemo(() => {
       if (!layoutState.data) {
@@ -539,6 +540,13 @@
           return normalizeText(a.name).localeCompare(normalizeText(b.name));
         });
     }, [familiesList, draftToken, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, layoutState.data, refreshKey]);
+
+    const mobileUnassignedFamilies = useMemo(() => {
+      return filteredFamilies
+        .filter((family) => !family._roomExists)
+        .filter((family) => !["absent", "undecided"].includes(family.status))
+        .slice(0, 80);
+    }, [filteredFamilies]);
 
     const visibleRooms = useMemo(() => {
       if (!layoutState.data) return [];
@@ -1325,6 +1333,245 @@
       );
     }
 
+    function renderMobileRoomCard(room, bucket) {
+      const selected = selectedRoomId === room.id;
+      const dragTarget = dropRoomId === room.id;
+      const familiesInRoom = bucket?.families || [];
+      const usedBeds = bucket?.headcount || 0;
+      const status = roomStatus(room, familiesInRoom.length, usedBeds);
+      const fillPercent = Math.min(100, Math.round((usedBeds / room.capacity) * 100));
+      const remaining = Math.max(room.capacity - usedBeds, 0);
+
+      return h(
+        "button",
+        {
+          key: room.id,
+          type: "button",
+          "data-drop-room-id": room.id,
+          onClick: () => {
+            focusRoom(room.id);
+            setFamilySheetOpen(true);
+          },
+          className: cx(
+            "min-h-[138px] w-full rounded-lg border p-3 text-left shadow-sm transition active:scale-[0.98]",
+            roomToneClass(status, selected, dragTarget)
+          ),
+        },
+        h("div", { className: "flex items-start justify-between gap-2" },
+          h("div", { className: "min-w-0" },
+            h("div", { className: "truncate text-[11px] font-semibold text-slate-500" }, room.floorLabel || `${room.floor}층`),
+            h("div", { className: "mt-1 truncate text-[18px] font-semibold leading-5 text-slate-950" }, room.label)
+          ),
+          h("span", { className: "shrink-0 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200" }, `${room.capacity}인`)
+        ),
+        h("div", { className: "mt-3 h-2 overflow-hidden rounded-full bg-slate-100" },
+          h("div", {
+            className: cx("h-full rounded-full transition-all duration-300", {
+              empty: "bg-slate-300",
+              partial: "bg-emerald-400",
+              full: "bg-emerald-600",
+              overflow: "bg-rose-500",
+            }[status]),
+            style: { width: `${fillPercent}%` },
+          })
+        ),
+        h("div", { className: "mt-2 flex items-center justify-between text-[11px] font-medium text-slate-500" },
+          h("span", null, `${usedBeds}/${room.capacity}`),
+          h("span", null, remaining ? `+${remaining}` : "완료")
+        ),
+        h("div", { className: "mt-3 flex min-h-[28px] flex-wrap gap-1.5 overflow-hidden" },
+          familiesInRoom.length
+            ? familiesInRoom.slice(0, 2).map((family) =>
+                h("span", {
+                  key: `${room.id}-${family._familyId}`,
+                  className: "max-w-full truncate rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200",
+                }, clampString(family.name.replace(" 가족", ""), 8))
+              )
+            : h("span", { className: "rounded-md border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-400" }, "비어 있음")
+        )
+      );
+    }
+
+    function renderMobileFamilyRow(family) {
+      return h(
+        "div",
+        {
+          key: family._familyId,
+          className: "flex min-h-[64px] items-center gap-3 border-b border-slate-100 px-4 py-2 last:border-b-0",
+          onClick: () => focusFamily(family._familyId),
+        },
+        h(
+          "button",
+          {
+            type: "button",
+            onPointerDown: (event) => startDrag(family, event),
+            className: "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#1e5a45] text-white shadow-sm active:scale-95",
+            title: "드래그하여 방에 배정",
+          },
+          renderIcon("grip", "h-5 w-5")
+        ),
+        h("div", { className: "min-w-0 flex-1" },
+          h("div", { className: "truncate text-sm font-semibold text-slate-950" }, familyDisplayName(family)),
+          h("div", { className: "mt-0.5 truncate text-xs text-slate-500" }, `${familyLeader(family)} · ${family._size}명`)
+        ),
+        h("button", {
+          type: "button",
+          onClick: (event) => {
+            event.stopPropagation();
+            if (!selectedRoom) {
+              showToast("방을 먼저 선택해 주세요.");
+              return;
+            }
+            const bucket = roomBundle.byRoom.get(selectedRoom.id);
+            const usedBeds = bucket?.headcount || 0;
+            if (usedBeds + family._size > selectedRoom.capacity) {
+              showToast(`${selectedRoom.label} 정원을 초과합니다.`);
+              return;
+            }
+            updateAssignment(family._familyId, selectedRoom.label);
+          },
+          className: "flex h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 active:scale-95",
+        }, selectedRoom ? "넣기" : "선택")
+      );
+    }
+
+    function renderMobileExperience() {
+      const selectedBucket = selectedRoom ? roomBundle.byRoom.get(selectedRoom.id) : null;
+      const selectedUsed = selectedBucket?.headcount || 0;
+      const selectedRemaining = selectedRoom ? Math.max(selectedRoom.capacity - selectedUsed, 0) : 0;
+
+      return h(
+        "div",
+        { className: "lg:hidden min-h-screen overflow-x-hidden bg-[#f7f7f4] pb-[164px] text-slate-950" },
+        h("div", { className: "sticky top-0 z-30 border-b border-slate-200 bg-[#f7f7f4]/95 px-4 pb-3 pt-3 backdrop-blur" },
+          h("div", { className: "flex items-center justify-between gap-3" },
+            h("div", { className: "min-w-0" },
+              h("div", { className: "flex items-center gap-2 text-[11px] font-semibold text-slate-500" }, renderIcon("bed-double", "h-4 w-4"), "방 배정"),
+              h("h2", { className: "mt-1 truncate text-[22px] font-semibold leading-7 text-slate-950" }, "모바일 배정")
+            ),
+            h("div", { className: "flex shrink-0 items-center gap-2" },
+              h("button", {
+                type: "button",
+                onClick: autoAssignRooms,
+                disabled: autoAssigning,
+                className: cx(
+                  "flex h-11 w-11 items-center justify-center rounded-lg border shadow-sm active:scale-95",
+                  autoAssigning ? "border-slate-200 bg-slate-100 text-slate-400" : "border-slate-200 bg-white text-[#1e5a45]"
+                ),
+                title: "자동 배정",
+              }, autoAssigning ? renderIcon("loader-circle", "h-5 w-5 animate-spin") : renderIcon("wand-sparkles", "h-5 w-5")),
+              h("button", {
+                type: "button",
+                onClick: saveChanges,
+                disabled: saving || !isDirty || autoAssigning,
+                className: cx(
+                  "flex h-11 w-11 items-center justify-center rounded-lg shadow-sm active:scale-95",
+                  saving || !isDirty || autoAssigning ? "bg-slate-200 text-slate-500" : "bg-[#1e5a45] text-white"
+                ),
+                title: "저장",
+              }, saving ? renderIcon("loader-circle", "h-5 w-5 animate-spin") : renderIcon("save", "h-5 w-5"))
+            )
+          ),
+          h("div", { className: "mt-3 grid grid-cols-3 gap-2" },
+            h("div", { className: "rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200" },
+              h("div", { className: "text-[10px] font-semibold text-slate-500" }, "방"),
+              h("div", { className: "mt-1 text-base font-semibold" }, roomStats.roomCount)
+            ),
+            h("div", { className: "rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200" },
+              h("div", { className: "text-[10px] font-semibold text-slate-500" }, "미배정"),
+              h("div", { className: "mt-1 text-base font-semibold" }, mobileUnassignedFamilies.length)
+            ),
+            h("div", { className: "rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200" },
+              h("div", { className: "text-[10px] font-semibold text-slate-500" }, "사용률"),
+              h("div", { className: "mt-1 text-base font-semibold" }, `${roomStats.utilization}%`)
+            )
+          ),
+          h("div", { className: "mt-3 grid grid-cols-2 gap-2" },
+            h("select", {
+              value: buildingFilter,
+              onChange: (event) => setBuildingFilter(event.target.value),
+              className: "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none",
+            }, [h("option", { key: "all", value: "all" }, "모든 건물")].concat((layoutState.data?.buildings || []).map((building) => h("option", { key: building.building, value: building.building }, building.building)))),
+            h("select", {
+              value: floorFilter,
+              onChange: (event) => setFloorFilter(event.target.value),
+              className: "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none",
+            }, [h("option", { key: "all", value: "all" }, "모든 층")].concat([...new Set((layoutState.data?.rooms || []).map((room) => String(room.floor)))].map((floor) => h("option", { key: floor, value: floor }, `${floor}층`))))
+          )
+        ),
+        selectedRoom
+          ? h("div", { className: "mx-4 mt-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm" },
+              h("div", { className: "flex items-center justify-between gap-2" },
+                h("div", { className: "min-w-0" },
+                  h("div", { className: "truncate text-sm font-semibold text-slate-950" }, `${selectedRoom.label} 선택됨`),
+                  h("div", { className: "mt-0.5 text-xs text-slate-500" }, `${selectedUsed}/${selectedRoom.capacity}명 · 잔여 ${selectedRemaining}명`)
+                ),
+                h("button", {
+                  type: "button",
+                  onClick: () => setSelectedRoomId(null),
+                  className: "flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500",
+                }, renderIcon("x", "h-5 w-5"))
+              )
+            )
+          : null,
+        h("main", { className: "px-4 pt-3" },
+          visibleRooms.map((building) =>
+            h("section", { key: `mobile-${building.building}`, className: "mb-6" },
+              h("div", { className: "mb-2 flex items-center justify-between" },
+                h("h3", { className: "truncate text-sm font-semibold text-slate-700" }, building.building),
+                h("span", { className: "text-xs font-medium text-slate-500" }, `${building.floors.length}개 층`)
+              ),
+              building.floors.map((floor) =>
+                h("div", { key: `mobile-${building.building}-${floor.floor}`, className: "mb-4" },
+                  h("div", { className: "mb-2 text-xs font-semibold text-slate-500" }, floor.label || `${floor.floor}층`),
+                  h("div", { className: "grid grid-cols-2 gap-2" },
+                    floor.rooms.map((room) => renderMobileRoomCard(room, roomBundle.byRoom.get(room.id)))
+                  )
+                )
+              )
+            )
+          )
+        ),
+        h("aside", {
+          className: cx(
+            "fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] rounded-t-2xl border border-slate-200 bg-white shadow-[0_-18px_48px_rgba(15,23,42,0.18)] transition-transform duration-300",
+            familySheetOpen ? "translate-y-0" : "translate-y-[calc(100%-76px)]"
+          ),
+        },
+          h("button", {
+            type: "button",
+            onClick: () => setFamilySheetOpen((open) => !open),
+            className: "flex min-h-[56px] w-full items-center justify-between px-4 text-left",
+          },
+            h("div", null,
+              h("div", { className: "mx-auto mb-2 h-1 w-10 rounded-full bg-slate-300" }),
+              h("div", { className: "flex items-center gap-2 text-sm font-semibold text-slate-950" },
+                renderIcon("users", "h-4 w-4 text-[#1e5a45]"),
+                `미배정 가족 ${mobileUnassignedFamilies.length}`
+              )
+            ),
+            renderIcon(familySheetOpen ? "chevron-down" : "chevron-up", "h-5 w-5 text-slate-400")
+          ),
+          h("div", { className: "border-t border-slate-100 px-4 pb-3" },
+            h("label", { className: "mt-3 flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500" },
+              renderIcon("search", "h-4 w-4"),
+              h("input", {
+                value: query,
+                onChange: (event) => setQuery(event.target.value),
+                className: "min-w-0 flex-1 bg-transparent outline-none placeholder:text-slate-400",
+                placeholder: "가족 검색",
+              })
+            )
+          ),
+          h("div", { className: "max-h-[52vh] overflow-y-auto overscroll-contain pb-4" },
+            mobileUnassignedFamilies.length
+              ? mobileUnassignedFamilies.map((family) => renderMobileFamilyRow(family))
+              : h("div", { className: "px-4 py-8 text-center text-sm text-slate-500" }, "미배정 가족이 없습니다.")
+          )
+        )
+      );
+    }
+
     if (layoutState.loading) {
       return h(
         "div",
@@ -1370,8 +1617,12 @@
     }
 
     return h(
+      React.Fragment,
+      null,
+      renderMobileExperience(),
+      h(
       "div",
-      { className: "mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8" },
+      { className: "hidden lg:block mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8" },
       h("div", { className: "overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,246,240,0.98))] shadow-[0_18px_60px_rgba(17,24,39,0.08)]" },
         h("div", { className: "border-b border-slate-200/80 px-5 py-5 sm:px-6" },
           h("div", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" },
@@ -1690,7 +1941,7 @@
             `${dragState.familyName} 드래그 중`
           )
         : null
-    );
+    ));
   }
 
   function mountRoomAssignment() {
