@@ -68,9 +68,19 @@
     return String(family?.id ?? index);
   }
 
-  function getFamilyHeadcount(family) {
-    if (!family || !Array.isArray(family.members)) return 0;
-    return family.members.length || 0;
+    function getFamilyHeadcount(family) {
+      if (!family || !Array.isArray(family.members)) return 0;
+      return family.members.length || 0;
+    }
+
+  function getFamilyGenderCounts(family) {
+    const counts = { brother: 0, sister: 0 };
+    (family?.members || []).forEach((member) => {
+      const gender = normalizeText(member?.gender || member?.sex || "");
+      if (gender.includes("여") || gender.includes("자매") || gender.includes("female")) counts.sister += 1;
+      else counts.brother += 1;
+    });
+    return counts;
   }
 
   function getFamilyRoomValue(family, draftAssignments) {
@@ -946,7 +956,10 @@
     function focusRoom(roomId) {
       setSelectedRoomId(roomId);
       setSelectedFamilyId(null);
-      if (window.innerWidth < 1024) setMobileTab("rooms");
+      if (window.innerWidth < 1024) {
+        setMobileTab("inspector");
+        setFamilySheetOpen(false);
+      }
     }
 
     function focusFamily(familyId) {
@@ -1137,6 +1150,61 @@
       );
     }
 
+    function renderQueueFamilyCard(family) {
+      const room = layoutState.data ? resolveRoom(layoutState.data, family._roomValue) : null;
+      const roomLabel = room?.label || "미배정";
+      const isSelected = selectedFamilyId === family._familyId;
+      const isAssigned = Boolean(room);
+      const genderCounts = getFamilyGenderCounts(family);
+
+      return h(
+        "article",
+        {
+          key: family._familyId,
+          className: cx(
+            "group rounded-2xl border bg-white px-3 py-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+            isSelected ? "border-[#1e5a45] ring-2 ring-[#1e5a45]/15" : "border-slate-200"
+          ),
+          onClick: () => focusFamily(family._familyId),
+        },
+        h("div", { className: "flex items-center gap-2" },
+          h(
+            "button",
+            {
+              type: "button",
+              onPointerDown: (event) => startDrag(family, event),
+              onClick: (event) => event.stopPropagation(),
+              className: "flex h-9 w-9 shrink-0 touch-none items-center justify-center rounded-xl bg-[#1e5a45]/10 text-[#1e5a45] transition active:scale-95",
+              title: "드래그하여 방에 배정",
+              "aria-label": `${family.name} 드래그하여 방에 배정`,
+            },
+            renderIcon("grip-vertical", "h-4 w-4")
+          ),
+          h("div", { className: "min-w-0 flex-1" },
+            h("div", { className: "flex items-center gap-2" },
+              h("h4", { className: "truncate text-sm font-semibold text-slate-950" }, familyDisplayName(family)),
+              h("span", { className: cx("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", isAssigned ? "bg-slate-100 text-slate-600 ring-slate-200" : "bg-amber-50 text-amber-700 ring-amber-200") }, roomLabel)
+            ),
+            h("div", { className: "mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-500" },
+              h("span", null, `형제 ${genderCounts.brother}`),
+              h("span", { className: "text-slate-300" }, "|"),
+              h("span", null, `자매 ${genderCounts.sister}`),
+              h("span", { className: "text-slate-300" }, "|"),
+              h("span", null, `총 ${family._size}명`)
+            )
+          ),
+          h("button", {
+            type: "button",
+            onClick: (event) => {
+              event.stopPropagation();
+              updateAssignment(family._familyId, "미배정");
+            },
+            className: "shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50",
+          }, "해제")
+        )
+      );
+    }
+
     function getRoomTypeTone(room) {
       const type = room?.room_type;
       if (type === "single") return "bg-sky-50 text-sky-700 ring-sky-200";
@@ -1182,7 +1250,7 @@
         "div",
         {
           key: space.id || `${space.label}-${space.cell}`,
-          className: "flex min-h-[58px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/55 px-2 text-center text-[11px] font-semibold text-slate-400",
+          className: "flex min-h-[64px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/55 px-2 text-center text-[11px] font-semibold text-slate-400",
           style: { gridColumn: `${col} / span 1` },
           title: `${space.label || "공용공간"} · ${space.cell || ""}`,
         },
@@ -1210,8 +1278,8 @@
           "data-drop-room-id": room.id,
           onClick: () => focusRoom(room.id),
           className: cx(
-            "group relative flex flex-col overflow-hidden rounded-2xl border text-left shadow-sm transition-all duration-200",
-            compact ? "min-h-[124px] p-3" : "min-h-[152px] p-3.5",
+            "group relative flex flex-col rounded-2xl border text-left shadow-sm transition-all duration-200",
+            compact ? "min-h-[128px] p-3" : "min-h-[148px] p-3",
             roomToneClass(status, selected, dragTarget),
             "hover:-translate-y-0.5 hover:shadow-lg"
           ),
@@ -1219,7 +1287,7 @@
         },
         h("div", { className: "flex items-start justify-between gap-2" },
           h("div", { className: "min-w-0" },
-            h("div", { className: "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500" },
+            h("div", { className: "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500" },
               renderIcon(room.room_type === "ondol_4" ? "house" : "bed-double", "h-3 w-3"),
               h("span", { className: "truncate" }, room.cell || `${room.row || "-"}행`)
             ),
@@ -1227,8 +1295,8 @@
           ),
           h("span", { className: cx("shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, `${room.capacity}인`)
         ),
-        h("div", { className: "mt-2 flex flex-wrap gap-1.5" },
-          h("span", { className: "rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200" }, toRoomBadge(room)),
+        h("div", { className: "mt-2 flex flex-wrap gap-1" },
+          h("span", { className: "rounded-full bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200" }, toRoomBadge(room)),
           h("span", { className: cx("rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", {
             empty: "bg-slate-50 text-slate-500 ring-slate-200",
             partial: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -1236,7 +1304,7 @@
             overflow: "bg-rose-50 text-rose-700 ring-rose-200",
           }[status]) }, status === "empty" ? "빈방" : status === "partial" ? "사용중" : status === "full" ? "만실" : "초과")
         ),
-        h("div", { className: "mt-3 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" },
+        h("div", { className: "mt-2.5 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" },
           h("div", {
             className: cx("h-full rounded-full transition-all duration-300", {
               empty: "bg-slate-300",
@@ -1251,7 +1319,7 @@
           h("span", null, `${usedBeds}/${room.capacity}명`),
           h("span", null, usedBeds ? `잔여 ${Math.max(room.capacity - usedBeds, 0)}` : "드롭 가능")
         ),
-        h("div", { className: "mt-2 flex min-h-[26px] flex-wrap gap-1.5" },
+        h("div", { className: "mt-2 flex min-h-[24px] flex-wrap gap-1" },
           familiesInRoom.length
             ? familiesInRoom.slice(0, compact ? 2 : 3).map((family) =>
                 h("span", {
@@ -1261,11 +1329,11 @@
                     event.stopPropagation();
                     focusFamily(family._familyId);
                   },
-                  className: "inline-flex max-w-full touch-none items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm",
+                  className: "inline-flex max-w-full touch-none items-center gap-1 rounded-full bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm",
                   title: "다른 방으로 드래그",
                 },
                   h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45]" }),
-                  h("span", { className: "truncate" }, clampString(family.name.replace(" 가족", ""), compact ? 6 : 8))
+                  h("span", { className: "truncate" }, clampString(family.name.replace(" 가족", ""), compact ? 6 : 7))
                 )
               )
             : h("span", { className: "rounded-full border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[10px] font-medium text-slate-400" }, "비어 있음")
@@ -1287,8 +1355,8 @@
         "div",
         {
           key: keyPrefix,
-          className: "grid gap-2",
-          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(${density === "compact" ? "58px" : "72px"}, 1fr))` },
+          className: "grid gap-2.5",
+          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(${density === "compact" ? "74px" : "104px"}, 1fr))` },
         },
         items.map((item) => {
           const col = Math.max((item.column || columnRange.min) - columnRange.min + 1, 1);
@@ -1306,8 +1374,8 @@
       return h(
         "div",
         {
-          className: "relative my-3 grid min-h-[48px] items-center rounded-[20px] border border-slate-200 bg-[linear-gradient(90deg,rgba(226,232,240,0.34),rgba(255,255,255,0.82),rgba(226,232,240,0.34))] px-3",
-          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(48px, 1fr))` },
+          className: "relative my-3 grid min-h-[52px] items-center rounded-[20px] border border-slate-200 bg-[linear-gradient(90deg,rgba(226,232,240,0.34),rgba(255,255,255,0.82),rgba(226,232,240,0.34))] px-3",
+          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(104px, 1fr))` },
         },
         h("div", { className: "pointer-events-none absolute inset-x-4 top-1/2 h-px bg-slate-300/70" }),
         h("div", { className: "relative z-10 col-span-full mx-auto rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-500 shadow-sm" },
@@ -1326,6 +1394,7 @@
 
     function renderFloorPlan(floor, density = "desktop") {
       const columnRange = getFloorColumnRange(floor);
+      const planMinWidth = Math.max(columnRange.span * (density === "compact" ? 86 : 118), density === "compact" ? 860 : 1320);
       const { northRooms, southRooms, northServices, southServices, corridorServices } = splitFloorItems(floor);
       const northItems = northRooms.concat(northServices.map((space) => ({ ...space, type: "service_space" }))).sort(sortByWorkbookPosition);
       const southItems = southRooms.concat(southServices.map((space) => ({ ...space, type: "service_space" }))).sort(sortByWorkbookPosition);
@@ -1352,8 +1421,8 @@
             })
           )
         ),
-        h("div", { className: "mt-4 overflow-x-auto rounded-[24px] border border-slate-100 bg-slate-50/70 p-3" },
-          h("div", { className: "min-w-[920px] space-y-2" },
+        h("div", { className: "mt-4 overflow-x-auto rounded-[24px] border border-slate-100 bg-slate-50/70 p-4" },
+          h("div", { className: "space-y-2", style: { minWidth: `${planMinWidth}px` } },
             renderFloorRow(northItems, columnRange, `${floor.floor}-north`, density),
             renderCorridorBand(floor, corridorServices, columnRange),
             renderFloorRow(southItems, columnRange, `${floor.floor}-south`, density)
@@ -1575,7 +1644,7 @@
           "data-drop-room-id": room.id,
           onClick: () => {
             focusRoom(room.id);
-            setFamilySheetOpen(true);
+            setFamilySheetOpen(false);
           },
           className: cx(
             "min-h-[138px] w-full rounded-lg border p-3 text-left shadow-sm transition active:scale-[0.98]",
@@ -1847,7 +1916,7 @@
       renderMobileExperience(),
       h(
       "div",
-      { className: "hidden lg:block mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8" },
+      { className: "hidden lg:block mx-auto max-w-[1900px] px-4 py-6 sm:px-6 lg:px-8" },
       h("div", { className: "overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,246,240,0.98))] shadow-[0_18px_60px_rgba(17,24,39,0.08)]" },
         h("div", { className: "border-b border-slate-200/80 px-5 py-5 sm:px-6" },
           h("div", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" },
@@ -2007,7 +2076,7 @@
             }, "인스펙터")
           )
         ),
-        h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 lg:grid-cols-[1.38fr_0.92fr]" },
+        h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_360px]" },
           h("div", { className: cx("space-y-5", mobileTab === "rooms" ? "block" : "hidden lg:block") },
             h("div", { className: "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm" },
               h("div", { className: "flex items-center justify-between gap-3" },
@@ -2075,7 +2144,7 @@
             )
           ),
           h("div", { className: cx("space-y-5", mobileTab !== "rooms" ? "block" : "hidden lg:block") },
-            h("div", { className: cx("rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm", mobileTab === "families" ? "block" : "hidden lg:block") },
+            h("div", { className: cx("rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-4 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto", mobileTab === "families" ? "block" : "hidden lg:block") },
               h("div", {
                 className: "mt-0 space-y-4",
               },
@@ -2083,9 +2152,9 @@
                   h("h3", { className: "text-lg font-semibold text-slate-900" }, "가족 대기열"),
                   h("span", { className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" }, `${filteredFamilies.length}가족`)
                 ),
-                h("div", { className: "space-y-3" },
+                h("div", { className: "space-y-2" },
                   filteredFamilies.length
-                    ? filteredFamilies.map((family) => renderFamilyCard(family))
+                    ? filteredFamilies.map((family) => renderQueueFamilyCard(family))
                     : h("div", { className: "rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500" }, "조건에 맞는 가족이 없습니다.")
                 )
               )
