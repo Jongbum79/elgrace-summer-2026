@@ -2554,9 +2554,8 @@ function openDriveActionModal(file, actionType = null) {
   const title = document.querySelector("#driveActionTitle");
   const subtitle = document.querySelector("#driveActionSubtitle");
   const folderSelect = document.querySelector("#driveActionFolderSelect");
-  const folderInput = document.querySelector("#driveActionFolderId");
   const copyNameInput = document.querySelector("#driveActionCopyName");
-  if (!modal || !title || !subtitle || !folderSelect || !folderInput || !copyNameInput || !file) return;
+  if (!modal || !title || !subtitle || !folderSelect || !copyNameInput || !file) return;
 
   title.textContent = file.name || "파일 작업";
   if (actionType === "copy") {
@@ -2568,14 +2567,12 @@ function openDriveActionModal(file, actionType = null) {
   }
 
   const folderOptions = [
-    `<option value="">현재 폴더를 선택하세요</option>`,
+    `<option value="">폴더를 선택하세요</option>`,
     ...driveCurrentFolders.map((folder) => `<option value="${folder.id}">${escapeHtml(folder.name)}</option>`),
   ].join("");
   folderSelect.innerHTML = folderOptions;
-  folderSelect.value = "";
-  folderInput.value = driveOAuthFolderId || driveActiveFolderId || "";
+  folderSelect.value = driveCurrentFolders[0]?.id || "";
   copyNameInput.value = file.name ? `${file.name.replace(/\.[^.]+$/, "")} - 복사본` : "복사본";
-  folderInput.style.display = actionType === "move" || actionType === "copy" ? "block" : "none";
   copyNameInput.style.display = actionType === "copy" ? "block" : "none";
   modal.style.display = "flex";
   modal.setAttribute("aria-hidden", "false");
@@ -2601,9 +2598,9 @@ async function performDriveFileAction(actionType, file, targetFolderId = "") {
   }
 
   try {
-    if (actionType === "copy") {
+  if (actionType === "copy") {
       if (!targetFolderId) {
-        showToast("대상 폴더 ID를 입력해주세요.");
+        showToast("대상 폴더를 선택해주세요.");
         return;
       }
       const copyName = document.querySelector("#driveActionCopyName")?.value.trim() || file.name;
@@ -2623,7 +2620,7 @@ async function performDriveFileAction(actionType, file, targetFolderId = "") {
       showToast("파일을 복사했습니다.");
     } else if (actionType === "move") {
       if (!targetFolderId) {
-        showToast("대상 폴더 ID를 입력해주세요.");
+        showToast("대상 폴더를 선택해주세요.");
         return;
       }
       const sourceParent = Array.isArray(file.parents) && file.parents.length ? file.parents[0] : driveActiveFolderId;
@@ -3163,10 +3160,6 @@ document.addEventListener("click", (event) => {
     const fileInput = document.querySelector("#driveFileInput");
     if (fileInput) fileInput.click();
   }
-  if (driveActionFolderSelect) {
-    const folderIdInput = document.querySelector("#driveActionFolderId");
-    if (folderIdInput) folderIdInput.value = driveActionFolderSelect.value || "";
-  }
   if (driveFileActionBtn) {
     event.preventDefault();
     event.stopPropagation();
@@ -3208,13 +3201,13 @@ document.addEventListener("click", (event) => {
   }
   if (event.target.closest("#driveActionCopyBtn")) {
     if (!driveCurrentActionFile) return;
-    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || document.querySelector("#driveActionFolderSelect")?.value.trim() || "";
+    const targetFolderId = document.querySelector("#driveActionFolderSelect")?.value.trim() || "";
     performDriveFileAction("copy", driveCurrentActionFile, targetFolderId);
     closeDriveActionModal();
   }
   if (event.target.closest("#driveActionMoveBtn")) {
     if (!driveCurrentActionFile) return;
-    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || document.querySelector("#driveActionFolderSelect")?.value.trim() || "";
+    const targetFolderId = document.querySelector("#driveActionFolderSelect")?.value.trim() || "";
     performDriveFileAction("move", driveCurrentActionFile, targetFolderId);
     closeDriveActionModal();
   }
@@ -3548,13 +3541,6 @@ document.addEventListener("click", (event) => {
   }
 
   if (window.lucide) lucide.createIcons();
-});
-
-document.addEventListener("change", (event) => {
-  if (event.target.matches("#driveActionFolderSelect")) {
-    const folderIdInput = document.querySelector("#driveActionFolderId");
-    if (folderIdInput) folderIdInput.value = event.target.value || "";
-  }
 });
 
 document.addEventListener("pointerdown", (event) => {
