@@ -1021,34 +1021,34 @@ body.desktop-mode .memo {
   border: 1px solid transparent;
 }
 .org-badge.badge-full {
-  background-color: var(--forest);
+  background-color: #3F7D58;
   color: #FFFFFF;
-  border-color: var(--forest);
+  border-color: #3F7D58;
 }
 .org-badge.badge-partial {
-  background-color: var(--sage);
-  color: var(--forest);
-  border-color: #b8d4c7;
+  background-color: #C98A2E;
+  color: #FFFFFF;
+  border-color: #C98A2E;
 }
 .org-badge.badge-absent {
-  background-color: #F1F5F9;
+  background-color: #C66A6A;
+  color: #FFFFFF;
+  border-color: #C66A6A;
+}
+.org-badge.badge-undecided {
+  background-color: #B8B8B8;
+  color: #FFFFFF;
+  border-color: #B8B8B8;
+}
+.org-badge.badge-unregistered {
+  background-color: #E2E8F0;
   color: #64748B;
   border-color: #E2E8F0;
 }
-.org-badge.badge-undecided {
-  background-color: #FAF8F3;
-  color: #8C6615;
-  border: 1px dashed #E5D5BA;
-}
-.org-badge.badge-unregistered {
-  background-color: #f8fafc;
-  color: #94a3b8;
-  border-color: #e2e8f0;
-}
 .org-badge.badge-not_in_db {
-  background-color: #f8fafc;
-  color: #94a3b8;
-  border-color: #e2e8f0;
+  background-color: #E2E8F0;
+  color: #64748B;
+  border-color: #E2E8F0;
 }
 
 /* 모바일 뷰 최적화 */
@@ -1204,11 +1204,6 @@ body.mobile-mode .org-filter-row .filter-chip {
   flex-wrap: wrap;
 }
 
-.org-badge.badge-undecided {
-  color: #505f5a;
-  background: #e8ecea;
-  border: 1px solid #cbd5e1;
-}
 .org-member-node.registered.present.undecided {
   background: #f1f3f2;
   border-color: #cbd5e1;
