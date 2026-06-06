@@ -2479,6 +2479,7 @@ let gapiToken = localStorage.getItem("gapi_access_token") || "";
 let tokenClient = null;
 let driveCurrentUser = null;
 let driveCurrentFiles = [];
+let driveCurrentFolders = [];
 let driveCurrentActionFile = null;
 let driveCurrentActionType = null;
 
@@ -2552,19 +2553,30 @@ function openDriveActionModal(file, actionType = null) {
   const modal = document.querySelector("#driveActionModal");
   const title = document.querySelector("#driveActionTitle");
   const subtitle = document.querySelector("#driveActionSubtitle");
+  const folderSelect = document.querySelector("#driveActionFolderSelect");
   const folderInput = document.querySelector("#driveActionFolderId");
-  if (!modal || !title || !subtitle || !folderInput || !file) return;
+  const copyNameInput = document.querySelector("#driveActionCopyName");
+  if (!modal || !title || !subtitle || !folderSelect || !folderInput || !copyNameInput || !file) return;
 
   title.textContent = file.name || "파일 작업";
   if (actionType === "copy") {
-    subtitle.textContent = "복사할 대상 폴더 ID를 입력하세요.";
+    subtitle.textContent = "복사할 대상 폴더와 파일명을 선택하세요.";
   } else if (actionType === "move") {
-    subtitle.textContent = "이동할 대상 폴더 ID를 입력하세요.";
+    subtitle.textContent = "이동할 대상 폴더를 선택하세요.";
   } else {
     subtitle.textContent = "파일 작업을 선택하세요.";
   }
 
+  const folderOptions = [
+    `<option value="">현재 폴더를 선택하세요</option>`,
+    ...driveCurrentFolders.map((folder) => `<option value="${folder.id}">${escapeHtml(folder.name)}</option>`),
+  ].join("");
+  folderSelect.innerHTML = folderOptions;
+  folderSelect.value = "";
   folderInput.value = driveOAuthFolderId || driveActiveFolderId || "";
+  copyNameInput.value = file.name ? `${file.name.replace(/\.[^.]+$/, "")} - 복사본` : "복사본";
+  folderInput.style.display = actionType === "move" || actionType === "copy" ? "block" : "none";
+  copyNameInput.style.display = actionType === "copy" ? "block" : "none";
   modal.style.display = "flex";
   modal.setAttribute("aria-hidden", "false");
 }
@@ -2594,6 +2606,7 @@ async function performDriveFileAction(actionType, file, targetFolderId = "") {
         showToast("대상 폴더 ID를 입력해주세요.");
         return;
       }
+      const copyName = document.querySelector("#driveActionCopyName")?.value.trim() || file.name;
       const endpoint = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}/copy?supportsAllDrives=true`;
       const response = await fetch(endpoint, {
         method: "POST",
@@ -2602,7 +2615,7 @@ async function performDriveFileAction(actionType, file, targetFolderId = "") {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: file.name,
+          name: copyName,
           parents: [targetFolderId],
         }),
       });
@@ -2852,6 +2865,7 @@ async function renderDriveView(folderId = null, folderName = "여름수련회_�
     const folders = items.filter(f => f.mimeType === "application/vnd.google-apps.folder");
     const files = items.filter(f => f.mimeType !== "application/vnd.google-apps.folder");
     driveCurrentFiles = files;
+    driveCurrentFolders = folders;
 
     if (folders.length > 0) {
       foldersSection.style.display = "block";
@@ -3123,6 +3137,7 @@ document.addEventListener("click", (event) => {
   const btnCloseDriveSettings = event.target.closest("#btnCloseDriveSettings");
   const btnSaveDriveSettings = event.target.closest("#btnSaveDriveSettings");
   const btnDriveLogout = event.target.closest("#btnDriveLogout");
+  const driveActionFolderSelect = event.target.closest("#driveActionFolderSelect");
   
   if (driveFolder) {
     const folderId = driveFolder.dataset.folderId;
@@ -3147,6 +3162,10 @@ document.addEventListener("click", (event) => {
   if (driveUploadBtn) {
     const fileInput = document.querySelector("#driveFileInput");
     if (fileInput) fileInput.click();
+  }
+  if (driveActionFolderSelect) {
+    const folderIdInput = document.querySelector("#driveActionFolderId");
+    if (folderIdInput) folderIdInput.value = driveActionFolderSelect.value || "";
   }
   if (driveFileActionBtn) {
     event.preventDefault();
@@ -3189,13 +3208,13 @@ document.addEventListener("click", (event) => {
   }
   if (event.target.closest("#driveActionCopyBtn")) {
     if (!driveCurrentActionFile) return;
-    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || "";
+    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || document.querySelector("#driveActionFolderSelect")?.value.trim() || "";
     performDriveFileAction("copy", driveCurrentActionFile, targetFolderId);
     closeDriveActionModal();
   }
   if (event.target.closest("#driveActionMoveBtn")) {
     if (!driveCurrentActionFile) return;
-    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || "";
+    const targetFolderId = document.querySelector("#driveActionFolderId")?.value.trim() || document.querySelector("#driveActionFolderSelect")?.value.trim() || "";
     performDriveFileAction("move", driveCurrentActionFile, targetFolderId);
     closeDriveActionModal();
   }
@@ -3529,6 +3548,13 @@ document.addEventListener("click", (event) => {
   }
 
   if (window.lucide) lucide.createIcons();
+});
+
+document.addEventListener("change", (event) => {
+  if (event.target.matches("#driveActionFolderSelect")) {
+    const folderIdInput = document.querySelector("#driveActionFolderId");
+    if (folderIdInput) folderIdInput.value = event.target.value || "";
+  }
 });
 
 document.addEventListener("pointerdown", (event) => {
