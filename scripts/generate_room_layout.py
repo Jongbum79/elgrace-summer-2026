@@ -65,6 +65,8 @@ def classify_room_type(raw_suffix: str | None, floor_default: str | None = None)
             return "single", 1, "inferred"
         if floor_default == "twin":
             return "twin", 2, "inferred"
+        if floor_default == "ondol_4":
+            return "ondol_4", 4, "inferred"
         if floor_default.endswith("_person"):
             capacity = int(floor_default.split("_", 1)[0])
             return floor_default, capacity, "inferred"
@@ -77,6 +79,8 @@ def room_type_label(room_type: str, capacity: int) -> str:
         return "1인실"
     if room_type == "twin":
         return "2인실"
+    if room_type == "ondol_4":
+        return "4인실 온돌"
     if room_type.endswith("_person"):
         return f"{capacity}인실"
     if room_type.startswith("bed_"):
@@ -87,6 +91,8 @@ def room_type_label(room_type: str, capacity: int) -> str:
 def room_type_family(room_type: str) -> str:
     if room_type in {"single", "twin"}:
         return "standard"
+    if room_type == "ondol_4":
+        return "ondol"
     if room_type.endswith("_person"):
         return "capacity"
     if room_type.startswith("bed_"):
@@ -94,9 +100,12 @@ def room_type_family(room_type: str) -> str:
     return "unknown"
 
 
-def infer_default_type(room_entries: list[dict[str, Any]]) -> str:
+def infer_default_type(room_entries: list[dict[str, Any]], section: Section) -> str:
     explicit_types = [entry["room_type"] for entry in room_entries if entry["source_kind"] == "explicit"]
     if not explicit_types:
+        # Workbook-specific heuristic: 휴락동 3층 unlabeled rooms are 온돌 4인실.
+        if section.building == "휴락동" and section.floor == 3:
+            return "ondol_4"
         return "twin"
     counts = Counter(explicit_types)
     return counts.most_common(1)[0][0]
@@ -207,7 +216,7 @@ def extract_room_entries(ws, sections: list[Section]) -> tuple[list[dict[str, An
                         }
                     )
 
-        default_type = infer_default_type(section_rooms)
+        default_type = infer_default_type(section_rooms, section)
         for entry in section_rooms:
             if entry["source_kind"] != "explicit":
                 inferred_type, capacity, _ = classify_room_type(None, floor_default=default_type)
@@ -300,7 +309,9 @@ def build_room_rules_md(structure: dict[str, Any], rooms: list[dict[str, Any]]) 
         "   - `N인실` -> capacity `N`",
         "4. When a room has no explicit suffix, the floor default is used.",
         "5. The floor default is the most common explicit room type found in that floor block.",
-        "6. If a floor has no explicit room-type labels, unlabeled rooms default to `twin`.",
+        "6. If a floor has no explicit room-type labels, workbook-specific heuristics are applied.",
+        "   - `휴락동 3층` unlabeled rooms are interpreted as `4인실 온돌`.",
+        "   - other unlabeled rooms fall back to `2인실`.",
         "7. Corridor relationship is inferred from the room row relative to the corridor row in the same floor block.",
         "",
         "## Current workbook findings",
