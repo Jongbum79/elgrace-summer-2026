@@ -2561,7 +2561,7 @@ function loginToGoogle() {
     initGoogleOAuth();
   }
   if (tokenClient) {
-    tokenClient.requestAccessToken({ prompt: "" });
+    tokenClient.requestAccessToken();
   } else {
     showToast("Google SDK 초기화 중입니다. 잠시 후 다시 시도해 주세요.");
   }
@@ -4089,7 +4089,8 @@ loadRetreatConfig()
     applyRetreatConfig(config);
     await Promise.all([
       loadChurchFamilyDb(),
-      loadFamiliesFromSupabase()
+      loadFamiliesFromSupabase(),
+      loadDriveConfig().then(() => { initGoogleOAuth(); })
     ]);
     renderAll();
   })
