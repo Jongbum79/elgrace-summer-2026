@@ -84,6 +84,72 @@
     return family.members.filter((member) => getMemberName(member)).length || 0;
   }
 
+  function getFamilyStayNights(family) {
+    if (!family || !Array.isArray(family.members)) return [];
+    const nights = [];
+    const dateLabels = ["7/27", "7/28", "7/29", "7/30"];
+    for (let d = 0; d < 3; d++) {
+      const dayLabel = dateLabels[d];
+      const nextDayLabel = dateLabels[d + 1];
+      const hasOvernight = family.members.some((member) => {
+        const periods = typeof getMemberAttendancePeriods === "function" ? getMemberAttendancePeriods(member) : [];
+        return periods.includes(`${dayLabel}-dinner`) && periods.includes(`${nextDayLabel}-breakfast`);
+      });
+      if (hasOvernight) {
+        nights.push(d);
+      }
+    }
+    return nights;
+  }
+
+  function getRoomOccupancyByNight(room, familiesInRoom) {
+    const nightHeads = [0, 0, 0];
+    (familiesInRoom || []).forEach((family) => {
+      const familySize = getFamilyHeadcount(family);
+      const stayNights = getFamilyStayNights(family);
+      stayNights.forEach((nightIdx) => {
+        if (nightIdx >= 0 && nightIdx < 3) {
+          nightHeads[nightIdx] += familySize;
+        }
+      });
+    });
+    return nightHeads;
+  }
+
+  function getRoomMaxOccupancy(room, familiesInRoom) {
+    const nightHeads = getRoomOccupancyByNight(room, familiesInRoom);
+    return Math.max(...nightHeads);
+  }
+
+  function canFamilyFitInRoom(family, room, familiesInRoom) {
+    if (!room || room.unavailable || room.capacity <= 0) return false;
+    const familySize = getFamilyHeadcount(family);
+    const familyNights = getFamilyStayNights(family);
+    
+    const nightHeads = [0, 0, 0];
+    (familiesInRoom || []).forEach((f) => {
+      const fId = f._familyId || f.id || f.name;
+      const targetId = family._familyId || family.id || family.name;
+      if (fId === targetId) return;
+      
+      const fSize = getFamilyHeadcount(f);
+      const fNights = getFamilyStayNights(f);
+      fNights.forEach((n) => {
+        if (n >= 0 && n < 3) {
+          nightHeads[n] += fSize;
+        }
+      });
+    });
+
+    const limit = getRoomAssignmentLimit(room);
+    for (const n of familyNights) {
+      if (nightHeads[n] + familySize > limit) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function getFamilyComposition(family) {
     const counts = { brother: 0, sister: 0, child: 0, total: 0 };
     (family?.members || []).forEach((member) => {
@@ -261,12 +327,38 @@
     return assignedWeight * 10 + (statusWeight[family?.status] ?? 9);
   }
 
-  function roomStatus(room, occupancyCount, usedBeds) {
+  function roomStatus(room, occupancyCount, maxOccupancy) {
     if (room?.unavailable || room?.capacity <= 0) return "unavailable";
     if (occupancyCount <= 0) return "empty";
-    if (usedBeds > getRoomAssignmentLimit(room)) return "overflow";
-    if (usedBeds >= room.capacity) return "full";
+    if (maxOccupancy > getRoomAssignmentLimit(room)) return "overflow";
+    if (maxOccupancy >= room.capacity) return "full";
     return "partial";
+  }
+
+  function renderNightProgressBar(room, familiesInRoom) {
+    const nightHeads = getRoomOccupancyByNight(room, familiesInRoom);
+    return h("div", { className: "mt-2.5 flex gap-1 w-full" },
+      [0, 1, 2].map(nightIdx => {
+        const nightHead = nightHeads[nightIdx];
+        const nightFill = room.capacity > 0 ? Math.min(100, Math.round((nightHead / room.capacity) * 100)) : 0;
+        const segmentStatus = nightHead === 0 ? "empty" : nightHead < room.capacity ? "partial" : nightHead === room.capacity ? "full" : "overflow";
+        return h("div", {
+          key: nightIdx,
+          className: "h-2 flex-1 rounded-full bg-slate-100 ring-1 ring-slate-200/50 overflow-hidden relative",
+          title: `7월 ${27 + nightIdx}일 숙박: ${nightHead}/${room.capacity}명`
+        },
+          h("div", {
+            className: cx("h-full rounded-full transition-all duration-300", {
+              empty: "bg-transparent",
+              partial: "bg-emerald-400",
+              full: "bg-emerald-600",
+              overflow: "bg-rose-500",
+            }[segmentStatus]),
+            style: { width: `${nightFill}%` }
+          })
+        );
+      })
+    );
   }
 
   function getRoomAssignmentLimit(room) {
@@ -275,7 +367,7 @@
   }
 
   function shouldShowOccupancyDetails(room) {
-    return !room?.unavailable && room?.capacity >= 6;
+    return !room?.unavailable && room?.capacity > 0;
   }
 
   function roomToneClass(status, isSelected, isDropTarget) {
@@ -435,7 +527,11 @@
       didMove: false,
     });
 
-    const familiesList = typeof families !== "undefined" && Array.isArray(families) ? families : [];
+    const familiesList = (typeof families !== "undefined" && Array.isArray(families) ? families : [])
+      .filter((family) => {
+        if (family.status === "absent" || family.status === "undecided") return false;
+        return getFamilyStayNights(family).length > 0;
+      });
     const draftToken = useMemo(() => serializeAssignments(draftAssignments), [draftAssignments]);
     const baselineToken = useMemo(() => serializeAssignments(baselineAssignments), [baselineAssignments]);
     const isDirty = draftToken !== baselineToken;
@@ -497,6 +593,7 @@
         return {
           roomCount: 0,
           assignedBeds: 0,
+          assignedFamiliesCount: 0,
           emptyRooms: 0,
           fullRooms: 0,
           overRooms: 0,
@@ -533,6 +630,7 @@
       return {
         roomCount: layoutState.data.rooms.length,
         assignedBeds,
+        assignedFamiliesCount: validRoomAssignedFamilies,
         emptyRooms,
         fullRooms,
         overRooms,
@@ -559,6 +657,8 @@
           };
         })
         .filter((family) => {
+          if (["absent", "undecided"].includes(family.status)) return false;
+          if (getFamilyStayNights(family).length === 0) return false;
           if (!family._queryMatch) return false;
           if (statusFilter !== "all" && family.status !== statusFilter) return false;
           if (familyStateFilter === "unassigned" && family._roomExists) return false;
@@ -611,8 +711,8 @@
                 if (roomTypeFilter !== "all" && room.room_type !== roomTypeFilter) return null;
                 const bucket = roomBundle.byRoom.get(room.id);
                 const familiesInRoom = bucket?.families || [];
-                const usedBeds = bucket?.headcount || 0;
-                const status = roomStatus(room, familiesInRoom.length, usedBeds);
+                const maxOccupancy = getRoomMaxOccupancy(room, familiesInRoom);
+                const status = roomStatus(room, familiesInRoom.length, maxOccupancy);
                 const isSelected = selectedRoomId === room.id;
                 const isDropTarget = dropRoomId === room.id;
                 const roomFilterMatch =
@@ -624,7 +724,7 @@
                 return {
                   ...room,
                   status,
-                  usedBeds,
+                  usedBeds: maxOccupancy,
                   familiesInRoom,
                   isSelected,
                   isDropTarget,
@@ -654,7 +754,6 @@
     const selectedRoomBucket = selectedRoom && roomBundle.byRoom.get(selectedRoom.id);
     const selectedRoomSuggestions = useMemo(() => {
       if (!layoutState.data || !selectedRoom) return [];
-      const capacityLeft = (selectedRoomBucket?.room.capacity || selectedRoom.capacity) - (selectedRoomBucket?.headcount || 0);
       return familiesList
         .map((family, index) => {
           const familyId = getFamilyId(family, index);
@@ -669,7 +768,7 @@
           };
         })
         .filter((item) => !resolveRoom(layoutState.data, item.roomValue))
-        .filter((item) => item.size <= Math.max(capacityLeft, 0))
+        .filter((item) => canFamilyFitInRoom(item.family, selectedRoom, selectedRoomBucket?.families || []))
         .sort((a, b) => {
           if (b.size !== a.size) return b.size - a.size;
           return normalizeText(a.family.name).localeCompare(normalizeText(b.family.name));
@@ -683,15 +782,13 @@
       return layoutState.data.rooms
         .map((room) => {
           const bucket = roomBundle.byRoom.get(room.id);
-          const available = getRoomAssignmentLimit(room) - (bucket?.headcount || 0);
           return {
             room,
             bucket,
-            available,
             familySize,
           };
         })
-        .filter((item) => item.available >= item.familySize)
+        .filter((item) => canFamilyFitInRoom(selectedFamily, item.room, item.bucket?.families || []))
         .sort((a, b) => {
           const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, headcount: 0 }, familySize).score;
           const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, headcount: 0 }, familySize).score;
@@ -760,10 +857,8 @@
             showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
           } else {
             const bucket = roomBundle.byRoom.get(roomId);
-            const usedBeds = bucket?.headcount || 0;
-            const familySize = getFamilyHeadcount(family);
-            if (usedBeds + familySize > getRoomAssignmentLimit(room)) {
-              showToast(`${room.label}은(는) 현재 최대 ${getRoomAssignmentLimit(room)}명까지 배정할 수 있습니다.`);
+            if (!canFamilyFitInRoom(family, room, bucket?.families || [])) {
+              showToast(`${room.label}의 날짜별 정원을 초과합니다.`);
             } else {
               updateAssignment(drag.familyId, room.label, { preserveView: true });
               showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
@@ -811,9 +906,7 @@
           const room = layoutState.data.roomById.get(roomId);
           const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
           const bucket = roomBundle.byRoom.get(roomId);
-          const usedBeds = bucket?.headcount || 0;
-          const familySize = getFamilyHeadcount(family);
-          setDropRoomId(!room.unavailable && room.capacity > 0 && usedBeds + familySize <= getRoomAssignmentLimit(room) ? roomId : null);
+          setDropRoomId(canFamilyFitInRoom(family, room, bucket?.families || []) ? roomId : null);
         } else {
           setDropRoomId(null);
         }
@@ -946,17 +1039,15 @@
           const options = layoutState.data.rooms
             .map((room) => {
               const bucket = roomBuckets.get(room.id);
-              const available = getRoomAssignmentLimit(room) - (bucket?.headcount || 0);
               return {
                 room,
                 bucket,
-                available,
               };
             })
-            .filter((option) => option.available >= item.size)
+            .filter((option) => canFamilyFitInRoom(item.family, option.room, option.bucket?.families || []))
             .sort((a, b) => {
-              const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, headcount: 0 }, item.size).score;
-              const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, headcount: 0 }, item.size).score;
+              const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, families: [], headcount: 0 }, item.size).score;
+              const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, families: [], headcount: 0 }, item.size).score;
               for (let i = 0; i < scoreA.length; i += 1) {
                 if (scoreA[i] !== scoreB[i]) return scoreA[i] - scoreB[i];
               }
@@ -1007,7 +1098,6 @@
       if (!selectedFamilyId) return;
       updateAssignment(selectedFamilyId, "미배정");
     }
-
     function focusRoom(roomId) {
       setSelectedRoomId(roomId);
       setSelectedFamilyId(null);
@@ -1036,10 +1126,11 @@
       const selected = selectedRoomId === room.id;
       const dragTarget = dropRoomId === room.id;
       const familiesInRoom = bucket?.families || [];
-      const usedBeds = bucket?.headcount || 0;
-      const status = roomStatus(room, familiesInRoom.length, usedBeds);
-      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((usedBeds / room.capacity) * 100)) : 0;
+      const maxOccupancy = getRoomMaxOccupancy(room, familiesInRoom);
+      const status = roomStatus(room, familiesInRoom.length, maxOccupancy);
+      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((maxOccupancy / room.capacity) * 100)) : 0;
       const canAssign = !room.unavailable && room.capacity > 0;
+      const showOccupancy = shouldShowOccupancyDetails(room);
 
       return h(
         "div",
@@ -1058,13 +1149,15 @@
               renderIcon("building-2", "h-3.5 w-3.5"),
               room.building
             ),
-            h("h4", { className: "mt-1 text-lg font-semibold text-slate-900" }, room.label),
+            h("div", { className: "flex items-center gap-2" },
+              h("h4", { className: "mt-1 text-sm font-semibold text-slate-900" }, room.label),
+              canAssign ? h("span", { className: cx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1", 
+                maxOccupancy > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-200"
+              ) }, maxOccupancy > 0 ? "배정" : "미배정") : null
+            ),
             h("div", { className: "mt-1 flex flex-wrap items-center gap-1.5" },
               h("span", { className: "rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200" }, room.floorLabel || `${room.floor}층`),
-              h("span", { className: "rounded-full bg-[#1e5a45]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1e5a45]" }, toCompactRoomBadge(room)),
-              h("span", { className: cx("rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1", 
-                usedBeds > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-200"
-              ) }, usedBeds > 0 ? "배정" : "미배정")
+              toCompactRoomBadge(room) !== room.label ? h("span", { className: "rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600" }, toCompactRoomBadge(room)) : null
             )
           ),
           h("div", { className: "flex flex-col items-end gap-1" },
@@ -1078,22 +1171,12 @@
           )
         ),
         h("div", { className: "mt-4 space-y-3" },
-          h("div", { className: "h-2 overflow-hidden rounded-full bg-slate-100" },
-            h("div", {
-              className: cx("h-full rounded-full transition-all duration-300", {
-                empty: "bg-slate-300",
-                partial: "bg-emerald-400",
-                full: "bg-emerald-600",
-                overflow: "bg-rose-500",
-              }[status]),
-              style: { width: `${fillPercent}%` },
-            })
-          ),
-          h("div", { className: "flex items-center justify-between text-[11px] font-medium text-slate-500" },
-            h("span", null, `입실 ${usedBeds}명`),
-            h("span", null, `잔여 ${Math.max(room.capacity - usedBeds, 0)}명`)
-          ),
-          familiesInRoom.length
+          canAssign && showOccupancy ? renderNightProgressBar(room, familiesInRoom) : null,
+          canAssign && showOccupancy ? h("div", { className: "flex items-center justify-between text-[11px] font-medium text-slate-500" },
+            h("span", null, `입실 ${maxOccupancy}명`),
+            h("span", null, `잔여 ${Math.max(room.capacity - maxOccupancy, 0)}명`)
+          ) : null,
+          canAssign ? (familiesInRoom.length
             ? h("div", { className: "flex flex-wrap gap-2" },
                 familiesInRoom.map((family) =>
                   h("button", {
@@ -1118,11 +1201,11 @@
                     "rounded-2xl border border-dashed border-slate-200 bg-white/80 px-3 py-4 text-sm text-slate-500",
                 },
                 "아직 배정된 가족이 없습니다. 드래그하거나 자동 배정을 사용해 보세요."
-              ),
-          h("div", { className: "flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-[11px] font-medium text-slate-500" },
+              )) : null,
+          canAssign ? h("div", { className: "flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-[11px] font-medium text-slate-500" },
             h("span", null, room.source_text || `${room.label} 정보`),
             h("span", null, `${room.row || 0}행 · ${room.column || 0}열`)
-          )
+          ) : null
         )
       );
     }
@@ -1251,15 +1334,7 @@
               h("span", { className: "text-slate-300" }, "|"),
               h("span", null, `총 ${composition.total}명`)
             )
-          ),
-          h("button", {
-            type: "button",
-            onClick: (event) => {
-              event.stopPropagation();
-              updateAssignment(family._familyId, "미배정");
-            },
-            className: "shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50",
-          }, "해제")
+          )
         )
       );
     }
@@ -1346,9 +1421,8 @@
       const selected = selectedRoomId === room.id;
       const dragTarget = dropRoomId === room.id;
       const familiesInRoom = bucket?.families || [];
-      const usedBeds = bucket?.headcount || 0;
-      const status = roomStatus(room, familiesInRoom.length, usedBeds);
-      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((usedBeds / room.capacity) * 100)) : 0;
+      const maxOccupancy = getRoomMaxOccupancy(room, familiesInRoom);
+      const status = roomStatus(room, familiesInRoom.length, maxOccupancy);
       const compact = density === "compact";
       const canAssign = !room.unavailable && room.capacity > 0;
       const showOccupancy = shouldShowOccupancyDetails(room);
@@ -1367,30 +1441,22 @@
           title: `${room.label} · ${toRoomBadge(room)} · ${room.cell || ""}`,
         },
         h("div", { className: "flex flex-col gap-1 w-full" },
-          h("div", { className: cx("font-semibold text-slate-950", compact ? "text-sm" : "text-base") }, room.label),
+          h("div", { className: "flex items-center justify-between gap-1 w-full" },
+            h("div", { className: cx("font-semibold text-slate-950", compact ? "text-xs" : "text-sm") }, room.label),
+            canAssign ? h("span", { className: cx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1", 
+              maxOccupancy > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-200"
+            ) }, maxOccupancy > 0 ? "배정" : "미배정") : null
+          ),
           h("div", { className: "flex flex-wrap items-center gap-1" },
-            h("span", { className: cx("inline-flex max-w-full rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, toCompactRoomBadge(room)),
-            h("span", { className: cx("rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", 
-              usedBeds > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-200"
-            ) }, usedBeds > 0 ? "배정" : "미배정")
+            h("span", { className: cx("inline-flex max-w-full rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, toCompactRoomBadge(room))
           )
         ),
-        canAssign && showOccupancy ? h("div", { className: "mt-2.5 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" },
-          h("div", {
-            className: cx("h-full rounded-full transition-all duration-300", {
-              empty: "bg-slate-300",
-              partial: "bg-emerald-400",
-              full: "bg-emerald-600",
-              overflow: "bg-rose-500",
-            }[status]),
-            style: { width: `${fillPercent}%` },
-          })
-        ) : null,
+        canAssign && showOccupancy ? renderNightProgressBar(room, familiesInRoom) : null,
         canAssign && showOccupancy ? h("div", { className: "mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500" },
-          h("span", null, `${usedBeds}/${room.capacity}명`),
-          h("span", null, usedBeds ? `잔여 ${Math.max(room.capacity - usedBeds, 0)}` : "드롭 가능")
-        ) : !canAssign ? h("div", { className: "mt-2 text-[10px] font-semibold text-slate-500" }, room.unavailable_reason || "사용할 수 없는 공간") : null,
-        h("div", { className: "mt-2 flex flex-wrap gap-1" },
+          h("span", null, `${maxOccupancy}/${room.capacity}명`),
+          h("span", null, maxOccupancy ? `잔여 ${Math.max(room.capacity - maxOccupancy, 0)}` : "드롭 가능")
+        ) : null,
+        canAssign ? h("div", { className: "mt-2 flex flex-wrap gap-1" },
           familiesInRoom.length
             ? familiesInRoom.map((family) =>
                 h("span", {
@@ -1408,7 +1474,7 @@
                 )
               )
             : h("span", { className: "rounded-full border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[10px] font-medium text-slate-400" }, "비어 있음")
-        )
+        ) : null
       );
     }
 
@@ -1467,7 +1533,7 @@
       const northItems = northRooms.concat(groupServiceSpacesForRow(northServices)).sort(sortByWorkbookPosition);
       const southItems = southRooms.concat(groupServiceSpacesForRow(southServices)).sort(sortByWorkbookPosition);
       const floorCapacity = (floor.rooms || []).reduce((sum, room) => sum + (room.unavailable ? 0 : room.capacity || 0), 0);
-      const usedBeds = (floor.rooms || []).reduce((sum, room) => sum + (roomBundle.byRoom.get(room.id)?.headcount || 0), 0);
+      const usedBeds = (floor.rooms || []).reduce((sum, room) => sum + getRoomMaxOccupancy(room, roomBundle.byRoom.get(room.id)?.families || []), 0);
 
       return h(
         "article",
@@ -1519,9 +1585,10 @@
 
       if (room) {
         const bucket = selectedRoomBucket || { families: [], headcount: 0 };
-        const usedBeds = bucket.headcount || 0;
-        const remaining = Math.max(room.capacity - usedBeds, 0);
-        const status = roomStatus(room, bucket.families.length, usedBeds);
+        const maxOccupancy = getRoomMaxOccupancy(room, bucket.families);
+        const usedBeds = maxOccupancy;
+        const remaining = Math.max(room.capacity - maxOccupancy, 0);
+        const status = roomStatus(room, bucket.families.length, maxOccupancy);
         return h(
           "div",
           { className: "rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm" },
@@ -1554,19 +1621,11 @@
           ),
           h("div", { className: "mt-5 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4" },
             h("div", { className: "flex items-center justify-between text-sm font-semibold text-slate-700" },
-              h("span", null, "배정 현황"),
+              h("span", null, "날짜별 배정 현황"),
               h("span", null, `${Math.min(100, Math.round((usedBeds / room.capacity) * 100))}%`)
             ),
-            h("div", { className: "mt-3 h-3 overflow-hidden rounded-full bg-white" },
-              h("div", {
-                className: cx("h-full rounded-full transition-all duration-300", {
-                  empty: "bg-slate-300",
-                  partial: "bg-emerald-400",
-                  full: "bg-emerald-600",
-                  overflow: "bg-rose-500",
-                }[status]),
-                style: { width: `${Math.min(100, Math.round((usedBeds / room.capacity) * 100))}%` },
-              })
+            h("div", { className: "mt-1" },
+              renderNightProgressBar(room, bucket.families)
             ),
             h("p", { className: "mt-3 text-sm leading-6 text-slate-600" },
               room.source_text || "원본 셀 정보가 없습니다.",
@@ -1699,10 +1758,9 @@
       const selected = selectedRoomId === room.id;
       const dragTarget = dropRoomId === room.id;
       const familiesInRoom = bucket?.families || [];
-      const usedBeds = bucket?.headcount || 0;
-      const status = roomStatus(room, familiesInRoom.length, usedBeds);
-      const fillPercent = room.capacity > 0 ? Math.min(100, Math.round((usedBeds / room.capacity) * 100)) : 0;
-      const remaining = Math.max(room.capacity - usedBeds, 0);
+      const maxOccupancy = getRoomMaxOccupancy(room, familiesInRoom);
+      const status = roomStatus(room, familiesInRoom.length, maxOccupancy);
+      const remaining = Math.max(room.capacity - maxOccupancy, 0);
       const canAssign = !room.unavailable && room.capacity > 0;
       const showOccupancy = shouldShowOccupancyDetails(room);
 
@@ -1717,33 +1775,25 @@
           ),
         },
         h("div", { className: "flex items-start justify-between gap-2" },
-          h("div", { className: "min-w-0 flex-1" },
-            h("div", { className: "text-sm font-semibold leading-5 text-slate-950" }, room.label),
+          h("div", { className: "min-w-0 flex-1 w-full" },
+            h("div", { className: "flex items-center justify-between gap-1 w-full" },
+              h("div", { className: "text-sm font-semibold leading-5 text-slate-950" }, room.label),
+              canAssign ? h("span", { className: cx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1", 
+                maxOccupancy > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-200"
+              ) }, maxOccupancy > 0 ? "배정" : "미배정") : null
+            ),
             h("div", { className: "mt-1 flex flex-wrap items-center gap-1" },
-              h("span", { className: cx("inline-flex max-w-full rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, toCompactRoomBadge(room)),
-              h("span", { className: cx("rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", 
-                usedBeds > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-200"
-              ) }, usedBeds > 0 ? "배정" : "미배정")
+              toCompactRoomBadge(room) !== room.label ? h("span", { className: cx("inline-flex max-w-full rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", getRoomTypeTone(room)) }, toCompactRoomBadge(room)) : null
             )
           ),
           h("span", { className: "text-[10px] font-medium text-slate-500" }, `정원 ${room.capacity}명`)
         ),
-        canAssign && showOccupancy ? h("div", { className: "mt-3 h-2 overflow-hidden rounded-full bg-slate-100" },
-          h("div", {
-            className: cx("h-full rounded-full transition-all duration-300", {
-              empty: "bg-slate-300",
-              partial: "bg-emerald-400",
-              full: "bg-emerald-600",
-              overflow: "bg-rose-500",
-            }[status]),
-            style: { width: `${fillPercent}%` },
-          })
-        ) : null,
+        canAssign && showOccupancy ? renderNightProgressBar(room, familiesInRoom) : null,
         canAssign && showOccupancy ? h("div", { className: "mt-2 flex items-center justify-between text-[11px] font-medium text-slate-500" },
-          h("span", null, `${usedBeds}/${room.capacity}`),
+          h("span", null, `${maxOccupancy}/${room.capacity}명`),
           h("span", null, remaining ? `+${remaining}` : "완료")
         ) : !canAssign ? h("div", { className: "mt-2 text-[10px] font-semibold text-slate-500" }, room.unavailable_reason || "사용할 수 없는 공간") : null,
-        h("div", { className: "mt-3 flex flex-wrap gap-1.5" },
+        canAssign || familiesInRoom.length ? h("div", { className: "mt-3 flex flex-wrap gap-1.5" },
           familiesInRoom.length
             ? familiesInRoom.map((family) =>
                 h("span", {
@@ -1752,7 +1802,7 @@
                 }, family.name.replace(" 가족", ""))
               )
             : h("span", { className: "rounded-md border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-400" }, "비어 있음")
-        )
+        ) : null
       );
     }
 
@@ -1801,7 +1851,8 @@
 
     function renderMobileExperience() {
       const selectedBucket = selectedRoom ? roomBundle.byRoom.get(selectedRoom.id) : null;
-      const selectedUsed = selectedBucket?.headcount || 0;
+      const selectedFamilies = selectedBucket?.families || [];
+      const selectedUsed = selectedRoom ? getRoomMaxOccupancy(selectedRoom, selectedFamilies) : 0;
       const selectedRemaining = selectedRoom ? Math.max(selectedRoom.capacity - selectedUsed, 0) : 0;
 
       return h(
@@ -1996,9 +2047,6 @@
                 "Room Assignment"
               ),
               h("h2", { className: "mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl" }, "방 배정"),
-              h("p", { className: "mt-2 max-w-3xl text-sm leading-7 text-slate-600" },
-                "Excel에서 생성된 방 구조를 그대로 읽어와 배정 초안을 만들고, 드래그·추천·자동 배정을 통해 가족 방을 정리합니다. 기존 family.room 값은 유지하며, 저장 시에만 실제 데이터에 반영됩니다."
-              ),
               toastHint
                 ? h("div", { className: "mt-3 inline-flex items-center gap-2 rounded-full bg-[#1e5a45]/10 px-3 py-1.5 text-sm font-medium text-[#1e5a45]" },
                     renderIcon("sparkles", "h-4 w-4"),
@@ -2052,7 +2100,7 @@
           ),
           h("div", { className: "mt-5 grid gap-3 md:grid-cols-4 xl:grid-cols-7" },
             renderSummaryChip("building-2", "전체 방", `${roomStats.roomCount}개`, "text-slate-900"),
-            renderSummaryChip("users", "배정 인원", `${roomStats.assignedBeds}명`, "text-slate-900"),
+            renderSummaryChip("users", "배정 가족", `${roomStats.assignedFamiliesCount}가족`, "text-slate-900"),
             renderSummaryChip("door-open", "빈 방", `${roomStats.emptyRooms}개`, "text-slate-900"),
             renderSummaryChip("check", "만실", `${roomStats.fullRooms}개`, "text-slate-900"),
             renderSummaryChip("user-round-search", "미배정 가족", `${roomStats.unassignedFamilies}가족`, "text-slate-900"),
@@ -2146,7 +2194,7 @@
             }, "인스펙터")
           )
         ),
-        h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_360px]" },
+        h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-cols-[minmax(0,1fr)_300px]" },
           h("div", { className: cx("space-y-5", mobileTab === "rooms" ? "block" : "hidden lg:block") },
             h("div", { className: "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm" },
               h("div", { className: "flex items-center justify-between gap-3" },
