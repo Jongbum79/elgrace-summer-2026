@@ -1930,6 +1930,7 @@ body.mobile-mode #schoolStatsBar::-webkit-scrollbar {
 }
 body.mobile-mode .school-stat-filter-chip {
   flex: 1 !important;
+  width: auto !important;
   text-align: center !important;
   justify-content: center !important;
   padding: 8px 12px !important;

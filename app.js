@@ -3794,6 +3794,9 @@ function renderSchoolView() {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      width: 170px;
+      box-sizing: border-box;
+      justify-content: flex-start;
       ${isActive ? `background: ${color}; color: #ffffff; font-weight: 800; border: 1px solid ${color};` : "background: #ffffff; color: var(--muted); border: 1px solid var(--line);"}
     `;
   };
