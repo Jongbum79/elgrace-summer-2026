@@ -2469,27 +2469,154 @@ function getFamilyFromForm(existingFamily = null) {
   };
 }
 
+let driveOAuthClientId = "";
+let driveOAuthFolderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS";
 let driveActiveFolderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS";
 let driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
 let driveViewMode = "grid";
 let driveSearchQuery = "";
-let driveLoadedItems = [];
+let gapiToken = localStorage.getItem("gapi_access_token") || "";
+let tokenClient = null;
 
-async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", folderName = "여름수련회_공유폴더") {
+async function loadDriveConfig() {
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const config = await res.json();
+      if (config.googleClientId) {
+        driveOAuthClientId = config.googleClientId;
+      }
+      if (config.driveFolderId) {
+        driveOAuthFolderId = config.driveFolderId;
+        if (driveFolderHistory.length === 1 && driveFolderHistory[0].id === "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS") {
+          driveFolderHistory[0].id = driveOAuthFolderId;
+          driveActiveFolderId = driveOAuthFolderId;
+        }
+      }
+    }
+  } catch (err) {
+    console.log("Config endpoint not found or offline. Using localStorage config.");
+  }
+
+  if (!driveOAuthClientId) {
+    driveOAuthClientId = localStorage.getItem("google_oauth_client_id") || "";
+  }
+  const savedFolderId = localStorage.getItem("google_oauth_folder_id");
+  if (savedFolderId) {
+    driveOAuthFolderId = savedFolderId;
+    if (driveFolderHistory.length === 1 && driveFolderHistory[0].id === "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS") {
+      driveFolderHistory[0].id = driveOAuthFolderId;
+      driveActiveFolderId = driveOAuthFolderId;
+    }
+  }
+
+  const inputClientId = document.querySelector("#inputDriveClientId");
+  const inputFolderId = document.querySelector("#inputDriveFolderId");
+  if (inputClientId) inputClientId.value = driveOAuthClientId;
+  if (inputFolderId) inputFolderId.value = driveOAuthFolderId;
+
+  const warningBanner = document.querySelector("#driveConfigWarningBanner");
+  if (warningBanner) {
+    warningBanner.style.display = driveOAuthClientId ? "none" : "flex";
+  }
+}
+
+function initGoogleOAuth() {
+  if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
+    console.warn("Google GIS SDK not loaded yet. Retrying in 1s...");
+    setTimeout(initGoogleOAuth, 1000);
+    return;
+  }
+  if (!driveOAuthClientId) {
+    console.log("OAuth Client ID is not configured yet. Sign-in disabled.");
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: driveOAuthClientId,
+    scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
+    callback: (response) => {
+      if (response.error) {
+        console.error("OAuth error:", response.error);
+        showToast("구글 로그인 실패: " + response.error);
+        return;
+      }
+      if (response.access_token) {
+        gapiToken = response.access_token;
+        localStorage.setItem("gapi_access_token", gapiToken);
+        showToast("구글 계정이 성공적으로 연동되었습니다.");
+        renderDriveView(driveActiveFolderId, driveFolderHistory[driveFolderHistory.length - 1]?.name);
+      }
+    },
+  });
+}
+
+function loginToGoogle() {
+  if (!driveOAuthClientId) {
+    showToast("설정에서 Google OAuth Client ID를 입력하세요.");
+    const modal = document.querySelector("#driveSettingsModal");
+    if (modal) modal.style.display = "flex";
+    return;
+  }
+  if (!tokenClient) {
+    initGoogleOAuth();
+  }
+  if (tokenClient) {
+    tokenClient.requestAccessToken({ prompt: "" });
+  } else {
+    showToast("Google SDK 초기화 중입니다. 잠시 후 다시 시도해 주세요.");
+  }
+}
+
+function logoutFromGoogle() {
+  if (gapiToken) {
+    try {
+      google.accounts.oauth2.revokeToken(gapiToken, () => {});
+    } catch (e) {
+      console.warn("Token revocation failed:", e);
+    }
+  }
+  gapiToken = "";
+  localStorage.removeItem("gapi_access_token");
+  showToast("로그아웃되었습니다.");
+  updateDriveUI();
+}
+
+function updateDriveUI() {
+  const loginContainer = document.querySelector("#driveLoginContainer");
+  const contentContainer = document.querySelector("#driveContentContainer");
+  if (!loginContainer || !contentContainer) return;
+
+  if (gapiToken) {
+    loginContainer.style.display = "none";
+    contentContainer.style.display = "block";
+  } else {
+    loginContainer.style.display = "flex";
+    contentContainer.style.display = "none";
+  }
+}
+
+async function renderDriveView(folderId = null, folderName = "여름수련회_공유폴더") {
+  if (!driveOAuthClientId) {
+    await loadDriveConfig();
+  }
+
+  updateDriveUI();
+  if (!gapiToken) return;
+
+  if (!folderId) {
+    folderId = driveOAuthFolderId;
+  }
+  driveActiveFolderId = folderId;
+
   const foldersContainer = document.querySelector(".drive-folders-grid");
   const filesGrid = document.querySelector("#driveFilesGrid");
   const filesListBody = document.querySelector("#driveFilesListBody");
   const filesListContainer = document.querySelector("#driveFilesListContainer");
   const foldersSection = document.querySelector("#driveFoldersContainer");
-  const activeFolderLabel = document.querySelector("#activeFolderLabel");
   const filesSectionTitle = document.querySelector("#filesSectionTitle");
-  const warningBanner = document.querySelector("#driveApiKeyWarningBanner");
   
-  if (!foldersContainer || !filesGrid || !filesListBody || !filesListContainer || !foldersSection || !activeFolderLabel || !filesSectionTitle) return;
-  
-  driveActiveFolderId = folderId;
-  
-  // Render Breadcrumbs
+  if (!foldersContainer || !filesGrid || !filesListBody || !filesListContainer || !foldersSection || !filesSectionTitle) return;
+
   let breadcrumbHtml = "";
   driveFolderHistory.forEach((item, index) => {
     const isActive = index === driveFolderHistory.length - 1;
@@ -2501,19 +2628,34 @@ async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", f
   document.querySelector(".drive-breadcrumbs").innerHTML = breadcrumbHtml;
 
   try {
-    const res = await fetch(`/api/drive-files?folderId=${folderId}`);
-    const data = await res.json();
+    const q = `'${folderId}' in parents and trashed = false`;
+    const fields = "files(id,name,mimeType,size,modifiedTime,webViewLink,owners)";
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}`;
     
-    if (data.warning === "NO_API_KEY") {
-      if (warningBanner) warningBanner.style.display = "flex";
-    } else {
-      if (warningBanner) warningBanner.style.display = "none";
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${gapiToken}`
+      }
+    });
+
+    if (res.status === 401) {
+      console.warn("OAuth token expired. Logging out.");
+      gapiToken = "";
+      localStorage.removeItem("gapi_access_token");
+      updateDriveUI();
+      showToast("로그인 세션이 만료되었습니다. 다시 로그인해 주세요.");
+      return;
     }
-    
+
+    if (!res.ok) {
+      throw new Error(`Google API Error: ${res.statusText}`);
+    }
+
+    const data = await res.json();
     const items = data.files || [];
     const folders = items.filter(f => f.mimeType === "application/vnd.google-apps.folder");
     const files = items.filter(f => f.mimeType !== "application/vnd.google-apps.folder");
-    
+
     if (folders.length > 0) {
       foldersSection.style.display = "block";
       foldersContainer.innerHTML = folders.map(folder => {
@@ -2531,20 +2673,22 @@ async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", f
     } else {
       foldersSection.style.display = "none";
     }
-    
+
     let filteredFiles = files;
     if (driveSearchQuery) {
       filteredFiles = filteredFiles.filter(f => f.name.toLowerCase().includes(driveSearchQuery.toLowerCase()));
     }
-    
-    filesSectionTitle.textContent = driveActiveFolderId === "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS" ? "최근 파일 / 전체 파일" : `${folderName} 내 파일`;
-    
+
+    filesSectionTitle.textContent = folderId === driveOAuthFolderId ? "최근 파일 / 전체 파일" : `${folderName} 내 파일`;
+
     const typeConfigs = {
       "application/pdf": { icon: "file-text", color: "#ea4335", bgColor: "#fce8e6", label: "PDF" },
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { icon: "file-spreadsheet", color: "#0f9d58", bgColor: "#e6f4ea", label: "Excel" },
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { icon: "file-text", color: "#4285f4", bgColor: "#e8f0fe", label: "Word" }
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { icon: "file-text", color: "#4285f4", bgColor: "#e8f0fe", label: "Word" },
+      "application/vnd.google-apps.document": { icon: "file-text", color: "#4285f4", bgColor: "#e8f0fe", label: "Google Doc" },
+      "application/vnd.google-apps.spreadsheet": { icon: "file-spreadsheet", color: "#0f9d58", bgColor: "#e6f4ea", label: "Google Sheet" }
     };
-    
+
     const getFileConfig = (mimeType, name) => {
       if (typeConfigs[mimeType]) return typeConfigs[mimeType];
       if (name.endsWith(".xlsx")) return typeConfigs["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
@@ -2552,11 +2696,11 @@ async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", f
       if (name.endsWith(".pdf")) return typeConfigs["application/pdf"];
       return { icon: "file", color: "#5f6368", bgColor: "#f1f3f4", label: "File" };
     };
-    
+
     if (driveViewMode === "grid") {
       filesGrid.style.display = "grid";
       filesListContainer.style.display = "none";
-      
+
       if (filteredFiles.length === 0) {
         filesGrid.innerHTML = `
           <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; background: #fafafa; border-radius: 12px; border: 1px dashed #dcdcdc; width: 100%;">
@@ -2572,7 +2716,6 @@ async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", f
             const bytes = parseInt(file.size);
             sizeStr = bytes > 1024 * 1024 ? (bytes / (1024 * 1024)).toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
           }
-          const modDate = file.modifiedTime ? file.modifiedTime.slice(0, 10) : "-";
           return `
             <div class="drive-file-card" style="background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer;">
               <div style="height: 120px; background: ${conf.bgColor}; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(0,0,0,0.03); position: relative;">
@@ -2597,7 +2740,7 @@ async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", f
     } else {
       filesGrid.style.display = "none";
       filesListContainer.style.display = "block";
-      
+
       if (filteredFiles.length === 0) {
         filesListBody.innerHTML = `
           <tr>
@@ -2640,13 +2783,11 @@ async function renderDriveView(folderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", f
     }
   } catch (err) {
     console.error("Drive load failed:", err);
-    showToast("드라이브 로딩 실패");
+    showToast("드라이브 로딩 실패: " + err.message);
   }
 
   if (window.lucide) lucide.createIcons();
-}
-
-function toggleModal(open, family = null) {
+}function toggleModal(open, family = null) {
   if (open) {
     editingFamilyId = family?.id || null;
     document.querySelector("#familyModalEyebrow").textContent = family ? "FAMILY DETAIL" : "NEW REGISTRATION";
@@ -2757,6 +2898,12 @@ document.addEventListener("click", (event) => {
   const driveRootBtn = event.target.closest("#btnDriveRoot");
   const breadcrumbItem = event.target.closest(".breadcrumb-item.active");
   const driveUploadBtn = event.target.closest("#btnDriveUpload");
+  const btnDriveLogin = event.target.closest("#btnDriveLogin");
+  const btnOpenDriveSettings = event.target.closest("#btnOpenDriveSettings");
+  const btnDriveSettings = event.target.closest("#btnDriveSettings");
+  const btnCloseDriveSettings = event.target.closest("#btnCloseDriveSettings");
+  const btnSaveDriveSettings = event.target.closest("#btnSaveDriveSettings");
+  const btnDriveLogout = event.target.closest("#btnDriveLogout");
   
   if (driveFolder) {
     const folderId = driveFolder.dataset.folderId;
@@ -2781,7 +2928,7 @@ document.addEventListener("click", (event) => {
     renderDriveView(currentFolder.id, currentFolder.name);
   }
   if (driveRootBtn) {
-    driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
+    driveFolderHistory = [{ id: driveOAuthFolderId, name: "여름수련회_공유폴더" }];
     renderDriveView();
   }
   if (breadcrumbItem) {
@@ -2795,6 +2942,55 @@ document.addEventListener("click", (event) => {
   if (driveUploadBtn) {
     const fileInput = document.querySelector("#driveFileInput");
     if (fileInput) fileInput.click();
+  }
+  if (btnDriveLogin) {
+    loginToGoogle();
+  }
+  if (btnOpenDriveSettings || btnDriveSettings) {
+    if (btnOpenDriveSettings) event.preventDefault();
+    const modal = document.querySelector("#driveSettingsModal");
+    if (modal) modal.style.display = "flex";
+  }
+  if (btnCloseDriveSettings) {
+    const modal = document.querySelector("#driveSettingsModal");
+    if (modal) modal.style.display = "none";
+  }
+  if (btnSaveDriveSettings) {
+    const clientId = document.querySelector("#inputDriveClientId")?.value.trim() || "";
+    const folderId = document.querySelector("#inputDriveFolderId")?.value.trim() || "";
+    
+    if (clientId) {
+      localStorage.setItem("google_oauth_client_id", clientId);
+      driveOAuthClientId = clientId;
+    } else {
+      localStorage.removeItem("google_oauth_client_id");
+      driveOAuthClientId = "";
+    }
+    
+    if (folderId) {
+      localStorage.setItem("google_oauth_folder_id", folderId);
+      driveOAuthFolderId = folderId;
+      if (driveFolderHistory.length > 0) {
+        driveFolderHistory[0].id = folderId;
+      }
+    } else {
+      localStorage.removeItem("google_oauth_folder_id");
+      driveOAuthFolderId = "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS";
+      if (driveFolderHistory.length > 0) {
+        driveFolderHistory[0].id = driveOAuthFolderId;
+      }
+    }
+    
+    showToast("설정이 저장되었습니다.");
+    const modal = document.querySelector("#driveSettingsModal");
+    if (modal) modal.style.display = "none";
+    
+    initGoogleOAuth();
+    loadDriveConfig();
+    renderDriveView();
+  }
+  if (btnDriveLogout) {
+    logoutFromGoogle();
   }
 
   if (refreshBtn) {
@@ -3114,35 +3310,54 @@ document.querySelector("#driveFileInput")?.addEventListener("change", async (e) 
   const file = e.target.files[0];
   if (!file) return;
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("folderId", driveActiveFolderId);
+  if (!gapiToken) {
+    showToast("파일 업로드를 위해 먼저 구글 계정으로 로그인해 주세요.");
+    return;
+  }
 
-  showToast("파일을 업로드하는 중...");
+  showToast("파일을 구글 드라이브에 업로드하는 중...");
 
   try {
-    const res = await fetch("/api/drive-upload", {
+    const metadata = {
+      name: file.name,
+      parents: [driveActiveFolderId]
+    };
+
+    const formData = new FormData();
+    formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+    formData.append("file", file);
+
+    const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
       method: "POST",
-      body: formData,
+      headers: {
+        Authorization: `Bearer ${gapiToken}`
+      },
+      body: formData
     });
-    
+
+    if (res.status === 401) {
+      console.warn("OAuth token expired during upload.");
+      gapiToken = "";
+      localStorage.removeItem("gapi_access_token");
+      updateDriveUI();
+      showToast("로그인 세션이 만료되었습니다. 다시 로그인한 뒤 업로드해 주세요.");
+      return;
+    }
+
     if (!res.ok) {
-      throw new Error(`Upload failed: ${res.statusText}`);
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `Upload failed: ${res.statusText}`);
     }
 
     const data = await res.json();
-    if (data.error || data.success === false) {
-      throw new Error(data.error || data.message || "Upload failed");
-    }
-
-    showToast("파일이 성공적으로 업로드되었습니다.");
+    showToast("파일이 구글 드라이브에 성공적으로 업로드되었습니다.");
     e.target.value = "";
     
     const currentFolder = driveFolderHistory[driveFolderHistory.length - 1];
     renderDriveView(currentFolder.id, currentFolder.name);
   } catch (err) {
-    console.error("Upload error:", err);
-    showToast("파일 업로드 실패: " + err.message);
+    console.error("Direct upload error:", err);
+    showToast("업로드 실패: " + err.message);
   }
 });
 document.querySelector("#memberFormList").addEventListener("change", (event) => {

@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body class="desktop-mode">
     <div class="app-shell">
@@ -441,82 +442,137 @@
 
         <!-- Google Drive UI 문서 자료실 -->
         <div class="page-view" id="docsView">
-          <!-- Google Drive Header -->
-          <section class="page-heading">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
+          <!-- Drive Login Container -->
+          <div id="driveLoginContainer" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; text-align: center; padding: 40px; background: white; border-radius: 20px; border: 1px solid var(--line); box-shadow: var(--shadow); margin-top: 20px;">
+            <div style="width: 64px; height: 64px; border-radius: 16px; background: #e8f0fe; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+              <svg viewBox="0 0 24 24" width="36" height="36" style="display: block;">
+                <path fill="#4285F4" d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.05 3.1v2.58h3.32c1.94-1.78 3.05-4.4 3.05-7.48 0-.64-.06-1.25-.15-1.9z"/>
+                <path fill="#34A853" d="M12 20.6c2.32 0 4.27-.77 5.7-2.1l-3.32-2.58c-.92.62-2.1.98-3.38.98-2.6 0-4.8-1.76-5.58-4.12H2.02v2.66C3.5 18.3 7.5 20.6 12 20.6z"/>
+                <path fill="#FBBC05" d="M6.42 12.78c-.2-.62-.32-1.28-.32-1.96s.12-1.34.32-1.96V6.2H2.02c-.66 1.32-1.04 2.82-1.04 4.4s.38 3.08 1.04 4.4l4.4-3.42z"/>
+                <path fill="#EA4335" d="M12 6.1c1.26 0 2.4.44 3.3 1.3l2.46-2.46C16.27 3.5 14.32 2.7 12 2.7c-4.5 0-8.5 2.3-9.98 5.16l4.4 3.42c.78-2.36 2.98-4.12 5.58-4.12z"/>
+              </svg>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 700; color: #202124; margin-bottom: 8px;">구글 계정 연동 필요</h3>
+            <p style="font-size: 13.5px; color: #5f6368; max-width: 320px; line-height: 1.5; margin-bottom: 24px;">문서 자료실을 이용하려면 구글 계정으로 로그인해야 합니다. 공유 폴더에 액세스 권한이 부여됩니다.</p>
+            <button class="primary-button" id="btnDriveLogin" style="height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 24px; font-size: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; border: none; background: #1a73e8; color: white;">
+              구글 계정으로 로그인
+            </button>
+            <div style="margin-top: 16px;">
+              <a href="#" id="btnOpenDriveSettings" style="font-size: 12px; color: #1a73e8; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <i data-lucide="settings" style="width: 12px; height: 12px;"></i>OAuth 설정 구성
+              </a>
+            </div>
+          </div>
+
+          <!-- Drive Content Container (hidden by default) -->
+          <div id="driveContentContainer" style="display: none;">
+            <!-- Google Drive Header -->
+            <section class="page-heading">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
+                <div>
+                  <div class="title-line">
+                    <h2>문서 자료실</h2>
+                    <span class="demo-badge" style="background: #e8f0fe; color: #1a73e8; border-color: #d2e3fc; font-weight: 700; font-size: 11px;">Google Drive 연동</span>
+                  </div>
+                  <p>수련회 기획서, 예산안, 악보 및 주요 매뉴얼 공유 공간입니다.</p>
+                </div>
+                <div class="drive-search-box" style="display: flex; gap: 8px; align-items: center;">
+                  <input type="file" id="driveFileInput" style="display: none;" />
+                  <button class="primary-button" id="btnDriveUpload" style="height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; font-weight: 700; font-size: 13px; cursor: pointer; border-radius: 8px; border: none; background: var(--forest); color: white;"><i data-lucide="upload" style="width: 14px; height: 14px; stroke-width: 2.5px;"></i>파일 업로드</button>
+                  <label class="search-box" style="margin: 0; display: inline-flex; align-items: center; background: #f1f3f4; border: none; border-radius: 8px; padding: 6px 12px; height: 38px;">
+                    <span style="color: #5f6368; font-size: 16px; margin-right: 6px; user-select: none;">⌕</span>
+                    <input id="driveSearchInput" type="search" placeholder="드라이브에서 파일 검색..." style="width: 200px; background: transparent; border: none; outline: none; font-size: 13px; color: #3c4043;" />
+                  </label>
+                  <div class="view-mode-switch" style="height: 38px; display: inline-flex; background: #f1f3f4; padding: 3px; border-radius: 8px; gap: 2px;">
+                    <button class="view-mode-button active" type="button" id="driveGridBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368; display: inline-flex;" title="그리드 뷰"><i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i></button>
+                    <button class="view-mode-button" type="button" id="driveListBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368; display: inline-flex;" title="리스트 뷰"><i data-lucide="list" style="width: 16px; height: 16px;"></i></button>
+                  </div>
+                  <button class="view-mode-button" type="button" id="btnDriveSettings" style="border: none; background: #f1f3f4; padding: 8px; border-radius: 8px; cursor: pointer; color: #5f6368; height: 38px; display: inline-flex; align-items: center; justify-content: center;" title="설정"><i data-lucide="settings" style="width: 16px; height: 16px;"></i></button>
+                  <button class="view-mode-button" type="button" id="btnDriveLogout" style="border: none; background: #fce8e6; padding: 0 12px; border-radius: 8px; cursor: pointer; color: #ea4335; height: 38px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700;" title="로그아웃"><i data-lucide="log-out" style="width: 14px; height: 14px;"></i>로그아웃</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Drive Content -->
+            <section class="drive-container" style="margin-top: 20px;">
+              <!-- Warning Banner -->
+              <div id="driveConfigWarningBanner" style="display: none; background: #fff8e1; border: 1px solid #ffe082; border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; align-items: center; gap: 10px; color: #b78103; font-size: 13px; font-weight: 600;">
+                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #f5b041; flex-shrink: 0; display: inline-block; vertical-align: middle;"></i>
+                <span>⚠️ API 설정 미완료: 구글 로그인 연동을 위해 우측 상단 ⚙️ 설정을 눌러 <strong>Google OAuth Client ID</strong>를 설정해 주세요.</span>
+              </div>
+
+              <!-- Breadcrumbs -->
+              <div class="drive-breadcrumbs" style="display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: #5f6368; margin-bottom: 20px; background: white; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line);">
+                <span class="breadcrumb-item active" style="font-weight: 700; color: #1a73e8; cursor: pointer;" id="btnDriveRoot">내 드라이브</span>
+                <span class="breadcrumb-separator" style="color: #dadce0; user-select: none;">&gt;</span>
+                <span class="breadcrumb-item" id="activeFolderLabel" style="color: #5f6368;">여름수련회_공유폴더</span>
+              </div>
+
+              <!-- Folders Section -->
+              <div id="driveFoldersContainer">
+                <h4 style="font-size: 13px; font-weight: 700; color: #5f6368; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">폴더</h4>
+                <div class="drive-folders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px;">
+                  <!-- Folders will be rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- Files Section -->
               <div>
-                <div class="title-line">
-                  <h2>문서 자료실</h2>
-                  <span class="demo-badge" style="background: #e8f0fe; color: #1a73e8; border-color: #d2e3fc; font-weight: 700; font-size: 11px;">Google Drive 연동</span>
+                <h4 id="filesSectionTitle" style="font-size: 13px; font-weight: 700; color: #5f6368; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">최근 파일 / 전체 파일</h4>
+                
+                <!-- Grid View -->
+                <div class="drive-files-grid" id="driveFilesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;">
+                  <!-- Files grid will be rendered dynamically -->
                 </div>
-                <p>수련회 기획서, 예산안, 악보 및 주요 매뉴얼 공유 공간입니다.</p>
-              </div>
-              <div class="drive-search-box" style="display: flex; gap: 8px; align-items: center;">
-                <input type="file" id="driveFileInput" style="display: none;" />
-                <button class="primary-button" id="btnDriveUpload" style="height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; font-weight: 700; font-size: 13px; cursor: pointer; border-radius: 8px; border: none; background: var(--forest); color: white;"><i data-lucide="upload" style="width: 14px; height: 14px; stroke-width: 2.5px;"></i>파일 업로드</button>
-                <label class="search-box" style="margin: 0; display: inline-flex; align-items: center; background: #f1f3f4; border: none; border-radius: 8px; padding: 6px 12px; height: 38px;">
-                  <span style="color: #5f6368; font-size: 16px; margin-right: 6px; user-select: none;">⌕</span>
-                  <input id="driveSearchInput" type="search" placeholder="드라이브에서 파일 검색..." style="width: 200px; background: transparent; border: none; outline: none; font-size: 13px; color: #3c4043;" />
-                </label>
-                <div class="view-mode-switch" style="height: 38px; display: inline-flex; background: #f1f3f4; padding: 3px; border-radius: 8px;">
-                  <button class="view-mode-button active" type="button" id="driveGridBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368;"><i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i></button>
-                  <button class="view-mode-button" type="button" id="driveListBtn" style="border: none; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: #5f6368;"><i data-lucide="list" style="width: 16px; height: 16px;"></i></button>
+
+                <!-- List View (Hidden by default) -->
+                <div class="drive-files-list-container" id="driveFilesListContainer" style="display: none; background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow);">
+                  <table class="drive-files-table" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                    <thead>
+                      <tr style="border-bottom: 1px solid var(--line); background: #f8f9fa; color: #5f6368; font-weight: 700;">
+                        <th style="padding: 14px 18px;">이름</th>
+                        <th style="padding: 14px 18px; width: 140px;">소유자</th>
+                        <th style="padding: 14px 18px; width: 140px;">수정일</th>
+                        <th style="padding: 14px 18px; width: 120px;">파일 크기</th>
+                        <th style="padding: 14px 18px; width: 100px; text-align: right;"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="driveFilesListBody">
+                      <!-- Files list will be rendered dynamically -->
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
+        </div>
 
-          <!-- Drive Content -->
-          <section class="drive-container" style="margin-top: 20px;">
-            <!-- Warning Banner -->
-            <div id="driveApiKeyWarningBanner" style="display: none; background: #fff8e1; border: 1px solid #ffe082; border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; align-items: center; gap: 10px; color: #b78103; font-size: 13px; font-weight: 600;">
-              <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #f5b041; flex-shrink: 0; display: inline-block; vertical-align: middle;"></i>
-              <span>⚠️ API Key 미설정: 구글 드라이브와 실시간 연동을 위해 <code>.env</code> 파일에 <code>GOOGLE_API_KEY</code>를 설정해주세요. (현재 데모 파일 표시 중, 파일 업로드 시 로컬 서버에 저장됨)</span>
+        <!-- Google Drive Settings Modal -->
+        <div id="driveSettingsModal" class="modal" aria-hidden="true" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 10000; padding: 20px;">
+          <div style="background: white; border-radius: 20px; max-width: 440px; width: 100%; border: 1px solid var(--line); box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="settings" style="width: 18px; height: 18px; color: var(--forest);"></i>
+                <h3 style="font-size: 15px; font-weight: 800; color: #202124; margin: 0;">구글 API 연동 설정</h3>
+              </div>
+              <button id="btnCloseDriveSettings" style="border: none; background: transparent; cursor: pointer; color: #5f6368; display: inline-flex; padding: 4px;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
             </div>
-
-            <!-- Breadcrumbs -->
-            <div class="drive-breadcrumbs" style="display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: #5f6368; margin-bottom: 20px; background: white; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line);">
-              <span class="breadcrumb-item active" style="font-weight: 700; color: #1a73e8; cursor: pointer;" id="btnDriveRoot">내 드라이브</span>
-              <span class="breadcrumb-separator" style="color: #dadce0; user-select: none;">&gt;</span>
-              <span class="breadcrumb-item" id="activeFolderLabel" style="color: #5f6368;">여름수련회_공유폴더</span>
-            </div>
-
-            <!-- Folders Section -->
-            <div id="driveFoldersContainer">
-              <h4 style="font-size: 13px; font-weight: 700; color: #5f6368; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">폴더</h4>
-              <div class="drive-folders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px;">
-                <!-- Folders will be rendered dynamically -->
+            <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #3c4043; margin-bottom: 6px;">Google OAuth Client ID</label>
+                <input id="inputDriveClientId" type="text" placeholder="OAuth Client ID 입력..." style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; outline: none; box-sizing: border-box;" />
+                <p style="font-size: 11px; color: #5f6368; margin-top: 4px; line-height: 1.4;">로컬 서버의 <code>.env</code> 파일에 <code>GOOGLE_CLIENT_ID</code>를 설정한 경우 자동 로드됩니다. GitHub Pages 등 정적 서버 환경에서는 이곳에 입력하세요.</p>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #3c4043; margin-bottom: 6px;">공유 폴더 ID</label>
+                <input id="inputDriveFolderId" type="text" placeholder="1WVtAhmSZ5..." style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; outline: none; box-sizing: border-box;" />
+                <p style="font-size: 11px; color: #5f6368; margin-top: 4px;">기본값: 수련회 공식 공유 폴더 ID</p>
               </div>
             </div>
-
-            <!-- Files Section -->
-            <div>
-              <h4 id="filesSectionTitle" style="font-size: 13px; font-weight: 700; color: #5f6368; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">최근 파일 / 전체 파일</h4>
-              
-              <!-- Grid View -->
-              <div class="drive-files-grid" id="driveFilesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;">
-                <!-- Files grid will be rendered dynamically -->
-              </div>
-
-              <!-- List View (Hidden by default) -->
-              <div class="drive-files-list-container" id="driveFilesListContainer" style="display: none; background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow);">
-                <table class="drive-files-table" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-                  <thead>
-                    <tr style="border-bottom: 1px solid var(--line); background: #f8f9fa; color: #5f6368; font-weight: 700;">
-                      <th style="padding: 14px 18px;">이름</th>
-                      <th style="padding: 14px 18px; width: 140px;">소유자</th>
-                      <th style="padding: 14px 18px; width: 140px;">수정일</th>
-                      <th style="padding: 14px 18px; width: 120px;">파일 크기</th>
-                      <th style="padding: 14px 18px; width: 100px; text-align: right;"></th>
-                    </tr>
-                  </thead>
-                  <tbody id="driveFilesListBody">
-                    <!-- Files list will be rendered dynamically -->
-                  </tbody>
-                </table>
-              </div>
+            <div style="padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; background: #fafafa;">
+              <button id="btnSaveDriveSettings" class="primary-button" style="height: 36px; padding: 0 16px; font-size: 12.5px; font-weight: 700; border-radius: 6px; border: none; background: var(--forest); color: white; cursor: pointer;">저장</button>
             </div>
-          </section>
+          </div>
         </div>
       </main>
     </div>
