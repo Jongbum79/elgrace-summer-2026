@@ -7,6 +7,7 @@
   const h = React.createElement;
   const { useEffect, useMemo, useRef, useState } = React;
   const ROOM_LAYOUT_URL = "./assets/building_structure.json";
+  let globalLayoutData = null;
 
   const STATUS_LABELS = {
     stay: "입소 완료",
@@ -60,9 +61,19 @@
   function normalizeRoomValue(value) {
     const raw = String(value || "").trim();
     if (!raw || raw === "미배정") return "";
+    
+    let buildingPrefix = "";
+    if (raw.includes("휴락동")) {
+      buildingPrefix = "휴락동 ";
+    } else if (raw.includes("동락홀")) {
+      buildingPrefix = "동락홀 ";
+    }
+    
     const digitMatch = raw.match(/(\d{3})/);
-    if (digitMatch) return `${digitMatch[1]}호`;
-    return normalizeText(raw).replace(/[()]/g, "");
+    if (digitMatch) {
+      return `${buildingPrefix}${digitMatch[1]}호`;
+    }
+    return buildingPrefix + normalizeText(raw).replace(/[()]/g, "");
   }
 
   function getFamilyId(family, index) {
@@ -200,7 +211,11 @@
           }
           return response.json();
         })
-        .then((data) => buildLayoutIndex(data));
+        .then((data) => {
+          const index = buildLayoutIndex(data);
+          globalLayoutData = index;
+          return index;
+        });
     }
     return layoutPromise;
   }
@@ -246,10 +261,23 @@
         floor.rooms.forEach((room) => {
           rooms.push(room);
           roomById.set(room.id, room);
-          roomByLabel.set(normalizeRoomValue(room.room_label), room);
-          roomByLabel.set(normalizeRoomValue(room.room_number), room);
-          roomByLabel.set(normalizeRoomValue(`${room.room_number}호`), room);
-          roomByNumber.set(String(room.room_number), room);
+          
+          const plainLabel = normalizeRoomValue(room.room_label);
+          const prefixedLabel = normalizeRoomValue(`${room.building} ${room.room_label}`);
+          
+          // Map prefixed first (higher priority/unique)
+          roomByLabel.set(prefixedLabel, room);
+          if (!roomByLabel.has(plainLabel)) {
+            roomByLabel.set(plainLabel, room);
+          }
+          
+          roomByLabel.set(normalizeRoomValue(`${room.building} ${room.room_number}`), room);
+          roomByLabel.set(normalizeRoomValue(`${room.building} ${room.room_number}호`), room);
+          
+          roomByNumber.set(`${room.building} ${room.room_number}`, room);
+          if (!roomByNumber.has(String(room.room_number))) {
+            roomByNumber.set(String(room.room_number), room);
+          }
         });
         floor.serviceSpaces.forEach((space) => {
           serviceSpaces.push({
@@ -279,7 +307,15 @@
     if (!normalized) return null;
     if (layoutIndex.roomByLabel.has(normalized)) return layoutIndex.roomByLabel.get(normalized);
     const digits = String(roomValue || "").match(/(\d{3})/);
-    if (digits && layoutIndex.roomByNumber.has(digits[1])) return layoutIndex.roomByNumber.get(digits[1]);
+    if (digits) {
+      let buildingPrefix = "";
+      if (String(roomValue).includes("휴락동")) buildingPrefix = "휴락동 ";
+      else if (String(roomValue).includes("동락홀")) buildingPrefix = "동락홀 ";
+      
+      const key = `${buildingPrefix}${digits[1]}`;
+      if (layoutIndex.roomByNumber.has(key)) return layoutIndex.roomByNumber.get(key);
+      if (layoutIndex.roomByNumber.has(digits[1])) return layoutIndex.roomByNumber.get(digits[1]);
+    }
     return null;
   }
 
@@ -727,18 +763,18 @@
           if (familyStateFilter === "unassigned" && family._roomExists) return false;
           if (familyStateFilter === "assigned" && !family._roomExists) return false;
           if (familyStateFilter === "orphaned" && family._roomExists) return false;
-          if (buildingFilter !== "all") {
-            if (!layoutState.data || !family._roomExists) return false;
+          if (buildingFilter !== "all" && family._roomExists) {
+            if (!layoutState.data) return false;
             const room = resolveRoom(layoutState.data, family._roomValue);
             if (!room || room.building !== buildingFilter) return false;
           }
-          if (floorFilter !== "all") {
-            if (!layoutState.data || !family._roomExists) return false;
+          if (floorFilter !== "all" && family._roomExists) {
+            if (!layoutState.data) return false;
             const room = resolveRoom(layoutState.data, family._roomValue);
             if (!room || String(room.floor) !== floorFilter) return false;
           }
-          if (roomTypeFilter !== "all") {
-            if (!layoutState.data || !family._roomExists) return false;
+          if (roomTypeFilter !== "all" && family._roomExists) {
+            if (!layoutState.data) return false;
             const room = resolveRoom(layoutState.data, family._roomValue);
             if (!room || room.room_type !== roomTypeFilter) return false;
           }
@@ -764,54 +800,55 @@
 
     const visibleRooms = useMemo(() => {
       if (!layoutState.data) return [];
-      return layoutState.data.buildings.map((building) => {
-        const buildingMatches = buildingFilter === "all" || building.building === buildingFilter;
-        const floors = building.floors
-          .map((floor) => {
-            const floorMatches = floorFilter === "all" || String(floor.floor) === floorFilter;
-            const rooms = floor.rooms
-              .map((room) => {
-                if (roomTypeFilter !== "all" && room.room_type !== roomTypeFilter) return null;
-                const bucket = roomBundle.byRoom.get(room.id);
-                const familiesInRoom = bucket?.families || [];
-                const maxOccupancy = getRoomMaxOccupancy(room, familiesInRoom);
-                const status = roomStatus(room, familiesInRoom.length, maxOccupancy);
-                const isSelected = selectedRoomId === room.id;
-                const isDropTarget = dropRoomId === room.id;
-                const roomFilterMatch =
-                  buildingMatches &&
-                  floorMatches &&
-                  (buildingFilter === "all" || building.building === buildingFilter) &&
-                  (floorFilter === "all" || String(floor.floor) === floorFilter);
-                if (!roomFilterMatch) return null;
-                return {
-                  ...room,
-                  status,
-                  usedBeds: maxOccupancy,
-                  familiesInRoom,
-                  isSelected,
-                  isDropTarget,
-                };
-              })
-              .filter(Boolean);
+      return layoutState.data.buildings
+        .map((building) => {
+          if (buildingFilter !== "all" && building.building !== buildingFilter) return null;
+          
+          const floors = building.floors
+            .map((floor) => {
+              if (floorFilter !== "all" && String(floor.floor) !== floorFilter) return null;
+              
+              const rooms = floor.rooms
+                .map((room) => {
+                  if (roomTypeFilter !== "all" && room.room_type !== roomTypeFilter) return null;
+                  const bucket = roomBundle.byRoom.get(room.id);
+                  const familiesInRoom = bucket?.families || [];
+                  const maxOccupancy = getRoomMaxOccupancy(room, familiesInRoom);
+                  const status = roomStatus(room, familiesInRoom.length, maxOccupancy);
+                  const isSelected = selectedRoomId === room.id;
+                  const isDropTarget = dropRoomId === room.id;
+                  
+                  return {
+                    ...room,
+                    status,
+                    usedBeds: maxOccupancy,
+                    familiesInRoom,
+                    isSelected,
+                    isDropTarget,
+                  };
+                })
+                .filter(Boolean);
 
-            const floorServiceSpaces = floor.serviceSpaces || [];
-            if (!rooms.length && !floorServiceSpaces.length) return null;
+              if (roomTypeFilter !== "all" && !rooms.length) return null;
 
-            return {
-              ...floor,
-              rooms,
-              serviceSpaces: floorServiceSpaces,
-            };
-          })
-          .filter(Boolean);
+              const floorServiceSpaces = floor.serviceSpaces || [];
+              if (!rooms.length && !floorServiceSpaces.length) return null;
 
-        if (!floors.length) return null;
-        return {
-          ...building,
-          floors,
-        };
-      }).filter(Boolean);
+              return {
+                ...floor,
+                rooms,
+                serviceSpaces: floorServiceSpaces,
+              };
+            })
+            .filter(Boolean);
+
+          if (!floors.length) return null;
+          return {
+            ...building,
+            floors,
+          };
+        })
+        .filter(Boolean);
     }, [layoutState.data, roomBundle, selectedRoomId, dropRoomId, buildingFilter, floorFilter, roomTypeFilter, refreshKey]);
 
     const selectedRoomBucket = selectedRoom && roomBundle.byRoom.get(selectedRoom.id);
@@ -864,11 +901,18 @@
     }, [layoutState.data, selectedFamily, roomBundle, refreshKey]);
 
     function updateAssignment(familyId, roomValue, options = {}) {
-      setDraftAssignments((prev) => ({ ...prev, [familyId]: roomValue || "미배정" }));
-      setToastHint(roomValue && roomValue !== "미배정" ? "배정 초안을 업데이트했습니다." : "배정 초안을 해제했습니다.");
-      if (options.preserveView) return;
+      let resolvedValue = roomValue;
       if (roomValue && roomValue !== "미배정" && layoutState.data) {
         const room = resolveRoom(layoutState.data, roomValue);
+        if (room) {
+          resolvedValue = `${room.building} ${room.label}`;
+        }
+      }
+      setDraftAssignments((prev) => ({ ...prev, [familyId]: resolvedValue || "미배정" }));
+      setToastHint(resolvedValue && resolvedValue !== "미배정" ? "배정 초안을 업데이트했습니다." : "배정 초안을 해제했습니다.");
+      if (options.preserveView) return;
+      if (resolvedValue && resolvedValue !== "미배정" && layoutState.data) {
+        const room = resolveRoom(layoutState.data, resolvedValue);
         setSelectedRoomId(room?.id || null);
         setSelectedFamilyId(null);
         setMobileTab("rooms");
@@ -1613,16 +1657,29 @@
           className: "min-h-[44px] rounded-2xl border border-dashed border-slate-200 bg-white/35",
         });
       }
+      
+      const isDongrak = keyPrefix.includes("동락홀") || (items[0] && items[0].building === "동락홀");
+      
       return h(
         "div",
         {
           key: keyPrefix,
           className: "grid gap-2.5",
-          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(${density === "compact" ? "74px" : "116px"}, 1fr))` },
+          style: { 
+            gridTemplateColumns: isDongrak 
+              ? `repeat(${items.length}, minmax(${density === "compact" ? "74px" : "116px"}, 1fr))`
+              : `repeat(${columnRange.span}, minmax(${density === "compact" ? "74px" : "116px"}, 1fr))` 
+          },
         },
-        items.map((item) => {
-          const col = Math.max((item.column || columnRange.min) - columnRange.min + 1, 1);
-          if (item.type === "service_space" || item.type === "service_stack") return renderServiceCell(item, columnRange);
+        items.map((item, idx) => {
+          const col = isDongrak ? idx + 1 : Math.max((item.column || columnRange.min) - columnRange.min + 1, 1);
+          if (item.type === "service_space" || item.type === "service_stack") {
+            return h("div", {
+              key: item.id || item.cell,
+              className: "relative flex items-center justify-center rounded-2xl border border-slate-200/50 bg-slate-100/50 p-2.5 text-center text-xs font-medium text-slate-400 select-none",
+              style: { gridColumn: isDongrak ? `${col} / span 1` : `${col} / span ${item.column_span || 1}` },
+            }, item.label);
+          }
           return h(
             "div",
             { key: item.id, style: { gridColumn: `${col} / span 1` }, className: "min-w-0" },
@@ -1633,17 +1690,23 @@
     }
 
     function renderCorridorBand(floor, corridorServices, columnRange) {
+      const isDongrak = floor.building === "동락홀";
+      
       return h(
         "div",
         {
           className: "relative my-3 grid min-h-[52px] items-center rounded-[20px] border border-slate-200 bg-[linear-gradient(90deg,rgba(226,232,240,0.34),rgba(255,255,255,0.82),rgba(226,232,240,0.34))] px-3",
-          style: { gridTemplateColumns: `repeat(${columnRange.span}, minmax(116px, 1fr))` },
+          style: { 
+            gridTemplateColumns: isDongrak 
+              ? `1fr` 
+              : `repeat(${columnRange.span}, minmax(116px, 1fr))` 
+          },
         },
         h("div", { className: "pointer-events-none absolute inset-x-4 top-1/2 h-px bg-slate-300/70" }),
         h("div", { className: "relative z-10 col-span-full mx-auto rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-500 shadow-sm" },
           `${floor.label || `${floor.floor}층`} 복도`
         ),
-        corridorServices.map((space) => {
+        isDongrak ? null : corridorServices.map((space) => {
           const col = Math.max((space.column || columnRange.min) - columnRange.min + 1, 1);
           return h("span", {
             key: space.id || space.cell,
@@ -1656,7 +1719,10 @@
 
     function renderFloorPlan(floor, density = "desktop") {
       const columnRange = getFloorColumnRange(floor);
-      const planMinWidth = Math.max(columnRange.span * (density === "compact" ? 86 : 118), density === "compact" ? 860 : 1320);
+      const isDongrak = floor.building === "동락홀";
+      const planMinWidth = isDongrak 
+        ? (density === "compact" ? 430 : 660)
+        : Math.max(columnRange.span * (density === "compact" ? 86 : 118), density === "compact" ? 860 : 1320);
       const { northRooms, southRooms, northServices, southServices, corridorServices } = splitFloorItems(floor);
       const northItems = northRooms.concat(groupServiceSpacesForRow(northServices)).sort(sortByWorkbookPosition);
       const southItems = southRooms.concat(groupServiceSpacesForRow(southServices)).sort(sortByWorkbookPosition);
@@ -2170,7 +2236,7 @@
       h(
       "div",
       { className: "hidden lg:block mx-auto max-w-[1900px] px-4 py-6 sm:px-6 lg:px-8" },
-      h("div", { className: "overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,246,240,0.98))] shadow-[0_18px_60px_rgba(17,24,39,0.08)]" },
+      h("div", { className: "rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,246,240,0.98))] shadow-[0_18px_60px_rgba(17,24,39,0.08)]" },
         h("div", { className: "border-b border-slate-200/80 px-5 py-5 sm:px-6" },
           h("div", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" },
             h("div", null,
@@ -2391,7 +2457,7 @@
           h("div", {
             "data-drop-queue": "true",
             className: cx(
-              "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto",
+              "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto",
               mobileTab !== "rooms" ? "block" : "hidden lg:block"
             )
           },
@@ -2476,6 +2542,22 @@
       root.render(h(RoomAssignmentApp, { refreshKey: renderNonce }));
     },
     mount: mountRoomAssignment,
+    checkRoomConflict(familyId, nextFamily, allFamilies) {
+      if (!globalLayoutData) return true;
+      const roomValue = nextFamily.room;
+      if (!roomValue || roomValue === "미배정") return true;
+      
+      const room = resolveRoom(globalLayoutData, roomValue);
+      if (!room) return true;
+      
+      const otherFamilies = (allFamilies || []).filter((f) => {
+        if (f.id === familyId) return false;
+        if (f.status === "absent" || f.status === "undecided") return false;
+        return normalizeRoomValue(f.room) === normalizeRoomValue(roomValue);
+      });
+      
+      return canFamilyFitInRoom(nextFamily, room, otherFamilies);
+    }
   };
 
   if (document.readyState === "loading") {

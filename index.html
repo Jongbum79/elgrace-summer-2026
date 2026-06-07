@@ -727,6 +727,15 @@
             <option value="paid">완납</option>
           </select>
         </label>
+        <div class="family-room-field" style="display: flex; flex-direction: column; justify-content: flex-start;">
+          <span style="font-size: 12px; font-weight: 700; color: #64748b;">배정된 방</span>
+          <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 8px; height: 38px;">
+            <span id="newFamilyRoomLabel" style="font-size: 14px; font-weight: 700; color: #1e5a45;">미배정</span>
+            <button type="button" id="btnCancelRoomAssignment" style="display: none; padding: 4px 10px; font-size: 11px; height: 28px; min-height: 28px; border-radius: 8px; line-height: 1; align-items: center; justify-content: center; font-weight: 700; border: 1px solid #fecaca; background: #fef2f2; color: #ef4444; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              배정 취소
+            </button>
+          </div>
+        </div>
         <div class="fee-estimate-container" style="background: #f4f7f5; border: 1px solid #dfe7e3; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; min-height: 80px; margin-top: 20px; grid-column: 1 / span 2;">
           <div style="font-size: 10px; font-weight: 700; color: #687872; line-height: 1; margin-bottom: 6px;">예상 회비 (실시간 계산)</div>
           <div style="font-size: 20px; font-weight: 800; color: #1e5a45; line-height: 1; margin-bottom: 8px;" id="estimatedFeeLabel">0원</div>

@@ -2089,6 +2089,15 @@ function resetFamilyForm(family = null) {
   document.querySelector("#newFamilyStatus").value = family?.status || "stay";
   document.querySelector("#newFamilyFeeStatus").value = family?.feeStatus || "pending";
   document.querySelector("#newFamilyMemo").value = family?.memo === "별도 메모 없음" ? "" : family?.memo || "";
+  
+  const roomValue = family?.room || "미배정";
+  const labelEl = document.querySelector("#newFamilyRoomLabel");
+  const cancelBtn = document.querySelector("#btnCancelRoomAssignment");
+  if (labelEl && cancelBtn) {
+    labelEl.textContent = roomValue;
+    cancelBtn.style.display = (roomValue && roomValue !== "미배정") ? "inline-flex" : "none";
+  }
+
   document.querySelector("#memberFormList").innerHTML = "";
   if (!family) {
     createMemberForm("형제", "성인 남성");
@@ -2457,7 +2466,7 @@ function getFamilyFromForm(existingFamily = null) {
   const fee = lodgingCost + totalMealCost;
   
   const feeStatus = document.querySelector("#newFamilyFeeStatus").value;
-  const room = existingFamily?.room || "미배정";
+  const room = document.querySelector("#newFamilyRoomLabel")?.textContent.trim() || "미배정";
 
   return {
     id: existingFamily?.id || (families.length ? Math.max(...families.map((family) => family.id)) + 1 : 1),
@@ -3660,10 +3669,26 @@ document.querySelector("#addFamilyButton").addEventListener("click", () => toggl
 document.querySelector("#modalClose").addEventListener("click", () => toggleModal(false));
 document.querySelector("#modalCancel").addEventListener("click", () => toggleModal(false));
 document.querySelector("#modalBackdrop").addEventListener("click", () => toggleModal(false));
+document.querySelector("#btnCancelRoomAssignment")?.addEventListener("click", () => {
+  const labelEl = document.querySelector("#newFamilyRoomLabel");
+  const cancelBtn = document.querySelector("#btnCancelRoomAssignment");
+  if (labelEl && cancelBtn) {
+    labelEl.textContent = "미배정";
+    cancelBtn.style.display = "none";
+  }
+});
 document.querySelector("#modalNext").addEventListener("click", async () => {
   const existingIndex = families.findIndex((family) => family.id === editingFamilyId);
   const family = getFamilyFromForm(existingIndex >= 0 ? families[existingIndex] : null);
   if (!family) return;
+  
+  if (window.RoomAssignmentPage && typeof window.RoomAssignmentPage.checkRoomConflict === "function") {
+    const isValid = window.RoomAssignmentPage.checkRoomConflict(editingFamilyId, family, families);
+    if (!isValid) {
+      alert("방배정 일정이 겹칩니다. 방배정을 먼저 취소해주세요.");
+      return;
+    }
+  }
   
   const dbFamily = { ...family };
   const feeInfo = {
