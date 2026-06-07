@@ -2609,8 +2609,7 @@
             h("div", { className: "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm" },
               h("div", { className: "flex items-center justify-between gap-3" },
                 h("div", null,
-                  h("h3", { className: "text-lg font-semibold text-slate-900" }, "건물·층별 방 현황"),
-                  h("p", { className: "mt-1 text-sm text-slate-500" }, "엑셀에서 생성된 방 구조를 그대로 보여줍니다. 서비스 공간은 희미하게, 실제 방은 카드로 표시합니다.")
+                  h("h3", { className: "text-lg font-semibold text-slate-900" }, "건물·층별 방 현황")
                 ),
                 h("div", { className: "hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 lg:inline-flex" }, "드래그 가능한 카드")
               ),
