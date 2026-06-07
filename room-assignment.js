@@ -2549,8 +2549,20 @@
                   )
                 }, renderIcon(buildingOption.icon, "h-4 w-4"), buildingOption.label);
               }),
-              buildingFilter !== "all" && h("div", { className: "inline-flex items-center gap-2" },
-                h("span", { className: "text-slate-300 font-light mx-1" }, "|"),
+              buildingFilter !== "all" && h("div", { className: "inline-flex items-center gap-2" }, [
+                h("span", { key: "sep", className: "text-slate-300 font-light mx-1" }, "|"),
+                h("button", {
+                  key: "all-floors",
+                  type: "button",
+                  onClick: () => setFloorFilter("all"),
+                  className: cx(
+                    "rounded-full px-3 py-1.5 text-xs font-semibold transition shadow-sm",
+                    floorFilter === "all"
+                      ? "bg-slate-700 text-white"
+                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  )
+                }, "전층")
+              ].concat(
                 [...new Set((layoutState.data?.rooms || [])
                   .filter(r => r.building === buildingFilter)
                   .map(r => r.floor))]
@@ -2572,7 +2584,7 @@
                       )
                     }, `${floorNum}F`);
                   })
-              )
+              ))
             ),
             h("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" },
               h("div", { className: "grid flex-1 gap-3 md:grid-cols-3" },
