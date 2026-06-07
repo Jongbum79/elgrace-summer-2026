@@ -416,7 +416,7 @@
 
   function getRoomAssignmentLimit(room) {
     if (!room || room.unavailable || room.capacity <= 0) return 0;
-    return room.room_type === "ondol_4" && room.capacity === 4 ? 5 : room.capacity;
+    return room.capacity;
   }
 
   function shouldShowOccupancyDetails(room) {
@@ -548,18 +548,30 @@
     return { byRoom, orphaned };
   }
 
-  function scoreRoomForFamily(roomBucket, familySize) {
-    const available = getRoomAssignmentLimit(roomBucket.room) - roomBucket.headcount;
+  function scoreRoomForFamily(roomBucket, familySize, familyNights = [0, 1, 2]) {
+    const nightHeads = [0, 0, 0];
+    (roomBucket.families || []).forEach((f) => {
+      const fSize = getFamilyHeadcount(f);
+      const fNights = getFamilyStayNights(f);
+      fNights.forEach((n) => {
+        if (n >= 0 && n < 3) nightHeads[n] += fSize;
+      });
+    });
+    const nights = familyNights && familyNights.length > 0 ? familyNights : [0, 1, 2];
+    const maxOccupiedBefore = Math.max(...nights.map((n) => nightHeads[n] || 0));
+    const limit = getRoomAssignmentLimit(roomBucket.room);
+    const available = limit - maxOccupiedBefore;
     const remainingAfter = available - familySize;
     const isLargeRoom = (roomBucket.room.capacity >= 6 && familySize < 6) ? 1000 : 0;
+    const hasExisting = maxOccupiedBefore > 0 ? 0 : 1;
     return {
       available,
       remainingAfter,
       score: [
-        isLargeRoom, // Penalty to avoid 6+ person rooms if smaller ones are available
+        isLargeRoom,
         getRoomPreferenceTier(familySize, roomBucket.room.capacity),
         remainingAfter,
-        roomBucket.headcount > 0 ? 0 : 1,
+        hasExisting,
         roomBucket.room.capacity,
         roomBucket.room.buildingOrder || 0,
         roomBucket.room.floor || 0,
@@ -595,6 +607,7 @@
     const [roomTypeFilter, setRoomTypeFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
     const [familyStateFilter, setFamilyStateFilter] = useState("unassigned");
+    const [queueSizeFilter, setQueueSizeFilter] = useState("all");
     const [saving, setSaving] = useState(false);
     const [dragState, setDragState] = useState(null);
     const [dropRoomId, setDropRoomId] = useState(null);
@@ -761,6 +774,18 @@
           if (!family._queryMatch) return false;
           if (statusFilter !== "all" && family.status !== statusFilter) return false;
           if (familyStateFilter === "unassigned" && family._roomExists) return false;
+          if (queueSizeFilter !== "all") {
+            const size = family._size;
+            if (queueSizeFilter === "1") {
+              if (size !== 1) return false;
+            } else if (queueSizeFilter === "2") {
+              if (size !== 2) return false;
+            } else if (queueSizeFilter === "3-4") {
+              if (size < 3 || size > 4) return false;
+            } else if (queueSizeFilter === "5+") {
+              if (size < 5) return false;
+            }
+          }
           if (familyStateFilter === "assigned" && !family._roomExists) return false;
           if (familyStateFilter === "orphaned" && family._roomExists) return false;
           if (buildingFilter !== "all" && family._roomExists) {
@@ -789,7 +814,7 @@
           if (b._size !== a._size) return b._size - a._size;
           return normalizeText(a.name).localeCompare(normalizeText(b.name));
         });
-    }, [familiesList, draftToken, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, layoutState.data, refreshKey]);
+    }, [familiesList, draftToken, query, buildingFilter, floorFilter, roomTypeFilter, statusFilter, familyStateFilter, queueSizeFilter, layoutState.data, refreshKey]);
 
     const mobileUnassignedFamilies = useMemo(() => {
       return filteredFamilies
@@ -890,8 +915,9 @@
         })
         .filter((item) => canFamilyFitInRoom(selectedFamily, item.room, item.bucket?.families || []))
         .sort((a, b) => {
-          const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, headcount: 0 }, familySize).score;
-          const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, headcount: 0 }, familySize).score;
+          const familyNights = getFamilyStayNights(selectedFamily);
+          const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, families: [], headcount: 0 }, familySize, familyNights).score;
+          const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, families: [], headcount: 0 }, familySize, familyNights).score;
           for (let i = 0; i < scoreA.length; i += 1) {
             if (scoreA[i] !== scoreB[i]) return scoreA[i] - scoreB[i];
           }
@@ -1155,7 +1181,7 @@
           .filter((item) => !resolveRoom(layoutState.data, item.roomValue))
           .filter((item) => !["absent", "undecided"].includes(item.family.status))
           .sort((a, b) => {
-            if (b.size !== a.size) return b.size - a.size;
+            if (a.size !== b.size) return a.size - b.size;
             const statusOrder = { stay: 0, late: 1, leave: 2, absent: 3, undecided: 4 };
             if ((statusOrder[a.family.status] ?? 9) !== (statusOrder[b.family.status] ?? 9)) {
               return (statusOrder[a.family.status] ?? 9) - (statusOrder[b.family.status] ?? 9);
@@ -1178,8 +1204,9 @@
             })
             .filter((option) => canFamilyFitInRoom(item.family, option.room, option.bucket?.families || []))
             .sort((a, b) => {
-              const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, families: [], headcount: 0 }, item.size).score;
-              const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, families: [], headcount: 0 }, item.size).score;
+              const familyNights = getFamilyStayNights(item.family);
+              const scoreA = scoreRoomForFamily(a.bucket || { room: a.room, families: [], headcount: 0 }, item.size, familyNights).score;
+              const scoreB = scoreRoomForFamily(b.bucket || { room: b.room, families: [], headcount: 0 }, item.size, familyNights).score;
               for (let i = 0; i < scoreA.length; i += 1) {
                 if (scoreA[i] !== scoreB[i]) return scoreA[i] - scoreB[i];
               }
@@ -1504,14 +1531,8 @@
               h("h4", { className: "truncate text-sm font-semibold text-slate-950" }, familyDisplayName(family)),
               h("span", { className: cx("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", isAssigned ? "bg-slate-100 text-slate-600 ring-slate-200" : "bg-amber-50 text-amber-700 ring-amber-200") }, roomLabel)
             ),
-            h("div", { className: "mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-500" },
-              h("span", null, `형제 ${composition.brother}`),
-              h("span", { className: "text-slate-300" }, "|"),
-              h("span", null, `자매 ${composition.sister}`),
-              h("span", { className: "text-slate-300" }, "|"),
-              h("span", null, `자녀 ${composition.child}`),
-              h("span", { className: "text-slate-300" }, "|"),
-              h("span", null, `총 ${composition.total}명`)
+            h("div", { className: "mt-1 text-[10px] font-semibold text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis" },
+              `형제 ${composition.brother} · 자매 ${composition.sister} · 자녀 ${composition.child} · 총 ${composition.total}명`
             )
           )
         )
@@ -2297,7 +2318,29 @@
                     ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
                     : "border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
                 ),
-              }, renderIcon("rotate-ccw", "h-4 w-4"), "초안 초기화")
+              }, renderIcon("rotate-ccw", "h-4 w-4"), "초안 초기화"),
+              h("button", {
+                type: "button",
+                disabled: autoAssigning,
+                onClick: () => {
+                  if (!confirm("모든 방 배정(기존 배정 포함)을 전부 해제하시겠습니까? 저장하려면 완료 후 변경 저장을 클릭해야 합니다.")) return;
+                  const next = {};
+                  familiesList.forEach((family, index) => {
+                    const familyId = getFamilyId(family, index);
+                    next[familyId] = "미배정";
+                  });
+                  setDraftAssignments(next);
+                  setSelectedRoomId(null);
+                  setSelectedFamilyId(null);
+                  setToastHint("모든 방 배정을 해제했습니다.");
+                },
+                className: cx(
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition",
+                  autoAssigning
+                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                    : "border-rose-200 bg-white text-rose-600 hover:-translate-y-0.5 hover:bg-rose-50 hover:shadow-md"
+                ),
+              }, renderIcon("trash-2", "h-4 w-4"), "기존 배정 전체 초기화")
             )
           ),
           h("div", { className: "mt-5 grid gap-3 md:grid-cols-4 xl:grid-cols-7" },
@@ -2391,7 +2434,7 @@
             }, "가족 대기열")
           )
         ),
-        h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-cols-[minmax(0,1fr)_300px]" },
+        h("div", { className: "grid gap-5 px-5 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_290px] 2xl:grid-cols-[minmax(0,1fr)_340px]" },
           h("div", { className: cx("space-y-5", mobileTab === "rooms" ? "block" : "hidden lg:block") },
             h("div", { className: "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm" },
               h("div", { className: "flex items-center justify-between gap-3" },
@@ -2469,6 +2512,31 @@
               h("div", { className: "flex items-center justify-between" },
                 h("h3", { className: "text-lg font-semibold text-slate-900" }, "가족 대기열"),
                 h("span", { className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" }, `${filteredFamilies.length}가족`)
+              ),
+              h("div", { className: "flex flex-wrap gap-1 pb-1 border-b border-slate-100" },
+                [
+                  { key: "all", label: "전체" },
+                  { key: "1", label: "1인" },
+                  { key: "2", label: "2인" },
+                  { key: "3-4", label: "3~4인" },
+                  { key: "5+", label: "5인+" },
+                ].map((btn) => {
+                  const active = queueSizeFilter === btn.key;
+                  return h("button", {
+                    key: btn.key,
+                    type: "button",
+                    onClick: () => setQueueSizeFilter(btn.key),
+                    className: cx(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-200 border",
+                      active
+                        ? "bg-[#1e5a45] text-white border-[#1e5a45] shadow-sm"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                    )
+                  }, 
+                    btn.key === "all" ? renderIcon("filter", "h-3 w-3") : renderIcon("user", "h-3 w-3"),
+                    btn.label
+                  );
+                })
               ),
               h("div", { className: "space-y-2" },
                 filteredFamilies.length
