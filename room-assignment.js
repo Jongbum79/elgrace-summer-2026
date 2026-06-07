@@ -427,7 +427,7 @@
             key: family._familyId || family.id,
             className: cx("h-full transition-all duration-300 first:rounded-l-full last:rounded-r-full", colorClass),
             style: { width: `${widthPercent}%` },
-            title: `${family.name}: ${fSize}명`
+            title: `${familyDisplayName(family)}: ${fSize}명`
           });
         });
         
@@ -1611,7 +1611,7 @@
                     className: "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm cursor-grab active:cursor-grabbing touch-none",
                   },
                     h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45] shrink-0" }),
-                    h("span", { className: "whitespace-normal break-all text-left" }, family.name),
+                    h("span", { className: "whitespace-normal break-all text-left" }, familyDisplayName(family)),
                     h("span", { className: "text-slate-400 shrink-0" }, `(${family._size})`)
                   )
                 )
@@ -1883,7 +1883,7 @@
                   title: "다른 방으로 드래그",
                 },
                   h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45] shrink-0" }),
-                  h("span", { className: "whitespace-nowrap truncate text-left" }, family.name.replace(" 가족", ""))
+                  h("span", { className: "whitespace-nowrap truncate text-left" }, familyDisplayName(family).replace(" 가족", ""))
                 )
               )
             : h("span", { className: "rounded-full border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[10px] font-medium text-slate-400" }, "비어 있음")
@@ -2093,7 +2093,7 @@
                       type: "button",
                       onClick: () => updateAssignment(item.familyId, room),
                       className: "rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:-translate-y-0.5 hover:bg-emerald-100",
-                    }, `${item.family.name} · ${item.size}명`)
+                    }, `${familyDisplayName(item.family)} · ${item.size}명`)
                   )
                 )
               : h("div", { className: "mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500" }, "이 방에 더 들어올 수 있는 가족이 없습니다.")
@@ -2224,7 +2224,7 @@
                     setActiveTooltip({ family, rect: event.currentTarget.getBoundingClientRect() });
                   },
                   className: "max-w-full rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 whitespace-nowrap truncate text-left cursor-pointer",
-                }, family.name.replace(" 가족", ""))
+                }, familyDisplayName(family).replace(" 가족", ""))
               )
             : h("span", { className: "rounded-md border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-400" }, "비어 있음")
         ) : null
