@@ -114,7 +114,7 @@ const brotherGroupsData = [
   { id: "21조", leader: "이재민", members: ["김현명", "김상훈", "김성현", "김명식", "정현민"] },
   { id: "22조", leader: "김흥규", members: ["김상옥", "유성애", "김주선", "이근실", "이민강"] },
   { id: "23조", leader: "전영진", members: ["서정영", "이경하", "손영준"] },
-  { id: "목회자", leader: "박철진", members: ["유병호", "이호경", "류제성", "안영준"] },
+  { id: "목회자", leader: "박철진", members: ["유병호", "이호경", "류제성", "안영준", "민상현"] },
 ];
 
 const brotherStaffData = {
