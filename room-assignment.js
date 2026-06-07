@@ -724,10 +724,10 @@
         key: `${floor.building || "building"}-${floor.floor}`,
         className: "overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm",
       },
-      h("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" },
-        h("div", null,
-          h("h5", { className: "text-sm font-semibold uppercase tracking-[0.2em] text-slate-500" }, floor.label || `${floor.floor}층`),
-          h("p", { className: "mt-1 text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 정원 ${floorCapacity}명 · 현재 ${usedBeds}명`)
+      h("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" },
+        h("div", { className: "flex flex-wrap items-baseline gap-x-2.5 gap-y-1" },
+          h("h5", { className: "text-lg font-bold text-slate-900" }, floor.label || `${floor.floor}층`),
+          h("span", { className: "text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 정원 ${floorCapacity}명 · 현재 ${usedBeds}명`)
         ),
         h("div", { className: "flex flex-wrap gap-1.5" },
           ["single", "twin", "ondol_4", "6_person", "12_person", "unavailable"].map((type) => {
