@@ -183,6 +183,11 @@
     delete dbFamily.fee;
     delete dbFamily.feeStatus;
     delete dbFamily.room;
+    Object.keys(dbFamily).forEach((key) => {
+      if (key.startsWith("_")) {
+        delete dbFamily[key];
+      }
+    });
     return dbFamily;
   }
 
@@ -337,19 +342,37 @@
 
   function renderNightProgressBar(room, familiesInRoom) {
     const nightHeads = getRoomOccupancyByNight(room, familiesInRoom);
+    const FAMILY_COLORS = [
+      "bg-emerald-600",
+      "bg-indigo-500",
+      "bg-amber-500",
+      "bg-sky-500",
+      "bg-rose-500"
+    ];
     return h("div", { className: "mt-2.5 flex gap-1 w-full" },
       [0, 1, 2].map(nightIdx => {
         const nightHead = nightHeads[nightIdx];
-        const nightFill = room.capacity > 0 ? Math.min(100, Math.round((nightHead / room.capacity) * 100)) : 0;
+        const familiesOnNight = (familiesInRoom || []).filter(f => getFamilyStayNights(f).includes(nightIdx));
+        
+        const segments = familiesOnNight.map(family => {
+          const famIdx = (familiesInRoom || []).findIndex(f => (f._familyId || f.id) === (family._familyId || family.id));
+          const colorClass = FAMILY_COLORS[famIdx >= 0 ? famIdx % FAMILY_COLORS.length : 0];
+          const fSize = getFamilyHeadcount(family);
+          const widthPercent = room.capacity > 0 ? (fSize / room.capacity) * 100 : 0;
+          return h("div", {
+            key: family._familyId || family.id,
+            className: cx("h-full transition-all duration-300 first:rounded-l-full last:rounded-r-full", colorClass),
+            style: { width: `${widthPercent}%` },
+            title: `${family.name}: ${fSize}명`
+          });
+        });
+        
         return h("div", {
           key: nightIdx,
-          className: "h-2 flex-1 rounded-full bg-slate-100 ring-1 ring-slate-200/50 overflow-hidden relative",
+          className: "h-2 flex-1 rounded-full bg-slate-100 ring-1 ring-slate-200/50 overflow-hidden relative flex",
           title: `7월 ${27 + nightIdx}일 숙박: ${nightHead}/${room.capacity}명`
         },
-          h("div", {
-            className: cx("h-full rounded-full bg-emerald-600 transition-all duration-300"),
-            style: { width: `${nightFill}%` }
-          })
+          segments
         );
       })
     );
@@ -414,6 +437,21 @@
     return tier === -1 ? preferred.length : tier;
   }
 
+  function getFamilyEarliestArrival(family) {
+    if (!family || !Array.isArray(family.members) || family.members.length === 0) return new Date(9999, 11, 31);
+    let earliest = null;
+    family.members.forEach((member) => {
+      const dateStr = member[2];
+      if (dateStr) {
+        const d = typeof parseMemberDate === "function" ? parseMemberDate(dateStr) : new Date(dateStr);
+        if (d && d.getTime() > 0) {
+          if (!earliest || d < earliest) earliest = d;
+        }
+      }
+    });
+    return earliest || new Date(9999, 11, 31);
+  }
+
   function buildRoomFamilyMap(familiesList, draftAssignments, layoutIndex) {
     const byRoom = new Map();
     const orphaned = [];
@@ -454,16 +492,35 @@
       bucket.headcount += familySize;
     });
 
+    // Sort families in each bucket chronologically by stay nights and earliest arrival time
+    byRoom.forEach((bucket) => {
+      bucket.families.sort((a, b) => {
+        const nightsA = getFamilyStayNights(a);
+        const nightsB = getFamilyStayNights(b);
+        const minA = nightsA.length > 0 ? Math.min(...nightsA) : 999;
+        const minB = nightsB.length > 0 ? Math.min(...nightsB) : 999;
+        if (minA !== minB) return minA - minB;
+
+        const arrA = getFamilyEarliestArrival(a);
+        const arrB = getFamilyEarliestArrival(b);
+        if (arrA.getTime() !== arrB.getTime()) return arrA.getTime() - arrB.getTime();
+
+        return a.name.localeCompare(b.name);
+      });
+    });
+
     return { byRoom, orphaned };
   }
 
   function scoreRoomForFamily(roomBucket, familySize) {
     const available = getRoomAssignmentLimit(roomBucket.room) - roomBucket.headcount;
     const remainingAfter = available - familySize;
+    const isLargeRoom = (roomBucket.room.capacity >= 6 && familySize < 6) ? 1000 : 0;
     return {
       available,
       remainingAfter,
       score: [
+        isLargeRoom, // Penalty to avoid 6+ person rooms if smaller ones are available
         getRoomPreferenceTier(familySize, roomBucket.room.capacity),
         remainingAfter,
         roomBucket.headcount > 0 ? 0 : 1,
@@ -508,6 +565,7 @@
     const [toastHint, setToastHint] = useState("");
     const [autoAssigning, setAutoAssigning] = useState(false);
     const [autoAssignProgress, setAutoAssignProgress] = useState({ index: 0, total: 0, family: "", room: "" });
+    const [activeTooltip, setActiveTooltip] = useState(null); // { familyId, family, rect }
     const lastDropAtRef = useRef(0);
     const dragRef = useRef({
       active: false,
@@ -544,7 +602,18 @@
       return () => {
         cancelled = true;
       };
-    }, []);
+    }, [refreshKey]);
+
+    useEffect(() => {
+      if (!activeTooltip) return;
+      const handleGlobalClick = () => {
+        setActiveTooltip(null);
+      };
+      window.addEventListener("click", handleGlobalClick);
+      return () => {
+        window.removeEventListener("click", handleGlobalClick);
+      };
+    }, [activeTooltip]);
 
     useEffect(() => {
       if (!layoutState.data) return;
@@ -809,7 +878,7 @@
       }
     }
 
-    function startDrag(family, event) {
+    function startDrag(family, event, options = {}) {
       event.preventDefault();
       event.stopPropagation();
       dragRef.current = {
@@ -822,6 +891,9 @@
         x: event.clientX,
         y: event.clientY,
         didMove: false,
+        rect: event.currentTarget.getBoundingClientRect(),
+        familyObj: family,
+        enableTooltip: Boolean(options.enableTooltip),
       };
       setDragState({
         familyId: family._familyId,
@@ -839,32 +911,38 @@
     function finishDragAt(clientX, clientY) {
       const drag = dragRef.current;
       if (!drag.active) return;
-      const elements = document.elementsFromPoint(clientX, clientY);
-      const isDropQueue = elements.some((el) => el?.dataset?.dropQueue || el?.closest("[data-drop-queue]"));
-      if (isDropQueue) {
-        lastDropAtRef.current = Date.now();
-        const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
-        if (family) {
-          updateAssignment(drag.familyId, "미배정", { preserveView: true });
-          showToast(`${family.name}의 배정을 해제했습니다.`);
+      if (!drag.didMove) {
+        if (drag.enableTooltip) {
+          setActiveTooltip({ family: drag.familyObj, rect: drag.rect });
         }
       } else {
-        const roomElement = elements.find((element) => element?.dataset?.dropRoomId);
-        const roomId = roomElement?.dataset?.dropRoomId || null;
-        if (roomId && layoutState.data?.roomById.has(roomId)) {
+        const elements = document.elementsFromPoint(clientX, clientY);
+        const isDropQueue = elements.some((el) => el?.dataset?.dropQueue || el?.closest("[data-drop-queue]"));
+        if (isDropQueue) {
           lastDropAtRef.current = Date.now();
-          const room = layoutState.data.roomById.get(roomId);
           const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
           if (family) {
-            if (room.unavailable || room.capacity <= 0) {
-              showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
-            } else {
-              const bucket = roomBundle.byRoom.get(roomId);
-              if (!canFamilyFitInRoom(family, room, bucket?.families || [])) {
-                showToast(`${room.label}의 날짜별 정원을 초과합니다.`);
+            updateAssignment(drag.familyId, "미배정", { preserveView: true });
+            showToast(`${family.name}의 배정을 해제했습니다.`);
+          }
+        } else {
+          const roomElement = elements.find((element) => element?.dataset?.dropRoomId);
+          const roomId = roomElement?.dataset?.dropRoomId || null;
+          if (roomId && layoutState.data?.roomById.has(roomId)) {
+            lastDropAtRef.current = Date.now();
+            const room = layoutState.data.roomById.get(roomId);
+            const family = familiesList.find((item, index) => getFamilyId(item, index) === drag.familyId);
+            if (family) {
+              if (room.unavailable || room.capacity <= 0) {
+                showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
               } else {
-                updateAssignment(drag.familyId, room.label, { preserveView: true });
-                showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
+                const bucket = roomBundle.byRoom.get(roomId);
+                if (!canFamilyFitInRoom(family, room, bucket?.families || [])) {
+                  showToast(`${room.label}의 날짜별 정원을 초과합니다.`);
+                } else {
+                  updateAssignment(drag.familyId, room.label, { preserveView: true });
+                  showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
+                }
               }
             }
           }
@@ -973,10 +1051,12 @@
           if (error) throw error;
         }
 
-        changedFamilies.forEach(({ familyId, nextRoom }) => {
-          const globalIndex = familiesList.findIndex((family, index) => getFamilyId(family, index) === familyId);
-          if (globalIndex >= 0 && typeof families !== "undefined" && Array.isArray(families)) {
-            families[globalIndex].room = nextRoom;
+        changedFamilies.forEach(({ family, nextRoom }) => {
+          if (typeof families !== "undefined" && Array.isArray(families)) {
+            const globalIndex = families.findIndex((f) => f === family);
+            if (globalIndex >= 0) {
+              families[globalIndex].room = nextRoom;
+            }
           }
         });
 
@@ -1117,6 +1197,55 @@
       if (window.innerWidth < 1024) setMobileTab("families");
     }
 
+    function renderTooltip() {
+      if (!activeTooltip) return null;
+      const { family, rect } = activeTooltip;
+
+      let left = rect.left + rect.width / 2 - 160;
+      if (left < 10) left = 10;
+      if (left + 320 > window.innerWidth - 10) left = window.innerWidth - 330;
+
+      const tooltipStyle = {
+        position: "fixed",
+        zIndex: 100,
+        backgroundColor: "white",
+        border: "1px solid #cbd5e1",
+        borderRadius: "16px",
+        padding: "16px",
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+        width: "320px",
+        left: `${left}px`,
+        top: `${rect.top - 8}px`,
+        transform: "translateY(-100%)",
+      };
+
+      const htmlContent = typeof renderFamilyAttendance === "function" ? renderFamilyAttendance(family) : "";
+
+      return h("div", {
+        style: tooltipStyle,
+        className: "family-attendance-tooltip pointer-events-auto",
+        onClick: (e) => e.stopPropagation()
+      },
+        h("div", {
+          style: {
+            position: "absolute",
+            bottom: "-6px",
+            left: `${rect.left + rect.width / 2 - left}px`,
+            transform: "translateX(-50%) rotate(45deg)",
+            width: "12px",
+            height: "12px",
+            backgroundColor: "white",
+            borderRight: "1px solid #cbd5e1",
+            borderBottom: "1px solid #cbd5e1",
+          }
+        }),
+        h("div", {
+          className: "text-sm text-slate-700",
+          dangerouslySetInnerHTML: { __html: htmlContent }
+        })
+      );
+    }
+
     function renderSummaryChip(icon, label, value, tone) {
       return h(
         "div",
@@ -1186,11 +1315,9 @@
                   h("button", {
                     key: `${room.id}-${family._familyId}`,
                     type: "button",
-                    onClick: (event) => {
-                      event.stopPropagation();
-                      focusFamily(family._familyId);
-                    },
-                    className: "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm",
+                    onPointerDown: (event) => startDrag(family, event, { enableTooltip: true }),
+                    onClick: (event) => event.stopPropagation(),
+                    className: "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm cursor-grab active:cursor-grabbing touch-none",
                   },
                     h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45] shrink-0" }),
                     h("span", { className: "whitespace-normal break-all text-left" }, family.name),
@@ -1465,12 +1592,9 @@
             ? familiesInRoom.map((family) =>
                 h("span", {
                   key: `${room.id}-${family._familyId}`,
-                  onPointerDown: (event) => startDrag(family, event),
-                  onClick: (event) => {
-                    event.stopPropagation();
-                    focusFamily(family._familyId);
-                  },
-                  className: "inline-flex max-w-full touch-none items-center gap-1 rounded-full bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm",
+                  onPointerDown: (event) => startDrag(family, event, { enableTooltip: true }),
+                  onClick: (event) => event.stopPropagation(),
+                  className: "inline-flex max-w-full touch-none items-center gap-1 rounded-full bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-sm cursor-grab active:cursor-grabbing",
                   title: "다른 방으로 드래그",
                 },
                   h("span", { className: "h-1.5 w-1.5 rounded-full bg-[#1e5a45] shrink-0" }),
@@ -1802,7 +1926,11 @@
             ? familiesInRoom.map((family) =>
                 h("span", {
                   key: `${room.id}-${family._familyId}`,
-                  className: "max-w-full rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 whitespace-nowrap truncate text-left",
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    setActiveTooltip({ family, rect: event.currentTarget.getBoundingClientRect() });
+                  },
+                  className: "max-w-full rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 whitespace-nowrap truncate text-left cursor-pointer",
                 }, family.name.replace(" 가족", ""))
               )
             : h("span", { className: "rounded-md border border-dashed border-slate-200 bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-400" }, "비어 있음")
@@ -2263,7 +2391,7 @@
           h("div", {
             "data-drop-queue": "true",
             className: cx(
-              "lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-60px)] lg:overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm",
+              "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto",
               mobileTab !== "rooms" ? "block" : "hidden lg:block"
             )
           },
@@ -2326,7 +2454,8 @@
             },
             `${dragState.familyName} 드래그 중`
           )
-        : null
+        : null,
+      renderTooltip()
     ));
   }
 
