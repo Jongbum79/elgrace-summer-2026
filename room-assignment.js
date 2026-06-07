@@ -172,7 +172,7 @@
   function getFamilyComposition(family) {
     const counts = { brother: 0, sister: 0, child: 0, total: 0 };
     (family?.members || []).forEach((member) => {
-      if (!getMemberName(member)) return;
+      if (!getMemberName(member) || !isMemberAttending(member)) return;
       const role = getMemberRole(member);
       counts.total += 1;
       if (role === "성인 남성") counts.brother += 1;
