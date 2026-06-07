@@ -335,8 +335,36 @@
       .join("|");
   }
 
+  function isMemberAttending(member) {
+    if (!member) return false;
+    if (member[7] === "undecided") return false;
+    if (member[5] && Array.isArray(member[5]) && member[5].length > 0) return true;
+    if (member[2] && member[3]) return true;
+    return false;
+  }
+
   function familyDisplayName(family) {
-    return family?.name || "이름 없음";
+    if (!family) return "이름 없음";
+    const baseName = family.name || "";
+    
+    const hasFamilySuffix = baseName.endsWith("가족");
+    const cleanBaseName = hasFamilySuffix ? baseName.slice(0, -2).trim() : baseName.trim();
+    
+    const parts = cleanBaseName.split(",").map(p => p.trim()).filter(Boolean);
+    
+    if (parts.length > 1 && family.members && Array.isArray(family.members)) {
+      const attendingParts = parts.filter(name => {
+        const member = family.members.find(m => m && m[0] === name);
+        if (!member) return true;
+        return isMemberAttending(member);
+      });
+      
+      if (attendingParts.length > 0) {
+        return attendingParts.join(", ") + (hasFamilySuffix ? " 가족" : "");
+      }
+    }
+    
+    return baseName;
   }
 
   function familyLeader(family) {
