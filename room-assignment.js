@@ -1494,9 +1494,10 @@
       if (!activeTooltip) return null;
       const { family, rect } = activeTooltip;
 
-      let left = rect.left + rect.width / 2 - 160;
+      const tooltipWidth = Math.min(490, window.innerWidth - 20);
+      let left = rect.left + rect.width / 2 - tooltipWidth / 2;
       if (left < 10) left = 10;
-      if (left + 320 > window.innerWidth - 10) left = window.innerWidth - 330;
+      if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
 
       const tooltipStyle = {
         position: "fixed",
@@ -1506,7 +1507,7 @@
         borderRadius: "16px",
         padding: "16px",
         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-        width: "320px",
+        width: `${tooltipWidth}px`,
         left: `${left}px`,
         top: `${rect.top - 8}px`,
         transform: "translateY(-100%)",
