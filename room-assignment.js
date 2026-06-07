@@ -1905,27 +1905,31 @@
     function renderCorridorBand(floor, corridorServices, columnRange) {
       const isDongrak = floor.building === "동락홀";
       
+      const activeServices = isDongrak ? [] : corridorServices.filter((space) => {
+        const label = space.label?.replace(/\s+/g, "").trim();
+        return label && label !== "복도";
+      });
+
       return h(
         "div",
         {
-          className: "relative my-3 grid min-h-[52px] items-center rounded-[20px] border border-slate-200 bg-[linear-gradient(90deg,rgba(226,232,240,0.34),rgba(255,255,255,0.82),rgba(226,232,240,0.34))] px-3",
+          className: "relative my-3 grid min-h-[44px] items-center rounded-full border border-slate-200/80 bg-slate-100/70 px-4",
           style: { 
             gridTemplateColumns: isDongrak 
               ? `1fr` 
               : `repeat(${columnRange.span}, minmax(116px, 1fr))` 
           },
         },
-        h("div", { className: "pointer-events-none absolute inset-x-4 top-1/2 h-px bg-slate-300/70" }),
-        h("div", { className: "relative z-10 col-span-full mx-auto rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-500 shadow-sm" },
+        h("div", { className: "relative z-10 col-span-full mx-auto text-xs font-bold text-slate-500 uppercase tracking-wider" },
           `${floor.label || `${floor.floor}층`} 복도`
         ),
-        isDongrak ? null : corridorServices.map((space) => {
+        activeServices.map((space) => {
           const col = Math.max((space.column || columnRange.min) - columnRange.min + 1, 1);
           return h("span", {
             key: space.id || space.cell,
-            className: "relative z-20 justify-self-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200",
+            className: "relative z-20 justify-self-center rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 shadow-sm border border-slate-200",
             style: { gridColumn: `${col} / span 1` },
-          }, space.label?.replace(/\s+/g, " ") || "복도");
+          }, space.label.replace(/\s+/g, " "));
         })
       );
     }
