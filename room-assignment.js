@@ -694,7 +694,7 @@
               key: `${item.id || item.cell}-${s}`,
               onClick: handleClick,
               className: cx(
-                "h-5 w-5 shrink-0 border rounded transition cursor-pointer hover:scale-110 active:scale-95",
+                "h-3.5 w-3.5 shrink-0 border rounded-[3px] transition cursor-pointer hover:scale-110 active:scale-95",
                 colorClass
               ),
               title: isRoom ? `${item.label}: ${isOccupied ? "배정 완료" : "미배정"}` : item.label
@@ -705,7 +705,7 @@
 
       for (let i = 0; i < span; i++) {
         if (!cells[i]) {
-          cells[i] = h("div", { key: `empty-${i}`, className: "h-5 w-5 shrink-0 bg-transparent" });
+          cells[i] = h("div", { key: `empty-${i}`, className: "h-3.5 w-3.5 shrink-0 bg-transparent" });
         }
       }
 
@@ -739,14 +739,13 @@
         )
       ),
 
-      h("div", { className: "mt-3.5 relative rounded-2xl border border-slate-200/60 bg-slate-50/60 p-2.5 w-full max-w-sm sm:max-w-md shadow-sm select-none overflow-x-auto" },
-        h("div", { className: "text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider" }, "전체 방 배치 미니맵 (클릭 시 이동)"),
-        h("div", { className: "space-y-1 relative w-fit mx-auto px-1 py-2.5" },
+      h("div", { className: "mt-2.5 relative rounded-xl border border-slate-200/60 bg-slate-50/60 p-2 w-full max-w-sm shadow-sm select-none overflow-x-auto" },
+        h("div", { className: "space-y-0.5 relative w-fit mx-auto px-0.5 py-1.5" },
           renderMinimapRow(northItems),
-          h("div", { className: "h-[2px] bg-slate-200 rounded-full w-full my-1" }),
+          h("div", { className: "h-px bg-slate-200 w-full my-0.5" }),
           renderMinimapRow(southItems),
           h("div", {
-            className: "absolute -top-2 -bottom-2 border-[2.5px] border-rose-500 bg-transparent pointer-events-none rounded-md transition-all duration-75 shadow-sm",
+            className: "absolute -top-1.5 -bottom-1.5 border-[2px] border-rose-500 bg-transparent pointer-events-none rounded-md transition-all duration-75 shadow-sm",
             style: {
               left: `${viewportLeftPct}%`,
               width: `${viewportWidthPct}%`,
