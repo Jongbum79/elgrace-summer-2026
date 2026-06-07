@@ -902,10 +902,14 @@
 
     function updateAssignment(familyId, roomValue, options = {}) {
       let resolvedValue = roomValue;
-      if (roomValue && roomValue !== "미배정" && layoutState.data) {
-        const room = resolveRoom(layoutState.data, roomValue);
-        if (room) {
-          resolvedValue = `${room.building} ${room.label}`;
+      if (roomValue && roomValue !== "미배정") {
+        if (typeof roomValue === "object" && roomValue.building && roomValue.label) {
+          resolvedValue = `${roomValue.building} ${roomValue.label}`;
+        } else if (layoutState.data) {
+          const room = resolveRoom(layoutState.data, roomValue);
+          if (room) {
+            resolvedValue = `${room.building} ${room.label}`;
+          }
         }
       }
       setDraftAssignments((prev) => ({ ...prev, [familyId]: resolvedValue || "미배정" }));
@@ -984,7 +988,7 @@
                 if (!canFamilyFitInRoom(family, room, bucket?.families || [])) {
                   showToast(`${room.label}의 날짜별 정원을 초과합니다.`);
                 } else {
-                  updateAssignment(drag.familyId, room.label, { preserveView: true });
+                  updateAssignment(drag.familyId, room, { preserveView: true });
                   showToast(`${family.name} → ${room.label} 배정 초안을 적용했습니다.`);
                 }
               }
@@ -1193,7 +1197,7 @@
           setSelectedRoomId(chosen ? chosen.room.id : null);
 
           if (chosen) {
-            next[item.familyId] = chosen.room.label;
+            next[item.familyId] = `${chosen.room.building} ${chosen.room.label}`;
             const currentBucket = roomBuckets.get(chosen.room.id);
             currentBucket.headcount += item.size;
             currentBucket.families.push({
@@ -1451,7 +1455,7 @@
             onClick: (event) => {
               event.stopPropagation();
               setSelectedFamilyId(family._familyId);
-              if (selectedRoom) updateAssignment(family._familyId, selectedRoom.label);
+              if (selectedRoom) updateAssignment(family._familyId, selectedRoom);
               else showToast("먼저 배정할 방을 선택해 주세요.");
             },
             className: "rounded-full bg-[#1e5a45] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#184a39]",
@@ -1864,7 +1868,7 @@
                     h("button", {
                       key: item.familyId,
                       type: "button",
-                      onClick: () => updateAssignment(item.familyId, room.label),
+                      onClick: () => updateAssignment(item.familyId, room),
                       className: "rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:-translate-y-0.5 hover:bg-emerald-100",
                     }, `${item.family.name} · ${item.size}명`)
                   )
@@ -1911,7 +1915,7 @@
                   h("button", {
                     key: item.room.id,
                     type: "button",
-                    onClick: () => updateAssignment(selectedFamilyId, item.room.label),
+                    onClick: () => updateAssignment(selectedFamilyId, item.room),
                     className: "flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-sm",
                   },
                     h("div", null,
@@ -1940,7 +1944,7 @@
                 showToast("먼저 배정할 방을 선택해 주세요.");
                 return;
               }
-              updateAssignment(selectedFamilyId, selectedRoom.label);
+              updateAssignment(selectedFamilyId, selectedRoom);
             },
             className: "rounded-full bg-[#1e5a45] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[#184a39]",
           }, "선택한 방에 배정")
@@ -2040,7 +2044,7 @@
               showToast(`${selectedRoom.label} 정원을 초과합니다.`);
               return;
             }
-            updateAssignment(family._familyId, selectedRoom.label);
+            updateAssignment(family._familyId, selectedRoom);
           },
           className: "flex h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 active:scale-95",
         }, selectedRoom ? "넣기" : "선택")
