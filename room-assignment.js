@@ -2630,45 +2630,6 @@
                   )
                 )
               )
-            ),
-            h("div", { className: "rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm" },
-              h("div", { className: "flex items-center justify-between" },
-                h("div", null,
-                  h("h3", { className: "text-lg font-semibold text-slate-900" }, "미배정 · 인식불가 가족"),
-                  h("p", { className: "mt-1 text-sm text-slate-500" }, "방 번호가 없거나 레이아웃과 맞지 않는 경우 먼저 확인해야 합니다.")
-                ),
-                h("span", { className: "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700" }, `${roomBundle.orphaned.length}건`)
-              ),
-              roomBundle.orphaned.length
-                ? h("div", { className: "mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3" },
-                    roomBundle.orphaned.map((item) =>
-                      h("div", {
-                        key: item.familyId,
-                        className: "rounded-[24px] border border-amber-200 bg-amber-50/70 p-4",
-                      },
-                        h("div", { className: "flex items-start justify-between gap-3" },
-                          h("div", null,
-                            h("div", { className: "text-base font-semibold text-slate-900" }, item.family.name),
-                            h("div", { className: "mt-1 text-sm text-slate-500" }, `${item.family.leader || "대표 미상"} · ${item.familySize}명`)
-                          ),
-                          h("span", { className: "rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200" }, item.roomValue)
-                        ),
-                        h("div", { className: "mt-3 flex flex-wrap gap-2" },
-                          h("button", {
-                            type: "button",
-                            onClick: () => focusFamily(item.familyId),
-                            className: "rounded-full bg-[#1e5a45] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#184a39]",
-                          }, "가족 선택"),
-                          h("button", {
-                            type: "button",
-                            onClick: () => updateAssignment(item.familyId, "미배정"),
-                            className: "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50",
-                          }, "미배정으로 변경")
-                        )
-                      )
-                    )
-                  )
-                : h("div", { className: "mt-4 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-sm text-slate-500" }, "인식 오류가 있는 가족이 없습니다.")
             )
           ),
           h("div", {
