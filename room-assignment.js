@@ -739,7 +739,7 @@
         )
       ),
 
-      h("div", { className: "mt-2.5 relative rounded-xl border border-slate-200/60 bg-slate-50/60 p-2 w-full max-w-sm shadow-sm select-none overflow-x-auto" },
+      h("div", { className: "mt-2.5 relative rounded-xl border border-slate-200/60 bg-slate-50/60 p-2 w-fit shadow-sm select-none overflow-x-auto" },
         h("div", { className: "space-y-0.5 relative w-fit mx-auto px-0.5 py-1.5" },
           renderMinimapRow(northItems),
           h("div", { className: "h-px bg-slate-200 w-full my-0.5" }),

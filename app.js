@@ -1525,7 +1525,7 @@ function renderOrgChart(genderMode) {
     const isLeader = roleLabel ? "leader" : "";
     const regClass = att.status;
        
-    const showLabel = roleLabel && roleLabel !== "조장";
+    const showLabel = roleLabel && roleLabel !== "조장" && roleLabel !== "기타";
     
     // Check if this node matches the active filter
     const visible = matchesOrgFilter(name, orgActiveFilter, groupFilter);
@@ -1760,7 +1760,7 @@ function openGroupDetailDrawer(groupId, genderMode) {
     const att = getMemberAttendanceStatus(name, groupFilter);
     const isLeader = roleLabel ? "leader" : "";
     const regClass = att.status;
-    const showLabel = roleLabel && roleLabel !== "조장";
+    const showLabel = roleLabel && roleLabel !== "조장" && roleLabel !== "기타";
     
     return `
       <div class="org-${isLeader ? "leader" : "member"}-node ${btnClassPrefix}-member-btn ${isLeader} ${regClass}" data-name="${name}" style="width: 100%; max-width: 100%;">
