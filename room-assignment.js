@@ -90,9 +90,17 @@
     return String(member?.role || member?.group || member?.type || "").trim();
   }
 
+  function isMemberAttending(member) {
+    if (!member) return false;
+    if (member[7] === "undecided") return false;
+    if (member[5] && Array.isArray(member[5]) && member[5].length > 0) return true;
+    if (member[2] && member[3]) return true;
+    return false;
+  }
+
   function getFamilyHeadcount(family) {
     if (!family || !Array.isArray(family.members)) return 0;
-    return family.members.filter((member) => getMemberName(member)).length || 0;
+    return family.members.filter((member) => getMemberName(member) && isMemberAttending(member)).length || 0;
   }
 
   function getFamilyStayNights(family) {
@@ -335,13 +343,7 @@
       .join("|");
   }
 
-  function isMemberAttending(member) {
-    if (!member) return false;
-    if (member[7] === "undecided") return false;
-    if (member[5] && Array.isArray(member[5]) && member[5].length > 0) return true;
-    if (member[2] && member[3]) return true;
-    return false;
-  }
+
 
   function familyDisplayName(family) {
     if (!family) return "이름 없음";
