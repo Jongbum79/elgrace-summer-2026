@@ -2526,7 +2526,7 @@
             renderSummaryChip("triangle-alert", "객실 나눔 배정", `${roomStats.overRooms}개`, "text-slate-900"),
             renderSummaryChip("layout-dashboard", "배정률", `${roomStats.utilization}%`, "text-slate-900")
           ),
-          h("div", { className: "mt-5 space-y-4" },
+          h("div", { className: "mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" },
             h("div", { className: "flex flex-wrap items-center gap-2" },
               [
                 { key: "all", label: "전체 건물", icon: "layout-dashboard" },
@@ -2586,58 +2586,15 @@
                   })
               ))
             ),
-            h("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" },
-              h("div", { className: "grid flex-1 gap-3 md:grid-cols-3" },
-                h("label", { className: "flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm" },
-                  renderIcon("search", "h-4 w-4"),
-                  h("input", {
-                    value: query,
-                    onChange: (event) => setQuery(event.target.value),
-                    className: "w-full bg-transparent outline-none placeholder:text-slate-400",
-                    placeholder: "가족명, 대표자, 방 번호 검색",
-                  })
-                ),
-                h("select", {
-                  value: roomTypeFilter,
-                  onChange: (event) => setRoomTypeFilter(event.target.value),
-                  className: "rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none",
-                }, [
-                  h("option", { key: "all", value: "all" }, "모든 방 타입"),
-                  h("option", { key: "single", value: "single" }, "1인실"),
-                  h("option", { key: "twin", value: "twin" }, "2인실"),
-                  h("option", { key: "ondol_4", value: "ondol_4" }, "4인실 온돌"),
-                  h("option", { key: "6_person", value: "6_person" }, "6인실"),
-                  h("option", { key: "12_person", value: "12_person" }, "12인실"),
-                ]),
-                h("select", {
-                  value: statusFilter,
-                  onChange: (event) => setStatusFilter(event.target.value),
-                  className: "rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none",
-                }, [
-                  h("option", { key: "all", value: "all" }, "모든 상태"),
-                  h("option", { key: "stay", value: "stay" }, "입소 완료"),
-                  h("option", { key: "late", value: "late" }, "입소 예정"),
-                  h("option", { key: "leave", value: "leave" }, "퇴소 완료"),
-                  h("option", { key: "absent", value: "absent" }, "전체 불참"),
-                  h("option", { key: "undecided", value: "undecided" }, "미정"),
-                ])
-              ),
-              h("div", { className: "flex flex-wrap gap-2" },
-                h("button", {
-                  type: "button",
-                  onClick: () => setFamilyStateFilter("all"),
-                  className: cx("rounded-full px-3 py-2 text-sm font-semibold transition", familyStateFilter === "all" ? "bg-[#1e5a45] text-white" : "border border-slate-200 bg-white text-slate-600"),
-                }, "전체 가족"),
-                h("button", {
-                  type: "button",
-                  onClick: () => setFamilyStateFilter("unassigned"),
-                  className: cx("rounded-full px-3 py-2 text-sm font-semibold transition", familyStateFilter === "unassigned" ? "bg-[#1e5a45] text-white" : "border border-slate-200 bg-white text-slate-600"),
-                }, "미배정"),
-                h("button", {
-                  type: "button",
-                  onClick: () => setFamilyStateFilter("assigned"),
-                  className: cx("rounded-full px-3 py-2 text-sm font-semibold transition", familyStateFilter === "assigned" ? "bg-[#1e5a45] text-white" : "border border-slate-200 bg-white text-slate-600"),
-                }, "배정됨")
+            h("div", { className: "w-full lg:w-80" },
+              h("label", { className: "flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm" },
+                renderIcon("search", "h-4 w-4"),
+                h("input", {
+                  value: query,
+                  onChange: (event) => setQuery(event.target.value),
+                  className: "w-full bg-transparent outline-none placeholder:text-slate-400",
+                  placeholder: "가족명, 대표자, 방 번호 검색",
+                })
               )
             )
           ),
