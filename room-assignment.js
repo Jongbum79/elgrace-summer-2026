@@ -1490,11 +1490,33 @@
       if (window.innerWidth < 1024) setMobileTab("families");
     }
 
+    function hasDifferentSchedules(family) {
+      if (!family || !Array.isArray(family.members)) return false;
+      const attendingMembers = family.members.filter(member => {
+        if (!member) return false;
+        if (member[7] === "undecided") return false;
+        const periods = member[5] || [];
+        return periods.length > 0;
+      });
+      if (attendingMembers.length <= 1) return false;
+      const keys = new Set();
+      attendingMembers.forEach(member => {
+        const periods = member[5] || [];
+        const externalMeals = member[6] || [];
+        const key = `${periods.join("|")}::${externalMeals.join("|")}`;
+        keys.add(key);
+      });
+      return keys.size > 1;
+    }
+
     function renderTooltip() {
       if (!activeTooltip) return null;
       const { family, rect } = activeTooltip;
 
-      const tooltipWidth = Math.min(490, window.innerWidth - 20);
+      const isDiff = hasDifferentSchedules(family);
+      const maxWidth = isDiff ? 490 : 320;
+
+      const tooltipWidth = Math.min(maxWidth, window.innerWidth - 20);
       let left = rect.left + rect.width / 2 - tooltipWidth / 2;
       if (left < 10) left = 10;
       if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
