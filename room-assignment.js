@@ -694,11 +694,10 @@
               key: `${item.id || item.cell}-${s}`,
               onClick: handleClick,
               className: cx(
-                "h-3.5 border rounded-sm transition cursor-pointer hover:scale-105 active:scale-95",
+                "h-5 w-5 shrink-0 border rounded transition cursor-pointer hover:scale-110 active:scale-95",
                 colorClass
               ),
-              title: isRoom ? `${item.label}: ${isOccupied ? "배정 완료" : "미배정"}` : item.label,
-              style: { flex: "1 1 0%" }
+              title: isRoom ? `${item.label}: ${isOccupied ? "배정 완료" : "미배정"}` : item.label
             });
           }
         }
@@ -706,11 +705,11 @@
 
       for (let i = 0; i < span; i++) {
         if (!cells[i]) {
-          cells[i] = h("div", { key: `empty-${i}`, className: "h-3.5 bg-transparent", style: { flex: "1 1 0%" } });
+          cells[i] = h("div", { key: `empty-${i}`, className: "h-5 w-5 shrink-0 bg-transparent" });
         }
       }
 
-      return h("div", { className: "flex gap-1 w-full" }, cells);
+      return h("div", { className: "flex gap-1" }, cells);
     };
 
     const ratio = scrollInfo.scrollWidth > 0 ? scrollInfo.clientWidth / scrollInfo.scrollWidth : 0;
@@ -740,14 +739,14 @@
         )
       ),
 
-      h("div", { className: "mt-3.5 relative rounded-2xl border border-slate-200/60 bg-slate-50/60 p-2.5 w-full max-w-sm sm:max-w-md shadow-sm select-none" },
+      h("div", { className: "mt-3.5 relative rounded-2xl border border-slate-200/60 bg-slate-50/60 p-2.5 w-full max-w-sm sm:max-w-md shadow-sm select-none overflow-x-auto" },
         h("div", { className: "text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider" }, "전체 방 배치 미니맵 (클릭 시 이동)"),
-        h("div", { className: "space-y-1 relative" },
+        h("div", { className: "space-y-1 relative w-fit mx-auto px-1 py-2.5" },
           renderMinimapRow(northItems),
-          h("div", { className: "h-[2px] bg-slate-200 rounded-full w-full" }),
+          h("div", { className: "h-[2px] bg-slate-200 rounded-full w-full my-1" }),
           renderMinimapRow(southItems),
           h("div", {
-            className: "absolute -top-1 -bottom-1 border-2 border-rose-500 bg-rose-500/10 pointer-events-none rounded transition-all duration-75 shadow-sm",
+            className: "absolute -top-2 -bottom-2 border-[2.5px] border-rose-500 bg-transparent pointer-events-none rounded-md transition-all duration-75 shadow-sm",
             style: {
               left: `${viewportLeftPct}%`,
               width: `${viewportWidthPct}%`,
