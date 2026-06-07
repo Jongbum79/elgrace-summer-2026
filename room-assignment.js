@@ -580,6 +580,196 @@
     };
   }
 
+  function FloorPlanCard({
+    floor,
+    density,
+    roomBundle,
+    selectedRoomId,
+    setSelectedRoomId,
+    setSelectedFamilyId,
+    mobileTab,
+    setMobileTab,
+    dropRoomId,
+    dragState,
+    layoutIndex,
+    renderFloorRow,
+    renderCorridorBand,
+    splitFloorItems,
+    getFloorColumnRange,
+    groupServiceSpacesForRow,
+    sortByWorkbookPosition,
+    getRoomTypeTone,
+  }) {
+    const scrollContainerRef = useRef(null);
+    const [scrollInfo, setScrollInfo] = useState({ scrollLeft: 0, scrollWidth: 1, clientWidth: 1 });
+
+    const handleScroll = () => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        setScrollInfo({
+          scrollLeft: el.scrollLeft,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+        });
+      }
+    };
+
+    useEffect(() => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        handleScroll();
+        const resizeObserver = new ResizeObserver(() => {
+          handleScroll();
+        });
+        resizeObserver.observe(el);
+        return () => resizeObserver.disconnect();
+      }
+    }, []);
+
+    useEffect(() => {
+      const timer = setTimeout(handleScroll, 50);
+      return () => clearTimeout(timer);
+    }, [floor, density, roomBundle]);
+
+    const columnRange = getFloorColumnRange(floor);
+    const isDongrak = floor.building === "동락홀";
+    const planMinWidth = isDongrak 
+      ? (density === "compact" ? 430 : 660)
+      : Math.max(columnRange.span * (density === "compact" ? 86 : 118), density === "compact" ? 860 : 1320);
+    
+    const { northRooms, southRooms, northServices, southServices, corridorServices } = splitFloorItems(floor);
+    const northItems = northRooms.concat(groupServiceSpacesForRow(northServices)).sort(sortByWorkbookPosition);
+    const southItems = southRooms.concat(groupServiceSpacesForRow(southServices)).sort(sortByWorkbookPosition);
+    const floorCapacity = (floor.rooms || []).reduce((sum, room) => sum + (room.unavailable ? 0 : room.capacity || 0), 0);
+    const usedBeds = (floor.rooms || []).reduce((sum, room) => sum + getRoomMaxOccupancy(room, roomBundle.byRoom.get(room.id)?.families || []), 0);
+
+    const span = isDongrak ? Math.max(northItems.length, southItems.length) : columnRange.span;
+
+    const renderMinimapRow = (rowItems) => {
+      const cells = Array.from({ length: span });
+      rowItems.forEach((item, idx) => {
+        const col = isDongrak ? idx : Math.max((item.column || columnRange.min) - columnRange.min, 0);
+        const colSpan = isDongrak ? 1 : (item.column_span || 1);
+        
+        const isRoom = item.type !== "service_space" && item.type !== "service_stack";
+        let colorClass = "bg-slate-200 border-slate-300"; // Service
+        let isOccupied = false;
+        
+        if (isRoom) {
+          const bucket = roomBundle.byRoom.get(item.id);
+          const headCount = bucket?.headcount || 0;
+          isOccupied = headCount > 0;
+          if (item.unavailable || item.capacity <= 0) {
+            colorClass = "bg-slate-100 border-slate-200"; // Unavailable
+          } else if (isOccupied) {
+            const maxOcc = getRoomMaxOccupancy(item, bucket?.families || []);
+            const status = roomStatus(item, bucket?.families.length || 0, maxOcc);
+            if (status === "overflow") {
+              colorClass = "bg-rose-500 border-rose-600";
+            } else if (status === "full") {
+              colorClass = "bg-emerald-700 border-emerald-800";
+            } else {
+              colorClass = "bg-emerald-500 border-emerald-600";
+            }
+          } else {
+            colorClass = "bg-white border-slate-200"; // Empty room
+          }
+        }
+
+        const handleClick = () => {
+          const scrollContainer = scrollContainerRef.current;
+          if (scrollContainer) {
+            const scrollWidth = scrollContainer.scrollWidth;
+            const scrollLeftTarget = col * (scrollWidth / span);
+            scrollContainer.scrollTo({
+              left: scrollLeftTarget,
+              behavior: "smooth",
+            });
+          }
+        };
+
+        for (let s = 0; s < colSpan; s++) {
+          if (col + s < span) {
+            cells[col + s] = h("div", {
+              key: `${item.id || item.cell}-${s}`,
+              onClick: handleClick,
+              className: cx(
+                "h-3.5 border rounded-sm transition cursor-pointer hover:scale-105 active:scale-95",
+                colorClass
+              ),
+              title: isRoom ? `${item.label}: ${isOccupied ? "배정 완료" : "미배정"}` : item.label,
+              style: { flex: "1 1 0%" }
+            });
+          }
+        }
+      });
+
+      for (let i = 0; i < span; i++) {
+        if (!cells[i]) {
+          cells[i] = h("div", { key: `empty-${i}`, className: "h-3.5 bg-transparent", style: { flex: "1 1 0%" } });
+        }
+      }
+
+      return h("div", { className: "flex gap-1 w-full" }, cells);
+    };
+
+    const ratio = scrollInfo.scrollWidth > 0 ? scrollInfo.clientWidth / scrollInfo.scrollWidth : 0;
+    const offsetRatio = scrollInfo.scrollWidth > 0 ? scrollInfo.scrollLeft / scrollInfo.scrollWidth : 0;
+    
+    const viewportWidthPct = Math.min(ratio * 100, 100);
+    const viewportLeftPct = Math.min(offsetRatio * 100, 100 - viewportWidthPct);
+
+    return h(
+      "article",
+      {
+        key: `${floor.building || "building"}-${floor.floor}`,
+        className: "overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm",
+      },
+      h("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" },
+        h("div", null,
+          h("h5", { className: "text-sm font-semibold uppercase tracking-[0.2em] text-slate-500" }, floor.label || `${floor.floor}층`),
+          h("p", { className: "mt-1 text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 정원 ${floorCapacity}명 · 현재 ${usedBeds}명`)
+        ),
+        h("div", { className: "flex flex-wrap gap-1.5" },
+          ["single", "twin", "ondol_4", "6_person", "12_person", "unavailable"].map((type) => {
+            const count = (floor.rooms || []).filter((room) => room.room_type === type).length;
+            if (!count) return null;
+            const sample = (floor.rooms || []).find((room) => room.room_type === type);
+            return h("span", { key: type, className: cx("rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1", getRoomTypeTone(sample)) }, `${toRoomBadge(sample)} ${count}`);
+          })
+        )
+      ),
+
+      h("div", { className: "mt-3.5 relative rounded-2xl border border-slate-200/60 bg-slate-50/60 p-2.5 w-full max-w-sm sm:max-w-md shadow-sm select-none" },
+        h("div", { className: "text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider" }, "전체 방 배치 미니맵 (클릭 시 이동)"),
+        h("div", { className: "space-y-1 relative" },
+          renderMinimapRow(northItems),
+          h("div", { className: "h-[2px] bg-slate-200 rounded-full w-full" }),
+          renderMinimapRow(southItems),
+          h("div", {
+            className: "absolute -top-1 -bottom-1 border-2 border-rose-500 bg-rose-500/10 pointer-events-none rounded transition-all duration-75 shadow-sm",
+            style: {
+              left: `${viewportLeftPct}%`,
+              width: `${viewportWidthPct}%`,
+            }
+          })
+        )
+      ),
+
+      h("div", {
+        ref: scrollContainerRef,
+        onScroll: handleScroll,
+        className: "mt-4 overflow-x-auto rounded-[24px] border border-slate-100 bg-slate-50/70 p-4"
+      },
+        h("div", { className: "space-y-2", style: { minWidth: `${planMinWidth}px` } },
+          renderFloorRow(northItems, columnRange, `${floor.floor}-north`, density),
+          renderCorridorBand(floor, corridorServices, columnRange),
+          renderFloorRow(southItems, columnRange, `${floor.floor}-south`, density)
+        )
+      )
+    );
+  }
+
   function renderIcon(name, className = "h-4 w-4") {
     return h("span", {
       className: "inline-flex items-center justify-center shrink-0",
@@ -1743,45 +1933,27 @@
     }
 
     function renderFloorPlan(floor, density = "desktop") {
-      const columnRange = getFloorColumnRange(floor);
-      const isDongrak = floor.building === "동락홀";
-      const planMinWidth = isDongrak 
-        ? (density === "compact" ? 430 : 660)
-        : Math.max(columnRange.span * (density === "compact" ? 86 : 118), density === "compact" ? 860 : 1320);
-      const { northRooms, southRooms, northServices, southServices, corridorServices } = splitFloorItems(floor);
-      const northItems = northRooms.concat(groupServiceSpacesForRow(northServices)).sort(sortByWorkbookPosition);
-      const southItems = southRooms.concat(groupServiceSpacesForRow(southServices)).sort(sortByWorkbookPosition);
-      const floorCapacity = (floor.rooms || []).reduce((sum, room) => sum + (room.unavailable ? 0 : room.capacity || 0), 0);
-      const usedBeds = (floor.rooms || []).reduce((sum, room) => sum + getRoomMaxOccupancy(room, roomBundle.byRoom.get(room.id)?.families || []), 0);
-
-      return h(
-        "article",
-        {
-          key: `${floor.building || "building"}-${floor.floor}`,
-          className: "overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm",
-        },
-        h("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" },
-          h("div", null,
-            h("h5", { className: "text-sm font-semibold uppercase tracking-[0.2em] text-slate-500" }, floor.label || `${floor.floor}층`),
-            h("p", { className: "mt-1 text-sm text-slate-500" }, `${floor.rooms.length}개 방 · 정원 ${floorCapacity}명 · 현재 ${usedBeds}명`)
-          ),
-          h("div", { className: "flex flex-wrap gap-1.5" },
-            ["single", "twin", "ondol_4", "6_person", "12_person", "unavailable"].map((type) => {
-              const count = (floor.rooms || []).filter((room) => room.room_type === type).length;
-              if (!count) return null;
-              const sample = (floor.rooms || []).find((room) => room.room_type === type);
-              return h("span", { key: type, className: cx("rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1", getRoomTypeTone(sample)) }, `${toRoomBadge(sample)} ${count}`);
-            })
-          )
-        ),
-        h("div", { className: "mt-4 overflow-x-auto rounded-[24px] border border-slate-100 bg-slate-50/70 p-4" },
-          h("div", { className: "space-y-2", style: { minWidth: `${planMinWidth}px` } },
-            renderFloorRow(northItems, columnRange, `${floor.floor}-north`, density),
-            renderCorridorBand(floor, corridorServices, columnRange),
-            renderFloorRow(southItems, columnRange, `${floor.floor}-south`, density)
-          )
-        )
-      );
+      return h(FloorPlanCard, {
+        key: `${floor.building || "building"}-${floor.floor}`,
+        floor,
+        density,
+        roomBundle,
+        selectedRoomId,
+        setSelectedRoomId,
+        setSelectedFamilyId,
+        mobileTab,
+        setMobileTab,
+        dropRoomId,
+        dragState,
+        layoutIndex: layoutState.data,
+        renderFloorRow,
+        renderCorridorBand,
+        splitFloorItems,
+        getFloorColumnRange,
+        groupServiceSpacesForRow,
+        sortByWorkbookPosition,
+        getRoomTypeTone,
+      });
     }
 
     function renderInspector() {
