@@ -1512,6 +1512,7 @@
     function renderTooltip() {
       if (!activeTooltip) return null;
       const { family, rect } = activeTooltip;
+      const comp = getFamilyComposition(family);
 
       const isDiff = hasDifferentSchedules(family);
       const maxWidth = isDiff ? 490 : 320;
@@ -1558,7 +1559,10 @@
         h("div", {
           className: "text-sm text-slate-700",
           dangerouslySetInnerHTML: { __html: htmlContent }
-        })
+        }),
+        h("div", { className: "mt-2 pt-2 border-t border-slate-100 text-xs font-semibold text-slate-500 text-center" },
+          `형제 ${comp.brother}명 | 자매 ${comp.sister}명 | 자녀 ${comp.child}명 | 총 ${comp.total}명`
+        )
       );
     }
 
