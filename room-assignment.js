@@ -1327,27 +1327,49 @@
           return;
         }
 
+        // 1. Build nextFamilies list with new room assignments
         const nextFamilies = familiesList.map((family, index) => {
           const familyId = getFamilyId(family, index);
           const changed = changedFamilies.find((item) => item.familyId === familyId);
-          if (!changed) return family;
+          const nextRoom = changed ? changed.nextRoom : family.room;
           return {
             ...family,
-            room: changed.nextRoom,
+            room: nextRoom,
           };
         });
 
-        if (typeof supabaseClient !== "undefined" && supabaseClient) {
-          const payload = changedFamilies.map(({ family, nextRoom }) => createDbFamily({ ...family, room: nextRoom }));
+        // 2. Recalculate fees for all families in nextFamilies using window.calculateFamilyFee
+        const updatedFamilies = nextFamilies.map(f => {
+          if (window.calculateFamilyFee) {
+            const feeResult = window.calculateFamilyFee(f, nextFamilies);
+            const fee = typeof feeResult === "object" ? feeResult.total : feeResult;
+            return {
+              ...f,
+              fee: fee
+            };
+          }
+          return f;
+        });
+
+        // 3. Find families whose room OR fee has changed
+        const familiesToUpdate = updatedFamilies.filter((f, idx) => {
+          const original = familiesList[idx];
+          return f.room !== original.room || f.fee !== original.fee;
+        });
+
+        if (typeof supabaseClient !== "undefined" && supabaseClient && familiesToUpdate.length > 0) {
+          const payload = familiesToUpdate.map(family => createDbFamily(family));
           const { error } = await supabaseClient.from("families").upsert(payload);
           if (error) throw error;
         }
 
-        changedFamilies.forEach(({ family, nextRoom }) => {
+        // 4. Update the global families array with new rooms and fees
+        familiesToUpdate.forEach(updatedFamily => {
           if (typeof families !== "undefined" && Array.isArray(families)) {
-            const globalIndex = families.findIndex((f) => f === family);
+            const globalIndex = families.findIndex((f) => f.id === updatedFamily.id);
             if (globalIndex >= 0) {
-              families[globalIndex].room = nextRoom;
+              families[globalIndex].room = updatedFamily.room;
+              families[globalIndex].fee = updatedFamily.fee;
             }
           }
         });
@@ -1358,7 +1380,7 @@
         setSelectedFamilyId(null);
         setToastHint("방 배정이 저장되었습니다.");
         if (typeof renderAll === "function") renderAll();
-        showToast(`방 배정 ${changedFamilies.length}건을 저장했습니다.`);
+        showToast(`방 배정 및 회비 변경사항 ${familiesToUpdate.length}건을 저장했습니다.`);
       } catch (error) {
         console.error("방 배정 저장 실패:", error);
         showToast("방 배정을 저장하지 못했습니다.");

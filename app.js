@@ -47,6 +47,7 @@ const SUPABASE_KEY = "sb_publishable_syIASoSn0ogksocj5Pnpvg_DupHv4cG";
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 let families = [];
+let globalRoomLayout = null;
 let currentOrgMode = "family";
 let currentPageView = "attendance";
 let orgActiveFilter = "all";
@@ -169,6 +170,248 @@ function buildRetreatDates(startText, endText) {
   }
   return dates;
 }
+
+function normalizeRoomValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "미배정") return "";
+  
+  let buildingPrefix = "";
+  if (raw.includes("휴락동")) {
+    buildingPrefix = "휴락동 ";
+  } else if (raw.includes("동락홀")) {
+    buildingPrefix = "동락홀 ";
+  }
+  
+  const digitMatch = raw.match(/(\d{3})/);
+  if (digitMatch) {
+    return `${buildingPrefix}${digitMatch[1]}호`;
+  }
+  return raw;
+}
+
+function getRoomMetadata(roomValue) {
+  if (!globalRoomLayout) return null;
+  const normalized = normalizeRoomValue(roomValue);
+  if (!normalized) return null;
+  return globalRoomLayout.get(normalized) || null;
+}
+
+async function loadRoomLayout() {
+  try {
+    const res = await fetch("./assets/building_structure.json");
+    if (!res.ok) throw new Error("building_structure.json을 불러오지 못했습니다.");
+    const data = await res.json();
+    const roomByLabel = new Map();
+    if (data && Array.isArray(data.buildings)) {
+      data.buildings.forEach(building => {
+        if (Array.isArray(building.floors)) {
+          building.floors.forEach(floor => {
+            if (Array.isArray(floor.rooms)) {
+              floor.rooms.forEach(room => {
+                const plainLabel = normalizeRoomValue(room.room_label);
+                const prefixedLabel = normalizeRoomValue(`${room.building} ${room.room_label}`);
+                const numberLabel = normalizeRoomValue(`${room.building} ${room.room_number}`);
+                const numberLabelHo = normalizeRoomValue(`${room.building} ${room.room_number}호`);
+                
+                roomByLabel.set(prefixedLabel, room);
+                if (!roomByLabel.has(plainLabel)) {
+                  roomByLabel.set(plainLabel, room);
+                }
+                roomByLabel.set(numberLabel, room);
+                roomByLabel.set(numberLabelHo, room);
+              });
+            }
+          });
+        }
+      });
+    }
+    globalRoomLayout = roomByLabel;
+  } catch (e) {
+    console.error("방 레이아웃 로드 에러:", e);
+  }
+}
+
+window.calculateFamilyFee = function(family, allFamilies) {
+  const members = family.members || [];
+  const attendingMembers = members.filter(m => {
+    const isUndecided = m[7] === "undecided";
+    const segs = m[5] || [];
+    return !isUndecided && segs.length > 0;
+  });
+  
+  const numMembers = attendingMembers.length;
+  if (numMembers === 0) {
+    return {
+      total: 0,
+      sharedFee: 0,
+      lodgingCost: 0,
+      mealCost: 0,
+      snackCost: 0,
+      roomLabel: "없음",
+      roomRate: 0,
+      nights: 0,
+      details: {
+        adultBreakfast: 0,
+        adultLunchDinner: 0,
+        childBreakfast: 0,
+        childLunchDinner: 0,
+        preschoolBreakfast: 0,
+        preschoolLunchDinner: 0
+      }
+    };
+  }
+  
+  const roomValue = family.room || "미배정";
+  const normalizedRoom = normalizeRoomValue(roomValue);
+  const roomMeta = normalizedRoom ? getRoomMetadata(normalizedRoom) : null;
+  const capacity = roomMeta ? roomMeta.capacity : numMembers;
+  
+  let roomLabel = "없음";
+  let baseRoomRate = 88000;
+  if (capacity === 1) {
+    roomLabel = "1인실";
+  } else if (capacity === 2) {
+    roomLabel = "2인실";
+  } else if (capacity === 4) {
+    roomLabel = "4인실";
+  } else if (capacity === 6) {
+    roomLabel = "6인실";
+    baseRoomRate = 98000;
+  } else if (capacity >= 12) {
+    roomLabel = "12인실";
+    baseRoomRate = 200000;
+  } else {
+    roomLabel = `${capacity}인실`;
+  }
+  
+  if (!normalizedRoom) {
+    // Unassigned, use base rate based on family size (default room mapping)
+    if (numMembers === 1) roomLabel = "1인실";
+    else if (numMembers === 2) roomLabel = "2인실";
+    else if (numMembers >= 3 && numMembers <= 4) roomLabel = "4인실";
+    else if (numMembers >= 5 && numMembers <= 6) roomLabel = "6인실";
+    else if (numMembers >= 7) roomLabel = "12인실";
+  }
+  
+  let lodgingCost = 0;
+  let totalNights = 0;
+  
+  for (let d = 0; d < dateLabels.length - 1; d++) {
+    const dayLabel = dateLabels[d];
+    const nextDayLabel = dateLabels[d+1];
+    
+    // Check if family stays overnight
+    const staysOvernight = attendingMembers.some(m => {
+      const segs = m[5] || [];
+      return segs.includes(`${dayLabel}-dinner`) && segs.includes(`${nextDayLabel}-breakfast`);
+    });
+    
+    if (staysOvernight) {
+      totalNights++;
+      if (!normalizedRoom) {
+        // Unassigned, use base rate based on family size
+        let unassignedRate = 88000;
+        if (numMembers >= 5 && numMembers <= 6) unassignedRate = 98000;
+        else if (numMembers >= 7) unassignedRate = 200000;
+        lodgingCost += unassignedRate;
+      } else {
+        // Assigned to room, check sharing count
+        let sharingCount = 1;
+        (allFamilies || []).forEach(f => {
+          if (f.id === family.id) return;
+          if (f.status === "absent" || f.status === "undecided") return;
+          if (normalizeRoomValue(f.room) !== normalizedRoom) return;
+          
+          const fOvernight = f.members && f.members.some(m => {
+            const isUndecided = m[7] === "undecided";
+            if (isUndecided) return false;
+            const segs = m[5] || [];
+            return segs.includes(`${dayLabel}-dinner`) && segs.includes(`${nextDayLabel}-breakfast`);
+          });
+          
+          if (fOvernight) {
+            sharingCount++;
+          }
+        });
+        
+        lodgingCost += baseRoomRate / sharingCount;
+      }
+    }
+  }
+  
+  let adultBreakfast = 0;
+  let adultLunchDinner = 0;
+  let childBreakfast = 0;
+  let childLunchDinner = 0;
+  let preschoolBreakfast = 0;
+  let preschoolLunchDinner = 0;
+  let snackCost = 0;
+  
+  attendingMembers.forEach(m => {
+    const group = m[1];
+    let type = "adult";
+    if (["유치부", "유아"].includes(group)) {
+      type = "preschool";
+    } else if (["초등부", "유년부"].includes(group)) {
+      type = "child";
+    }
+    
+    const segs = m[5] || [];
+    const externalSegs = m[6] || [];
+    segs.forEach(seg => {
+      if (!externalSegs.includes(seg)) {
+        const parts = seg.split("-");
+        if (parts.length >= 2) {
+          const period = parts[1];
+          if (type === "adult") {
+            if (period === "breakfast") adultBreakfast++;
+            else if (period === "lunch" || period === "dinner") adultLunchDinner++;
+          } else if (type === "child") {
+            if (period === "breakfast") childBreakfast++;
+            else if (period === "lunch" || period === "dinner") childLunchDinner++;
+          } else if (type === "preschool") {
+            if (period === "breakfast") preschoolBreakfast++;
+            else if (period === "lunch" || period === "dinner") preschoolLunchDinner++;
+          }
+        }
+      }
+    });
+    
+    const selectedDays = [...new Set(segs.map(seg => {
+      const parts = seg.split("-");
+      return parts.length > 0 ? dateLabels.indexOf(parts[0]) : -1;
+    }))];
+    const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
+    snackCost += snackDays * 3000;
+  });
+  
+  const mealCost = 
+    (adultBreakfast * 3000 + adultLunchDinner * 10000) +
+    (childBreakfast * 3000 + childLunchDinner * 9000) +
+    (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
+    
+  const sharedFee = numMembers > 0 ? 10000 : 0;
+  const total = sharedFee + lodgingCost + mealCost + snackCost;
+  
+  return {
+    total,
+    sharedFee,
+    lodgingCost,
+    mealCost,
+    snackCost,
+    roomLabel,
+    roomRate: baseRoomRate,
+    nights: totalNights,
+    details: {
+      adultBreakfast,
+      adultLunchDinner,
+      childBreakfast,
+      childLunchDinner,
+      preschoolBreakfast,
+      preschoolLunchDinner
+    }
+  };
+};
 
 async function loadRetreatConfig() {
   const response = await fetch("./retreat-config.md", { cache: "no-store" });
@@ -2219,93 +2462,53 @@ function updateEstimatedFee() {
   });
   const numMembers = attendingRows.length;
   
-  let roomLabel = "없음";
-  let roomRate = 0;
-  if (numMembers === 1) {
-    roomLabel = "1인실";
-    roomRate = 88000;
-  } else if (numMembers === 2) {
-    roomLabel = "2인실";
-    roomRate = 88000;
-  } else if (numMembers >= 3 && numMembers <= 4) {
-    roomLabel = "4인실";
-    roomRate = 88000;
-  } else if (numMembers >= 5 && numMembers <= 6) {
-    roomLabel = "6인실";
-    roomRate = 98000;
-  } else if (numMembers >= 7) {
-    roomLabel = "12인실";
-    roomRate = 200000;
-  }
+  const roomValue = document.querySelector("#newFamilyRoomLabel")?.textContent.trim() || "미배정";
   
-  let nights = 0;
-  for (let d = 0; d < dateLabels.length - 1; d++) {
-    const dayLabel = dateLabels[d];
-    const nextDayLabel = dateLabels[d+1];
-    const hasOvernightMember = attendingRows.some(row => {
-      const selectedSegs = [...row.querySelectorAll(".attendance-segment.selected")].map(seg => 
-        `${dateLabels[Number(seg.dataset.day)]}-${seg.dataset.period}`
-      );
-      return selectedSegs.includes(`${dayLabel}-dinner`) && selectedSegs.includes(`${nextDayLabel}-breakfast`);
-    });
-    if (hasOvernightMember) {
-      nights++;
-    }
-  }
-  
-  let adultBreakfast = 0;
-  let adultLunchDinner = 0;
-  
-  let childBreakfast = 0;
-  let childLunchDinner = 0;
-  
-  let preschoolBreakfast = 0;
-  let preschoolLunchDinner = 0;
-  
-  let snackCost = 0;
-  
-  attendingRows.forEach((row) => {
-    const groupSelect = row.querySelector(".new-member-group");
-    if (!groupSelect) return;
-    const group = groupSelect.value;
+  // Construct temporary members list
+  const tempMembers = [];
+  rows.forEach(row => {
+    const name = row.querySelector(".new-member-name").value.trim();
+    if (!name) return;
+    const group = row.querySelector(".new-member-group").value;
+    const selectedSegments = [...row.querySelectorAll(".attendance-segment.selected")];
+    const externalMealSegments = [...row.querySelectorAll(".attendance-segment.external-meal")];
+    const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active") ? "undecided" : "";
     
-    let type = "adult";
-    if (["유치부", "유아"].includes(group)) {
-      type = "preschool";
-    } else if (["초등부", "유년부"].includes(group)) {
-      type = "child";
-    }
-    
-    const segments = [...row.querySelectorAll(".attendance-segment.selected")];
-    segments.forEach((seg) => {
-      if (!seg.classList.contains("external-meal")) {
-        const period = seg.dataset.period;
-        if (type === "adult") {
-          if (period === "breakfast") adultBreakfast++;
-          else if (period === "lunch" || period === "dinner") adultLunchDinner++;
-        } else if (type === "child") {
-          if (period === "breakfast") childBreakfast++;
-          else if (period === "lunch" || period === "dinner") childLunchDinner++;
-        } else if (type === "preschool") {
-          if (period === "breakfast") preschoolBreakfast++;
-          else if (period === "lunch" || period === "dinner") preschoolLunchDinner++;
-        }
-      }
-    });
-
-    const selectedDays = [...new Set(segments.map(seg => Number(seg.dataset.day)))];
-    const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
-    snackCost += snackDays * 3000;
+    tempMembers.push([
+      name,
+      group,
+      "",
+      "",
+      [],
+      selectedSegments.map(btn => `${dateLabels[Number(btn.dataset.day)]}-${btn.dataset.period}`),
+      externalMealSegments.map(btn => `${dateLabels[Number(btn.dataset.day)]}-${btn.dataset.period}`),
+      isUndecided
+    ]);
   });
   
-  const lodgingCost = roomRate * nights;
-  const mealCost = 
-    (adultBreakfast * 3000 + adultLunchDinner * 10000) +
-    (childBreakfast * 3000 + childLunchDinner * 9000) +
-    (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
+  const tempFamily = {
+    id: editingFamilyId,
+    room: roomValue,
+    members: tempMembers
+  };
   
-  const sharedFee = numMembers > 0 ? 10000 : 0;
-  const totalCost = sharedFee + lodgingCost + mealCost + snackCost;
+  const feeResult = window.calculateFamilyFee(tempFamily, families);
+  
+  const totalCost = feeResult.total;
+  const sharedFee = feeResult.sharedFee;
+  const lodgingCost = feeResult.lodgingCost;
+  const mealCost = feeResult.mealCost;
+  const snackCost = feeResult.snackCost;
+  const roomLabel = feeResult.roomLabel;
+  const roomRate = feeResult.roomRate;
+  const nights = feeResult.nights;
+  
+  const adultBreakfast = feeResult.details.adultBreakfast;
+  const adultLunchDinner = feeResult.details.adultLunchDinner;
+  const childBreakfast = feeResult.details.childBreakfast;
+  const childLunchDinner = feeResult.details.childLunchDinner;
+  const preschoolBreakfast = feeResult.details.preschoolBreakfast;
+  const preschoolLunchDinner = feeResult.details.preschoolLunchDinner;
   
   const label = document.querySelector("#estimatedFeeLabel");
   const detail = document.querySelector("#estimatedFeeDetail");
@@ -2315,6 +2518,9 @@ function updateEstimatedFee() {
     const lunchCount = attendingRows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "lunch" && !seg.classList.contains("external-meal")).length, 0);
     const dinnerCount = attendingRows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "dinner" && !seg.classList.contains("external-meal")).length, 0);
     
+    const isLodgingShared = lodgingCost < (nights * roomRate);
+    const sharingNotice = isLodgingShared ? `<span style="color: #ef4444; font-weight: 700; margin-left: 8px;">(방나누기 할인 적용됨)</span>` : "";
+
     detail.innerHTML = `
       <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
         <span>🛏️ 총 숙박수: ${nights}박</span>
@@ -2323,7 +2529,7 @@ function updateEstimatedFee() {
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>공동부담금: ${sharedFee.toLocaleString()}원</div>
-        <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
+        <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
         <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 마지막날 제외)</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
@@ -2418,94 +2624,17 @@ function getFamilyFromForm(existingFamily = null) {
   }
   
   const status = document.querySelector("#newFamilyStatus").value;
-  
-  // Calculate total fee again to save it in DB
-  const attendingRows = enteredRows.filter(row => {
-    const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active");
-    return !isUndecided && row.querySelectorAll(".attendance-segment.selected").length > 0;
-  });
-  const numMembers = attendingRows.length;
-  let roomRate = 0;
-  if (numMembers === 1) {
-    roomRate = 88000;
-  } else if (numMembers === 2) {
-    roomRate = 88000;
-  } else if (numMembers >= 3 && numMembers <= 4) {
-    roomRate = 88000;
-  } else if (numMembers >= 5 && numMembers <= 6) {
-    roomRate = 98000;
-  } else if (numMembers >= 7) {
-    roomRate = 200000;
-  }
-  
-  let nights = 0;
-  for (let d = 0; d < dateLabels.length - 1; d++) {
-    const dayLabel = dateLabels[d];
-    const nextDayLabel = dateLabels[d+1];
-    const hasOvernightMember = attendingRows.some(row => {
-      const selectedSegs = [...row.querySelectorAll(".attendance-segment.selected")].map(seg => 
-        `${dateLabels[Number(seg.dataset.day)]}-${seg.dataset.period}`
-      );
-      return selectedSegs.includes(`${dayLabel}-dinner`) && selectedSegs.includes(`${nextDayLabel}-breakfast`);
-    });
-    if (hasOvernightMember) {
-      nights++;
-    }
-  }
-
-  let adultBreakfast = 0;
-  let adultLunchDinner = 0;
-  let childBreakfast = 0;
-  let childLunchDinner = 0;
-  let preschoolBreakfast = 0;
-  let preschoolLunchDinner = 0;
-  let snackCost = 0;
-
-  attendingRows.forEach((row) => {
-    const groupSelect = row.querySelector(".new-member-group");
-    if (!groupSelect) return;
-    const group = groupSelect.value;
-    
-    let type = "adult";
-    if (["유치부", "유아"].includes(group)) {
-      type = "preschool";
-    } else if (["초등부", "유년부"].includes(group)) {
-      type = "child";
-    }
-    
-    const segments = [...row.querySelectorAll(".attendance-segment.selected")];
-    segments.forEach((seg) => {
-      if (!seg.classList.contains("external-meal")) {
-        const period = seg.dataset.period;
-        if (type === "adult") {
-          if (period === "breakfast") adultBreakfast++;
-          else if (period === "lunch" || period === "dinner") adultLunchDinner++;
-        } else if (type === "child") {
-          if (period === "breakfast") childBreakfast++;
-          else if (period === "lunch" || period === "dinner") childLunchDinner++;
-        } else if (type === "preschool") {
-          if (period === "breakfast") preschoolBreakfast++;
-          else if (period === "lunch" || period === "dinner") preschoolLunchDinner++;
-        }
-      }
-    });
-
-    const selectedDays = [...new Set(segments.map(seg => Number(seg.dataset.day)))];
-    const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
-    snackCost += snackDays * 3000;
-  });
-
-  const lodgingCost = roomRate * nights;
-  const mealCost = 
-    (adultBreakfast * 3000 + adultLunchDinner * 10000) +
-    (childBreakfast * 3000 + childLunchDinner * 9000) +
-    (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
-  
-  const sharedFee = numMembers > 0 ? 10000 : 0;
-  const fee = sharedFee + lodgingCost + mealCost + snackCost;
-  
   const feeStatus = document.querySelector("#newFamilyFeeStatus").value;
   const room = document.querySelector("#newFamilyRoomLabel")?.textContent.trim() || "미배정";
+  
+  const tempFamily = {
+    id: existingFamily?.id || null,
+    room: room,
+    members: members
+  };
+  
+  const feeResult = window.calculateFamilyFee(tempFamily, families);
+  const fee = feeResult.total;
 
   return {
     id: existingFamily?.id || (families.length ? Math.max(...families.map((family) => family.id)) + 1 : 1),
@@ -4425,6 +4554,7 @@ loadRetreatConfig()
     await Promise.all([
       loadChurchFamilyDb(),
       loadFamiliesFromSupabase(),
+      loadRoomLayout(),
       loadDriveConfig().then(() => { initGoogleOAuth(); })
     ]);
     renderAll();
