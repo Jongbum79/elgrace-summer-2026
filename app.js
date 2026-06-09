@@ -2537,8 +2537,11 @@ function updateEstimatedFee() {
           • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
           • 미취학 아동: 아침 ${preschoolBreakfast}회 x 3,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 3000 + preschoolLunchDinner * 7000).toLocaleString()}원
         </div>
-        <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px;">
-          식비 합계: ${mealCost.toLocaleString()}원
+        <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
+          식사비 합계: ${mealCost.toLocaleString()}원
+        </div>
+        <div style="font-weight: 800; border-top: 1px solid #1e5a45; padding-top: 6px; margin-top: 6px; color: #0f172a; font-size: 11.5px; line-height: 1.4;">
+          공동부담금 ${sharedFee.toLocaleString()}원 + 숙박비 ${lodgingCost.toLocaleString()}원 + 식사비 ${mealCost.toLocaleString()}원 + 간식비 ${snackCost.toLocaleString()}원 = 최종 ${totalCost.toLocaleString()}원
         </div>
       </div>
     `;
