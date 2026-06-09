@@ -2223,16 +2223,19 @@ function updateEstimatedFee() {
   let roomRate = 0;
   if (numMembers === 1) {
     roomLabel = "1인실";
-    roomRate = 60000;
+    roomRate = 88000;
   } else if (numMembers === 2) {
     roomLabel = "2인실";
-    roomRate = 70000;
+    roomRate = 88000;
   } else if (numMembers >= 3 && numMembers <= 4) {
     roomLabel = "4인실";
-    roomRate = 80000;
-  } else if (numMembers >= 5) {
+    roomRate = 88000;
+  } else if (numMembers >= 5 && numMembers <= 6) {
     roomLabel = "6인실";
-    roomRate = 100000;
+    roomRate = 98000;
+  } else if (numMembers >= 7) {
+    roomLabel = "12인실";
+    roomRate = 200000;
   }
   
   let nights = 0;
@@ -2258,6 +2261,8 @@ function updateEstimatedFee() {
   
   let preschoolBreakfast = 0;
   let preschoolLunchDinner = 0;
+  
+  let snackCost = 0;
   
   attendingRows.forEach((row) => {
     const groupSelect = row.querySelector(".new-member-group");
@@ -2287,14 +2292,20 @@ function updateEstimatedFee() {
         }
       }
     });
+
+    const selectedDays = [...new Set(segments.map(seg => Number(seg.dataset.day)))];
+    const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
+    snackCost += snackDays * 3000;
   });
   
   const lodgingCost = roomRate * nights;
   const mealCost = 
-    (adultBreakfast * 4000 + adultLunchDinner * 9000) +
-    (childBreakfast * 4000 + childLunchDinner * 8000) +
-    (preschoolBreakfast * 0 + preschoolLunchDinner * 6000);
-  const totalCost = lodgingCost + mealCost;
+    (adultBreakfast * 3000 + adultLunchDinner * 10000) +
+    (childBreakfast * 3000 + childLunchDinner * 9000) +
+    (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
+  
+  const sharedFee = numMembers > 0 ? 10000 : 0;
+  const totalCost = sharedFee + lodgingCost + mealCost + snackCost;
   
   const label = document.querySelector("#estimatedFeeLabel");
   const detail = document.querySelector("#estimatedFeeDetail");
@@ -2311,12 +2322,14 @@ function updateEstimatedFee() {
         <span><i data-lucide="utensils-crossed" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
+        <div>공동부담금: ${sharedFee.toLocaleString()}원</div>
         <div>숙박비: ${nights}박 x ${roomRate.toLocaleString()}원(${roomLabel}) = ${lodgingCost.toLocaleString()}원</div>
+        <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 마지막날 제외)</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
-          • 성인/청소년: 아침 ${adultBreakfast}회 x 4,000원 + 중/석식 ${adultLunchDinner}회 x 9,000원 = ${(adultBreakfast * 4000 + adultLunchDinner * 9000).toLocaleString()}원<br/>
-          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 4,000원 + 중/석식 ${childLunchDinner}회 x 8,000원 = ${(childBreakfast * 4000 + childLunchDinner * 8000).toLocaleString()}원<br/>
-          • 미취학 아동: 아침 ${preschoolBreakfast}회 x 0원 + 중/석식 ${preschoolLunchDinner}회 x 6,000원 = ${(preschoolLunchDinner * 6000).toLocaleString()}원
+          • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
+          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
+          • 미취학 아동: 아침 ${preschoolBreakfast}회 x 3,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 3000 + preschoolLunchDinner * 7000).toLocaleString()}원
         </div>
         <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px;">
           식비 합계: ${mealCost.toLocaleString()}원
@@ -2413,10 +2426,17 @@ function getFamilyFromForm(existingFamily = null) {
   });
   const numMembers = attendingRows.length;
   let roomRate = 0;
-  if (numMembers === 1) roomRate = 60000;
-  else if (numMembers === 2) roomRate = 70000;
-  else if (numMembers >= 3 && numMembers <= 4) roomRate = 80000;
-  else if (numMembers >= 5) roomRate = 100000;
+  if (numMembers === 1) {
+    roomRate = 88000;
+  } else if (numMembers === 2) {
+    roomRate = 88000;
+  } else if (numMembers >= 3 && numMembers <= 4) {
+    roomRate = 88000;
+  } else if (numMembers >= 5 && numMembers <= 6) {
+    roomRate = 98000;
+  } else if (numMembers >= 7) {
+    roomRate = 200000;
+  }
   
   let nights = 0;
   for (let d = 0; d < dateLabels.length - 1; d++) {
@@ -2433,9 +2453,18 @@ function getFamilyFromForm(existingFamily = null) {
     }
   }
 
-  let totalMealCost = 0;
+  let adultBreakfast = 0;
+  let adultLunchDinner = 0;
+  let childBreakfast = 0;
+  let childLunchDinner = 0;
+  let preschoolBreakfast = 0;
+  let preschoolLunchDinner = 0;
+  let snackCost = 0;
+
   attendingRows.forEach((row) => {
-    const group = row.querySelector(".new-member-group").value;
+    const groupSelect = row.querySelector(".new-member-group");
+    if (!groupSelect) return;
+    const group = groupSelect.value;
     
     let type = "adult";
     if (["유치부", "유아"].includes(group)) {
@@ -2449,21 +2478,31 @@ function getFamilyFromForm(existingFamily = null) {
       if (!seg.classList.contains("external-meal")) {
         const period = seg.dataset.period;
         if (type === "adult") {
-          if (period === "breakfast") totalMealCost += 4000;
-          else if (period === "lunch" || period === "dinner") totalMealCost += 9000;
+          if (period === "breakfast") adultBreakfast++;
+          else if (period === "lunch" || period === "dinner") adultLunchDinner++;
         } else if (type === "child") {
-          if (period === "breakfast") totalMealCost += 4000;
-          else if (period === "lunch" || period === "dinner") totalMealCost += 8000;
+          if (period === "breakfast") childBreakfast++;
+          else if (period === "lunch" || period === "dinner") childLunchDinner++;
         } else if (type === "preschool") {
-          if (period === "breakfast") totalMealCost += 0;
-          else if (period === "lunch" || period === "dinner") totalMealCost += 6000;
+          if (period === "breakfast") preschoolBreakfast++;
+          else if (period === "lunch" || period === "dinner") preschoolLunchDinner++;
         }
       }
     });
+
+    const selectedDays = [...new Set(segments.map(seg => Number(seg.dataset.day)))];
+    const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
+    snackCost += snackDays * 3000;
   });
 
   const lodgingCost = roomRate * nights;
-  const fee = lodgingCost + totalMealCost;
+  const mealCost = 
+    (adultBreakfast * 3000 + adultLunchDinner * 10000) +
+    (childBreakfast * 3000 + childLunchDinner * 9000) +
+    (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
+  
+  const sharedFee = numMembers > 0 ? 10000 : 0;
+  const fee = sharedFee + lodgingCost + mealCost + snackCost;
   
   const feeStatus = document.querySelector("#newFamilyFeeStatus").value;
   const room = document.querySelector("#newFamilyRoomLabel")?.textContent.trim() || "미배정";
