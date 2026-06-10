@@ -1471,9 +1471,20 @@ body.mobile-mode .org-filter-row .filter-chip {
   padding-bottom: 8px;
   align-items: flex-start;
 }
+.school-cards-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 100%;
+}
+.school-cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(142px, 1fr));
+  gap: 12px;
+  min-width: 100%;
+}
 .school-card {
   flex: 1 1 0px;
-  min-width: 148px;
+  min-width: 136px;
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 12px 14px;
@@ -2192,6 +2203,13 @@ body.mobile-mode .school-stat-filter-chip span {
 }
 body.mobile-mode #schoolTimeFilterContainer {
   display: none !important;
+}
+body.mobile-mode .school-cards-row {
+  grid-template-columns: repeat(3, minmax(112px, 1fr));
+}
+body.mobile-mode .school-card {
+  min-width: 112px;
+  padding: 10px;
 }
 
 /* School Detailed Student List Cards on Mobile */

@@ -4883,6 +4883,41 @@ function renderSchoolView() {
     });
     
     const sortedGroups = Object.values(grouped).sort((a, b) => a.mapping.weight - b.mapping.weight);
+    const renderSchoolGroupCard = (group) => {
+      group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+      return `
+        <div class="school-card" style="border-top: 3px solid ${group.mapping.color};">
+          <div class="school-card-header" style="color: ${group.mapping.color}; font-weight: 700; background: transparent; padding: 0 0 6px 0; text-shadow: none; border-bottom: 1px solid var(--line); border-radius: 0;">
+            <span>${group.label}</span>
+            <span style="font-size: 10px; color: var(--muted); font-weight: 500;">${group.members.length} students</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+            ${group.members.map(member => {
+              const parentShortName = member.leader.replace(" 가족", "");
+              const showAge = dept.key === "유치부" ? `${member.mapping.label.replace("세", "")}, ` : "";
+              return `
+                <span class="school-member-pill" title="가족: ${member.familyName}">
+                  <strong>${member.name}</strong>
+                  <span>(${showAge}${parentShortName})</span>
+                </span>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    };
+    const schoolCardsHtml = dept.key === "중고등부"
+      ? `
+        <div class="school-cards-stack">
+          <div class="school-cards-row school-cards-row-high">
+            ${sortedGroups.filter(group => group.label.startsWith("고")).map(renderSchoolGroupCard).join("")}
+          </div>
+          <div class="school-cards-row school-cards-row-middle">
+            ${sortedGroups.filter(group => group.label.startsWith("중")).map(renderSchoolGroupCard).join("")}
+          </div>
+        </div>
+      `
+      : sortedGroups.map(renderSchoolGroupCard).join("");
     
     return `
       <div class="school-department-row">
@@ -4891,30 +4926,7 @@ function renderSchoolView() {
           <span>${dept.label} / ${dept.children.length} students</span>
         </h3>
         <div class="school-cards-container">
-          ${sortedGroups.map(group => {
-            group.members.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-            
-            return `
-              <div class="school-card" style="border-top: 3px solid ${group.mapping.color};">
-                <div class="school-card-header" style="color: ${group.mapping.color}; font-weight: 700; background: transparent; padding: 0 0 6px 0; text-shadow: none; border-bottom: 1px solid var(--line); border-radius: 0;">
-                  <span>${group.label}</span>
-                  <span style="font-size: 10px; color: var(--muted); font-weight: 500;">${group.members.length} students</span>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
-                  ${group.members.map(member => {
-                    const parentShortName = member.leader.replace(" 가족", "");
-                    const showAge = dept.key === "유치부" ? `${member.mapping.label.replace("세", "")}, ` : "";
-                    return `
-                      <span class="school-member-pill" title="가족: ${member.familyName}">
-                        <strong>${member.name}</strong>
-                        <span>(${showAge}${parentShortName})</span>
-                      </span>
-                    `;
-                  }).join("")}
-                </div>
-              </div>
-            `;
-          }).join("")}
+          ${schoolCardsHtml}
         </div>
       </div>
     `;
