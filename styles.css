@@ -2099,26 +2099,32 @@ body.mobile-mode .org-leader-node,
 body.mobile-mode .org-member-node {
   width: 100% !important;
   min-width: 0 !important;
-  align-items: flex-start !important;
-  flex-direction: column !important;
-  gap: 5px !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
   padding: 9px 8px !important;
 }
 body.mobile-mode .org-node-name {
-  width: 100%;
-  align-items: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+}
+body.mobile-mode .org-node-name .org-status-dot {
+  display: none;
 }
 body.mobile-mode .org-node-name b {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   word-break: keep-all;
   line-height: 1.35;
 }
 body.mobile-mode .org-node-status-badge {
-  align-self: flex-start;
+  align-self: center;
+  flex: 0 0 auto;
   min-width: 0;
-  margin-left: 17px;
+  margin-left: 0;
   padding: 3px 6px;
   text-align: center;
 }

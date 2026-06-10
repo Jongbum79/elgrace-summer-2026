@@ -4908,18 +4908,23 @@ function renderSchoolView() {
         </div>
       `;
     };
-    const schoolCardsHtml = dept.key === "중고등부"
-      ? `
-        <div class="school-cards-stack">
-          <div class="school-cards-row school-cards-row-high">
-            ${sortedGroups.filter(group => group.label.startsWith("고")).map(renderSchoolGroupCard).join("")}
-          </div>
-          <div class="school-cards-row school-cards-row-middle">
-            ${sortedGroups.filter(group => group.label.startsWith("중")).map(renderSchoolGroupCard).join("")}
-          </div>
-        </div>
-      `
-      : sortedGroups.map(renderSchoolGroupCard).join("");
+    const groupedRows = dept.key === "중고등부"
+      ? [
+          sortedGroups.filter(group => group.label.startsWith("고")),
+          sortedGroups.filter(group => group.label.startsWith("중")),
+        ]
+      : sortedGroups.map(group => [group]);
+    const schoolCardsHtml = `
+      <div class="school-cards-stack">
+        ${groupedRows
+          .filter(row => row.length > 0)
+          .map((row, index) => `
+            <div class="school-cards-row ${dept.key === "중고등부" && index === 0 ? "school-cards-row-high" : ""} ${dept.key === "중고등부" && index === 1 ? "school-cards-row-middle" : ""}">
+              ${row.map(renderSchoolGroupCard).join("")}
+            </div>
+          `).join("")}
+      </div>
+    `;
     
     return `
       <div class="school-department-row">
