@@ -667,6 +667,32 @@ body.mobile-mode .meal-chart-card .card-heading { align-items: flex-start; gap: 
 body.mobile-mode .meal-bar-chart { padding-left: 13px; padding-right: 13px; }
 body.mobile-mode .meal-chart-column { min-width: 68px; }
 body.mobile-mode .meal-cards { grid-template-columns: 1fr; }
+body.mobile-mode .quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+body.mobile-mode .quick-action-card {
+  padding: 14px;
+  border-radius: 16px;
+  gap: 12px;
+}
+body.mobile-mode .quick-action-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+body.mobile-mode .quick-action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+body.mobile-mode .quick-action-title {
+  font-size: 13px;
+}
+body.mobile-mode .quick-action-desc {
+  font-size: 10px;
+  line-height: 1.35;
+}
 body.mobile-mode .chatbot-layout { grid-template-columns: 1fr; }
 body.mobile-mode .chatbot-card { min-height: calc(100vh - 175px); }
 body.mobile-mode .chatbot-guide { display: none; }
@@ -729,6 +755,32 @@ body.mobile-mode .remove-child { grid-column: 3; grid-row: 1; }
   .meal-bar-chart { padding-left: 13px; padding-right: 13px; }
   .meal-chart-column { min-width: 68px; }
   .meal-cards { grid-template-columns: 1fr; }
+  .quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .quick-action-card {
+    padding: 14px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  .quick-action-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+  .quick-action-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .quick-action-title {
+    font-size: 13px;
+  }
+  .quick-action-desc {
+    font-size: 10px;
+    line-height: 1.35;
+  }
   .chatbot-layout { grid-template-columns: 1fr; }
   .chatbot-guide { display: none; }
   .family-basic-fields { grid-template-columns: 1fr; gap: 0; }
