@@ -416,8 +416,14 @@ h2, h3, h4, p { margin-top: 0; }
 .search-box input { width: 100%; height: 36px; outline: 0; border: 0; color: var(--ink); background: transparent; font-size: 11px; }
 .filter-button span { display: inline-grid; width: 15px; height: 15px; margin-left: 4px; place-items: center; border-radius: 50%; color: white; background: var(--forest); font-size: 9px; }
 .family-filter-row { display: flex; align-items: center; gap: 6px; padding: 0 20px 13px; border-bottom: 1px solid var(--line); }
-.filter-chip { padding: 6px 9px; border-radius: 20px; color: #7b8983; background: #f4f7f5; font-size: 11px; }
-.filter-chip.active { color: var(--forest); background: var(--mint); font-weight: 700; }
+.filter-chip { padding: 6px 9px; border-radius: 20px; color: #7b8983; background: #f4f7f5; border: 1px solid transparent; font-size: 11px; }
+.filter-chip.active { color: var(--forest); background: var(--mint); border-color: var(--sage); font-weight: 700; }
+.family-filter-row .filter-chip[data-filter="all"] { color: var(--forest); background: var(--mint); border-color: var(--sage); }
+.family-filter-row .filter-chip[data-filter="attending"],
+.family-filter-row .filter-chip[data-filter="full"] { color: var(--status-full-fg); background: var(--status-full-bg); border-color: var(--status-full-border); }
+.family-filter-row .filter-chip[data-filter="partial"] { color: var(--status-partial-fg); background: var(--status-partial-bg); border-color: var(--status-partial-border); }
+.family-filter-row .filter-chip[data-filter="undecided"] { color: var(--status-undecided-fg); background: var(--status-undecided-bg); border-color: var(--status-undecided-border); }
+.family-filter-row .filter-chip.active { box-shadow: inset 0 0 0 1px currentColor; font-weight: 800; }
 .table-count { margin-left: auto; color: var(--muted); font-size: 11px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .stats-sep { color: #cbd5e1; }
 .table-wrap { overflow-x: auto; }
@@ -2486,6 +2492,42 @@ body.mobile-mode #participantsView .mode-tab {
   border-radius: 10px;
   box-sizing: border-box;
   justify-content: center;
+}
+
+#participantsView .family-filter-row .filter-chip {
+  border-radius: 20px;
+  border-width: 1px;
+  border-style: solid;
+}
+
+#participantsView .family-filter-row .filter-chip[data-filter="all"] {
+  color: var(--forest);
+  background: var(--mint);
+  border-color: var(--sage);
+}
+
+#participantsView .family-filter-row .filter-chip[data-filter="attending"],
+#participantsView .family-filter-row .filter-chip[data-filter="full"] {
+  color: var(--status-full-fg);
+  background: var(--status-full-bg);
+  border-color: var(--status-full-border);
+}
+
+#participantsView .family-filter-row .filter-chip[data-filter="partial"] {
+  color: var(--status-partial-fg);
+  background: var(--status-partial-bg);
+  border-color: var(--status-partial-border);
+}
+
+#participantsView .family-filter-row .filter-chip[data-filter="undecided"] {
+  color: var(--status-undecided-fg);
+  background: var(--status-undecided-bg);
+  border-color: var(--status-undecided-border);
+}
+
+#participantsView .family-filter-row .filter-chip.active {
+  box-shadow: inset 0 0 0 1px currentColor;
+  font-weight: 800;
 }
 
 body.mobile-mode .page-heading h2,
