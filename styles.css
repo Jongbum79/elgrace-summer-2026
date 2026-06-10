@@ -690,8 +690,7 @@ body.mobile-mode .quick-action-title {
   font-size: 13px;
 }
 body.mobile-mode .quick-action-desc {
-  font-size: 10px;
-  line-height: 1.35;
+  display: none;
 }
 body.mobile-mode .chatbot-layout { grid-template-columns: 1fr; }
 body.mobile-mode .chatbot-card { min-height: calc(100vh - 175px); }
@@ -778,8 +777,7 @@ body.mobile-mode .remove-child { grid-column: 3; grid-row: 1; }
     font-size: 13px;
   }
   .quick-action-desc {
-    font-size: 10px;
-    line-height: 1.35;
+    display: none;
   }
   .chatbot-layout { grid-template-columns: 1fr; }
   .chatbot-guide { display: none; }
