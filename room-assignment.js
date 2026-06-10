@@ -2304,11 +2304,12 @@
     }
 
     function renderMobileFamilyRow(family) {
+      const composition = getFamilyComposition(family);
       return h(
         "div",
         {
           key: family._familyId,
-          className: "flex min-h-[64px] items-center gap-3 border-b border-slate-100 px-4 py-2 last:border-b-0 active:bg-slate-50",
+          className: "flex min-h-[64px] items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-b-0 active:bg-slate-50",
           onClick: () => {
             if (selectedRoom) {
               assignFamilyToSelectedRoom(family);
@@ -2317,19 +2318,12 @@
             }
           },
         },
-        h(
-          "button",
-          {
-            type: "button",
-            onPointerDown: (event) => startDrag(family, event),
-            className: "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#1e5a45] text-white shadow-sm active:scale-95",
-            title: "드래그하여 방에 배정",
-          },
-          renderIcon("grip", "h-5 w-5")
-        ),
         h("div", { className: "min-w-0 flex-1" },
-          h("div", { className: "truncate text-sm font-semibold text-slate-950" }, familyDisplayName(family)),
-          h("div", { className: "mt-0.5 truncate text-xs text-slate-500" }, `${familyLeader(family)} · ${family._size}명`)
+          h("div", { className: "flex min-w-0 items-center gap-1.5" },
+            h("div", { className: "truncate text-sm font-semibold text-slate-950" }, familyDisplayName(family)),
+            h("span", { className: "shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200" }, `${family._size}명`)
+          ),
+          h("div", { className: "mt-1 truncate text-xs text-slate-500" }, `형제 ${composition.brother} · 자매 ${composition.sister} · 자녀 ${composition.child}`)
         ),
         h("button", {
           type: "button",
@@ -2474,7 +2468,7 @@
               })
             )
           ),
-          h("div", { className: "max-h-[52vh] overflow-y-auto overscroll-contain pb-4" },
+          h("div", { className: "max-h-[52vh] overflow-y-auto overscroll-contain pb-24" },
             mobileUnassignedFamilies.length
               ? mobileUnassignedFamilies.map((family) => renderMobileFamilyRow(family))
               : h("div", { className: "px-4 py-8 text-center text-sm text-slate-500" }, "미배정 가족이 없습니다.")
