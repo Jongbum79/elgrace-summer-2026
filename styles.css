@@ -2205,11 +2205,46 @@ body.mobile-mode #schoolTimeFilterContainer {
   display: none !important;
 }
 body.mobile-mode .school-cards-row {
-  grid-template-columns: repeat(3, minmax(112px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 body.mobile-mode .school-card {
-  min-width: 112px;
-  padding: 10px;
+  min-width: 0;
+  padding: 10px 8px;
+  overflow: hidden;
+}
+body.mobile-mode .school-card > div[style*="grid-template-columns"] {
+  grid-template-columns: 1fr !important;
+  gap: 5px !important;
+}
+body.mobile-mode .school-member-pill {
+  min-width: 0;
+  padding: 6px 7px;
+  gap: 4px;
+  justify-content: flex-start;
+}
+body.mobile-mode .school-member-pill strong {
+  max-width: 42%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.mobile-mode .school-member-pill span {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+body.mobile-mode .school-card-header {
+  gap: 4px;
+}
+body.mobile-mode .school-card-header span:first-child {
+  flex-shrink: 0;
+}
+body.mobile-mode .school-card-header span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* School Detailed Student List Cards on Mobile */
@@ -2236,6 +2271,7 @@ body.mobile-mode .school-student-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: hidden;
 }
 .student-card-header {
   display: flex;
@@ -2268,11 +2304,57 @@ body.mobile-mode .school-student-card {
   border-top: 1px dashed #E5E7EB;
   padding-top: 8px;
 }
+.student-attendance-block {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.school-status-chip {
+  margin: 0;
+  padding: 2px 8px;
+  min-width: 54px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  border-radius: 8px;
+  text-align: center;
+  white-space: nowrap;
+}
 .student-card-footer .row-menu {
   position: static !important;
   min-height: 36px;
   min-width: 36px;
   padding: 6px;
+}
+body.mobile-mode .student-card-footer {
+  align-items: flex-start;
+  gap: 10px;
+}
+body.mobile-mode .student-attendance-block {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+body.mobile-mode .student-attendance-block .family-attendance-summary,
+body.mobile-mode .student-attendance-block .family-schedule-groups,
+body.mobile-mode .student-attendance-block .family-schedule-group {
+  width: 100%;
+  min-width: 0 !important;
+}
+body.mobile-mode .student-attendance-block .family-day-squares {
+  width: 100%;
+  max-width: 212px;
+}
+body.mobile-mode .student-attendance-block .family-day-square {
+  flex: 1 1 0;
+  min-width: 0;
+}
+body.mobile-mode .student-card-footer .row-menu {
+  flex: 0 0 36px;
+  align-self: flex-start;
 }
 
 /* Google Drive UI Shared Folder Styles */

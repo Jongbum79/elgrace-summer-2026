@@ -5014,8 +5014,8 @@ function renderSchoolView() {
               부모: ${motherName ? `${motherName} · ` : ""}<a href="tel:${family ? family.phone : ''}" class="phone-link">${family ? family.phone : "-"}</a>
             </div>
             <div class="student-card-footer">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="status ${badgeClass}" style="margin: 0; padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 8px;">${symbol} ${labelText}</span>
+              <div class="student-attendance-block">
+                <span class="status ${badgeClass} school-status-chip">${symbol} ${labelText}</span>
                 ${attendanceHtml}
               </div>
               <button class="row-menu" data-family-id="${family ? family.id : ''}" aria-label="${family ? family.name : ''} 상세보기">···</button>
