@@ -2442,6 +2442,37 @@
                     }))
                 )
               : null
+          ),
+          h("div", {
+            className: cx(
+              "mt-3 rounded-2xl border px-3 py-3 shadow-sm",
+              selectedRoom
+                ? "border-[#1e5a45]/15 bg-[#1e5a45]/10"
+                : "border-amber-200 bg-amber-50"
+            )
+          },
+            h("div", { className: "flex items-start gap-2.5" },
+              h("div", {
+                className: cx(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
+                  selectedRoom ? "bg-[#1e5a45] text-white" : "bg-amber-500 text-white"
+                )
+              }, renderIcon(selectedRoom ? "users" : "door-open", "h-4 w-4")),
+              h("div", { className: "min-w-0" },
+                h("div", {
+                  className: cx(
+                    "text-sm font-semibold",
+                    selectedRoom ? "text-[#184a39]" : "text-amber-900"
+                  )
+                }, selectedRoom ? `${selectedRoom.label}에 배정할 가족을 선택하세요` : "먼저 배정할 방을 선택하세요"),
+                h("div", {
+                  className: cx(
+                    "mt-0.5 text-xs leading-5",
+                    selectedRoom ? "text-[#1e5a45]" : "text-amber-800"
+                  )
+                }, selectedRoom ? "하단 미배정 가족 목록에서 가족을 탭하면 바로 배정됩니다." : "방 카드를 탭하면 하단에 배정할 가족 목록이 열립니다.")
+              )
+            )
           )
         ),
         selectedRoom
