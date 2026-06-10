@@ -1198,7 +1198,7 @@ body.mobile-mode #participantsView .page-heading {
 
 body.mobile-mode #participantsView .heading-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 44px;
   gap: 8px;
   width: 100%;
 }
@@ -1206,7 +1206,7 @@ body.mobile-mode #participantsView .heading-actions {
 body.mobile-mode #participantsView .heading-actions .primary-button,
 body.mobile-mode #participantsView .heading-actions .secondary-button {
   width: 100%;
-  min-height: 46px;
+  min-height: 44px;
   justify-content: center;
   border-radius: 14px;
   padding: 0 12px;
