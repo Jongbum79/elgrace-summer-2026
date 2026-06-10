@@ -818,7 +818,7 @@
     const [selectedRoomId, setSelectedRoomId] = useState(null);
     const [selectedFamilyId, setSelectedFamilyId] = useState(null);
     const [mobileTab, setMobileTab] = useState("rooms");
-    const [familySheetOpen, setFamilySheetOpen] = useState(true);
+    const [familySheetOpen, setFamilySheetOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [buildingFilter, setBuildingFilter] = useState("all");
     const [floorFilter, setFloorFilter] = useState("all");
@@ -1501,8 +1501,8 @@
       setSelectedRoomId(roomId);
       setSelectedFamilyId(null);
       if (window.innerWidth < 1024) {
-        setMobileTab("inspector");
-        setFamilySheetOpen(false);
+        setMobileTab("rooms");
+        setFamilySheetOpen(true);
       }
     }
 
@@ -1510,6 +1510,20 @@
       setSelectedFamilyId(familyId);
       setSelectedRoomId(null);
       if (window.innerWidth < 1024) setMobileTab("families");
+    }
+
+    function assignFamilyToSelectedRoom(family) {
+      if (!selectedRoom) {
+        showToast("방을 먼저 선택해 주세요.");
+        return;
+      }
+      const bucket = roomBundle.byRoom.get(selectedRoom.id);
+      if (!canFamilyFitInRoom(family, selectedRoom, bucket?.families || [])) {
+        showToast(`${selectedRoom.label}의 날짜별 정원을 초과합니다.`);
+        return;
+      }
+      updateAssignment(family._familyId, selectedRoom);
+      showToast(`${family.name} → ${selectedRoom.label} 배정 초안을 적용했습니다.`);
     }
 
     function hasDifferentSchedules(family) {
@@ -2241,8 +2255,15 @@
         {
           key: room.id,
           "data-drop-room-id": canAssign ? room.id : undefined,
+          onClick: () => {
+            if (!canAssign) {
+              showToast(`${room.label}은(는) ${room.unavailable_reason || "사용할 수 없는 공간"}입니다.`);
+              return;
+            }
+            focusRoom(room.id);
+          },
           className: cx(
-            "min-h-[112px] w-full rounded-lg border p-3 text-left shadow-sm transition active:scale-[0.98]",
+            "min-h-[112px] w-full rounded-lg border p-3 text-left shadow-sm transition active:scale-[0.98] cursor-pointer",
             roomToneClass(status, selected, dragTarget)
           ),
         },
@@ -2287,8 +2308,14 @@
         "div",
         {
           key: family._familyId,
-          className: "flex min-h-[64px] items-center gap-3 border-b border-slate-100 px-4 py-2 last:border-b-0",
-          onClick: () => focusFamily(family._familyId),
+          className: "flex min-h-[64px] items-center gap-3 border-b border-slate-100 px-4 py-2 last:border-b-0 active:bg-slate-50",
+          onClick: () => {
+            if (selectedRoom) {
+              assignFamilyToSelectedRoom(family);
+            } else {
+              focusFamily(family._familyId);
+            }
+          },
         },
         h(
           "button",
@@ -2308,20 +2335,13 @@
           type: "button",
           onClick: (event) => {
             event.stopPropagation();
-            if (!selectedRoom) {
-              showToast("방을 먼저 선택해 주세요.");
-              return;
-            }
-            const bucket = roomBundle.byRoom.get(selectedRoom.id);
-            const usedBeds = bucket?.headcount || 0;
-            if (usedBeds + family._size > getRoomAssignmentLimit(selectedRoom)) {
-              showToast(`${selectedRoom.label} 정원을 초과합니다.`);
-              return;
-            }
-            updateAssignment(family._familyId, selectedRoom);
+            assignFamilyToSelectedRoom(family);
           },
-          className: "flex h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 active:scale-95",
-        }, selectedRoom ? "넣기" : "선택")
+          className: cx(
+            "flex h-11 min-w-11 items-center justify-center rounded-lg px-3 text-xs font-semibold active:scale-95",
+            selectedRoom ? "bg-[#1e5a45] text-white" : "border border-slate-200 bg-white text-slate-700"
+          ),
+        }, selectedRoom ? "넣기" : "방 선택")
       );
     }
 
