@@ -4809,8 +4809,8 @@ function renderSchoolView() {
         </span>
       </div>
     `;
-    renderSchoolTimeFilter();
   }
+  renderSchoolTimeFilter();
   
   if (activeChildren.length === 0) {
     container.innerHTML = `

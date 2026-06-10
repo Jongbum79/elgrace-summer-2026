@@ -1298,6 +1298,7 @@ body.mobile-mode .org-controls-container {
   align-items: stretch;
   padding: 10px 12px;
   gap: 12px;
+  overflow: hidden;
 }
 body.mobile-mode .org-controls-container .org-stats-bar {
   padding: 0;
@@ -1305,11 +1306,15 @@ body.mobile-mode .org-controls-container .org-stats-bar {
   gap: 6px;
 }
 body.mobile-mode .school-controls-container {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
   border: none !important;
   padding: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   margin-bottom: 12px !important;
+  overflow: hidden !important;
 }
 body.mobile-mode .school-stats-sep {
   display: none !important;
@@ -2160,10 +2165,10 @@ body.mobile-mode .school-header {
   margin-bottom: 16px !important;
 }
 body.mobile-mode #schoolStatsBar {
-  display: flex !important;
-  flex-direction: row !important;
-  overflow-x: auto !important;
-  white-space: nowrap !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  overflow: visible !important;
+  white-space: normal !important;
   background: #F3F4F6 !important;
   border-radius: 12px !important;
   padding: 4px !important;
@@ -2175,12 +2180,12 @@ body.mobile-mode #schoolStatsBar::-webkit-scrollbar {
   display: none;
 }
 body.mobile-mode .school-stat-filter-chip {
-  flex: 1 !important;
+  flex: none !important;
   width: auto !important;
   text-align: center !important;
   justify-content: center !important;
-  padding: 8px 12px !important;
-  font-size: 11px !important;
+  padding: 8px 6px !important;
+  font-size: 10.5px !important;
   font-weight: 700 !important;
   border: none !important;
   border-radius: 9px !important;
@@ -2192,6 +2197,8 @@ body.mobile-mode .school-stat-filter-chip {
   align-items: center !important;
   gap: 4px !important;
   transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
 }
 body.mobile-mode .school-stat-filter-chip.active {
   background: #ffffff !important;
@@ -2201,8 +2208,49 @@ body.mobile-mode .school-stat-filter-chip.active {
 body.mobile-mode .school-stat-filter-chip span {
   display: none !important;
 }
+body.mobile-mode #orgTimeFilterContainer,
 body.mobile-mode #schoolTimeFilterContainer {
-  display: none !important;
+  display: flex !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 7px !important;
+  overflow: hidden !important;
+  padding: 8px !important;
+}
+body.mobile-mode #orgTimeFilterContainer > span,
+body.mobile-mode #schoolTimeFilterContainer > span {
+  flex: 1 1 auto !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+}
+body.mobile-mode #clearOrgTimeFilter,
+body.mobile-mode #clearSchoolTimeFilter {
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+}
+body.mobile-mode #orgTimeFilterDays,
+body.mobile-mode #schoolTimeFilterDays {
+  order: 3;
+  flex: 0 0 100% !important;
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+  margin: 0 !important;
+}
+body.mobile-mode #orgTimeFilterDays .attendance-day,
+body.mobile-mode #schoolTimeFilterDays .attendance-day {
+  width: auto !important;
+  min-width: 0 !important;
+  height: 34px !important;
+}
+body.mobile-mode #orgTimeFilterDays .attendance-segment,
+body.mobile-mode #schoolTimeFilterDays .attendance-segment {
+  font-size: 8px;
+  min-width: 0;
 }
 body.mobile-mode .school-cards-row {
   grid-template-columns: 1fr;
