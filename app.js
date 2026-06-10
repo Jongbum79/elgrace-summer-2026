@@ -642,52 +642,39 @@ function renderStats() {
   ];
   
   if (document.body.classList.contains("mobile-mode")) {
-    const totalFamilies = families.length;
-    const decidedFamilies = families.filter(f => f.status && f.status !== "undecided").length;
-    const inputRate = totalFamilies > 0 ? ((decidedFamilies / totalFamilies) * 100).toFixed(1) : "0.0";
-    
-    const assignedFamilies = families.filter(f => f.room && f.room !== "미배정").length;
-    const roomRate = totalFamilies > 0 ? ((assignedFamilies / totalFamilies) * 100).toFixed(1) : "0.0";
-
-    const mobileStats = [
-      {
-        label: "참석자",
-        value: `<span style="color: var(--forest); font-weight: 800;">${currentActual}</span><span style="color: #9CA3AF; font-size: 14px; font-weight: 500;"> / ${currentExpected}</span>`,
-        caption: `입소율 ${getPercentStr(currentActual, currentExpected)}%`,
-        icon: "user-check"
-      },
-      {
-        label: "가족수",
-        value: `<span style="font-weight: 800; color: var(--ink);">${totalFamilies}</span><small style="font-size: 12px; font-weight: 500; color: #9CA3AF; margin-left: 2px;">가족</small>`,
-        caption: "등록된 총 가족 수",
-        icon: "users"
-      },
-      {
-        label: "입력률",
-        value: `<span style="font-weight: 800; color: var(--ink);">${inputRate}</span><small style="font-size: 12px; font-weight: 500; color: #9CA3AF; margin-left: 2px;">%</small>`,
-        caption: `확정 ${decidedFamilies} / 총 ${totalFamilies}가족`,
-        icon: "clipboard-check"
-      },
-      {
-        label: "방배정률",
-        value: `<span style="font-weight: 800; color: var(--ink);">${roomRate}</span><small style="font-size: 12px; font-weight: 500; color: #9CA3AF; margin-left: 2px;">%</small>`,
-        caption: `배정 ${assignedFamilies} / 총 ${totalFamilies}가족`,
-        icon: "bed-double"
+    document.querySelector("#statsGrid").innerHTML = stats.map((item) => {
+      if (item.isRatio) {
+        return `
+          <article class="stat-card">
+            <div class="stat-top">
+              <span>${item.label}</span>
+              <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
+            </div>
+            <div>
+              <div class="stat-value">
+                <span style="color: var(--forest); font-weight: 800;">${item.actual}</span><span style="color: #9CA3AF; font-size: 13px; font-weight: 500;"> / ${item.expected}</span><small style="font-size: 10px; font-weight: 600; color: var(--gold); margin-left: 2px;">(${item.percent}%)</small>
+              </div>
+              <span class="stat-caption">${item.caption}</span>
+            </div>
+          </article>
+        `;
+      } else {
+        return `
+          <article class="stat-card">
+            <div class="stat-top">
+              <span>${item.label}</span>
+              <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
+            </div>
+            <div>
+              <div class="stat-value">
+                <span style="font-weight: 800; color: var(--ink);">${item.value}</span><small style="font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 2px;">${item.unit}</small>
+              </div>
+              <span class="stat-caption">${item.caption}</span>
+            </div>
+          </article>
+        `;
       }
-    ];
-
-    document.querySelector("#statsGrid").innerHTML = mobileStats.map((item) => `
-      <article class="stat-card">
-        <div class="stat-top">
-          <span>${item.label}</span>
-          <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
-        </div>
-        <div>
-          <div class="stat-value">${item.value}</div>
-          <span class="stat-caption">${item.caption}</span>
-        </div>
-      </article>
-    `).join("");
+    }).join("");
     if (window.lucide) lucide.createIcons();
     return;
   }
