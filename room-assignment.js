@@ -2344,6 +2344,29 @@
       const selectedFamilies = selectedBucket?.families || [];
       const selectedUsed = selectedRoom ? getRoomMaxOccupancy(selectedRoom, selectedFamilies) : 0;
       const selectedRemaining = selectedRoom ? Math.max(selectedRoom.capacity - selectedUsed, 0) : 0;
+      const buildingOptions = [
+        { key: "all", label: "전체 건물", icon: "layout-dashboard" },
+        { key: "휴락동", label: "휴락동", icon: "building-2" },
+        { key: "동락홀", label: "동락홀", icon: "hotel" },
+      ];
+      const floorOptions = buildingFilter === "all"
+        ? []
+        : [...new Set((layoutState.data?.rooms || [])
+            .filter((room) => room.building === buildingFilter)
+            .map((room) => room.floor))]
+            .sort((a, b) => a - b);
+      const renderMobileFilterButton = (key, label, active, onClick, icon) =>
+        h("button", {
+          key,
+          type: "button",
+          onClick,
+          className: cx(
+            "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold shadow-sm transition active:scale-[0.98]",
+            active
+              ? "bg-[#1e5a45] text-white"
+              : "border border-slate-200 bg-white text-slate-600"
+          ),
+        }, icon ? renderIcon(icon, "h-3.5 w-3.5") : null, label);
 
       return h(
         "div",
@@ -2391,17 +2414,34 @@
               h("div", { className: "mt-1 text-base font-semibold" }, `${roomStats.utilization}%`)
             )
           ),
-          h("div", { className: "mt-3 grid grid-cols-2 gap-2" },
-            h("select", {
-              value: buildingFilter,
-              onChange: (event) => setBuildingFilter(event.target.value),
-              className: "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none",
-            }, [h("option", { key: "all", value: "all" }, "모든 건물")].concat((layoutState.data?.buildings || []).map((building) => h("option", { key: building.building, value: building.building }, building.building)))),
-            h("select", {
-              value: floorFilter,
-              onChange: (event) => setFloorFilter(event.target.value),
-              className: "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none",
-            }, [h("option", { key: "all", value: "all" }, "모든 층")].concat([...new Set((layoutState.data?.rooms || []).map((room) => String(room.floor)))].map((floor) => h("option", { key: floor, value: floor }, `${floor}층`))))
+          h("div", { className: "mt-3 space-y-2" },
+            h("div", { className: "grid grid-cols-3 gap-2" },
+              buildingOptions.map((option) => renderMobileFilterButton(
+                option.key,
+                option.label,
+                buildingFilter === option.key,
+                () => {
+                  setBuildingFilter(option.key);
+                  setFloorFilter("all");
+                },
+                option.icon
+              ))
+            ),
+            buildingFilter !== "all"
+              ? h("div", { className: "flex flex-wrap gap-2" },
+                  [renderMobileFilterButton("all-floors", "전층", floorFilter === "all", () => setFloorFilter("all"))]
+                    .concat(floorOptions.map((floorNum) => {
+                      const floorVal = String(floorNum);
+                      const isSelected = floorFilter === floorVal;
+                      return renderMobileFilterButton(
+                        floorVal,
+                        `${floorNum}F`,
+                        isSelected,
+                        () => setFloorFilter(isSelected ? "all" : floorVal)
+                      );
+                    }))
+                )
+              : null
           )
         ),
         selectedRoom
