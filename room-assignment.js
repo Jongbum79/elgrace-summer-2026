@@ -2449,7 +2449,11 @@
               h("div", { className: "flex items-center justify-between gap-2" },
                 h("div", { className: "min-w-0" },
                   h("div", { className: "truncate text-sm font-semibold text-slate-950" }, `${selectedRoom.label} 선택됨`),
-                  h("div", { className: "mt-0.5 text-xs text-slate-500" }, `${selectedUsed}/${selectedRoom.capacity}명 · 잔여 ${selectedRemaining}명`)
+                  h("div", { className: "mt-0.5 text-xs text-slate-500" }, `${selectedUsed}/${selectedRoom.capacity}명 · 잔여 ${selectedRemaining}명`),
+                  h("div", { className: "mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#1e5a45]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1e5a45]" },
+                    renderIcon("hand-pointer", "h-3.5 w-3.5"),
+                    "아래 가족을 탭하면 이 방에 배정됩니다."
+                  )
                 ),
                 h("button", {
                   type: "button",
@@ -2460,6 +2464,19 @@
             )
           : null,
         h("main", { className: "px-4 pt-3" },
+          !selectedRoom
+            ? h("div", { className: "mb-3 rounded-2xl border border-[#1e5a45]/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(232,241,235,0.92))] p-4 shadow-sm" },
+                h("div", { className: "flex items-start gap-3" },
+                  h("div", { className: "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1e5a45] text-white shadow-sm" },
+                    renderIcon("door-open", "h-5 w-5")
+                  ),
+                  h("div", { className: "min-w-0" },
+                    h("div", { className: "text-sm font-semibold text-slate-950" }, "먼저 배정할 방을 선택하세요"),
+                    h("p", { className: "mt-1 text-xs leading-5 text-slate-600" }, "방 카드를 탭하면 하단에 미배정 가족 목록이 열립니다. 그 다음 가족을 탭하면 바로 배정됩니다.")
+                  )
+                )
+              )
+            : null,
           visibleRooms.map((building) =>
             h("section", { key: `mobile-${building.building}`, className: "mb-6" },
               h("div", { className: "mb-2 flex items-center justify-between" },
@@ -2493,6 +2510,9 @@
               h("div", { className: "flex items-center gap-2 text-sm font-semibold text-slate-950" },
                 renderIcon("users", "h-4 w-4 text-[#1e5a45]"),
                 `미배정 가족 ${mobileUnassignedFamilies.length}`
+              ),
+              h("div", { className: "mt-1 text-xs font-medium text-slate-500" },
+                selectedRoom ? `${selectedRoom.label}에 배정할 가족을 선택하세요.` : "방을 먼저 선택하면 가족을 배정할 수 있습니다."
               )
             ),
             renderIcon(familySheetOpen ? "chevron-down" : "chevron-up", "h-5 w-5 text-slate-400")
