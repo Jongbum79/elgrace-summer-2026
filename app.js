@@ -2278,7 +2278,7 @@ function getAvailableAttendancePeriods() {
   });
 }
 
-function createMemberForm(role, group, removable = false, member = null) {
+function createMemberForm(role, group, removable = true, member = null) {
   const memberId = ++newMemberId;
   const groups = role === "자녀" ? [...new Set([...childGroups, member?.[1]].filter(Boolean))] : [group];
   const genders = role === "자녀" ? ["남", "여"] : [role === "형제" ? "남" : "여"];
@@ -2309,7 +2309,7 @@ function createMemberForm(role, group, removable = false, member = null) {
     </div>
     <button type="button" class="member-full-attendance" aria-label="${role} 풀참">풀참</button>
     <button type="button" class="member-undecided-attendance ${member?.[7] === "undecided" ? "active" : ""}" aria-label="${role} 미정">미정</button>
-    ${removable ? `<button type="button" class="remove-child" aria-label="자녀 삭제">삭제</button>` : "<span></span>"}`;
+    ${removable ? `<button type="button" class="remove-child" aria-label="${role} 삭제">삭제</button>` : "<span></span>"}`;
   document.querySelector("#memberFormList").append(row);
   updateFullAttendanceLabels();
 }
@@ -2330,8 +2330,8 @@ function resetFamilyForm(family = null) {
 
   document.querySelector("#memberFormList").innerHTML = "";
   if (!family) {
-    createMemberForm("형제", "성인 남성");
-    createMemberForm("자매", "성인 여성");
+    createMemberForm("형제", "성인 남성", true);
+    createMemberForm("자매", "성인 여성", true);
     updateEstimatedFee();
     return;
   }
@@ -2339,8 +2339,15 @@ function resetFamilyForm(family = null) {
   const children = family.members.filter((member) => !member[1].startsWith("성인"));
   const brother = adults.find((member) => member[1] === "성인 남성");
   const sister = adults.find((member) => member[1] === "성인 여성");
-  createMemberForm("형제", "성인 남성", false, brother);
-  createMemberForm("자매", "성인 여성", false, sister);
+  if (brother) {
+    createMemberForm("형제", "성인 남성", true, brother);
+  }
+  if (sister) {
+    createMemberForm("자매", "성인 여성", true, sister);
+  }
+  if (!brother && !sister) {
+    createMemberForm("자매", "성인 여성", true);
+  }
   children.forEach((member) => createMemberForm("자녀", member[1], true, member));
   updateEstimatedFee();
 }
@@ -3476,6 +3483,14 @@ document.addEventListener("click", (event) => {
     renderFamilies();
   }
   if (familyMenu) toggleModal(true, families.find((family) => family.id === Number(familyMenu.dataset.familyId)));
+  if (event.target.closest("#addBrotherButton")) {
+    createMemberForm("형제", "성인 남성", true);
+    updateEstimatedFee();
+  }
+  if (event.target.closest("#addSisterButton")) {
+    createMemberForm("자매", "성인 여성", true);
+    updateEstimatedFee();
+  }
   if (event.target.closest("#addChildButton")) {
     createMemberForm("자녀", "중고등부", true);
     updateEstimatedFee();
@@ -3584,11 +3599,9 @@ document.addEventListener("click", (event) => {
       
       if (isDbEmpty) {
         if (isBrother) {
-          createMemberForm("형제", "성인 남성", false, [name]);
-          createMemberForm("자매", "성인 여성", false, [""]);
+          createMemberForm("형제", "성인 남성", true, [name]);
         } else {
-          createMemberForm("형제", "성인 남성", false, [""]);
-          createMemberForm("자매", "성인 여성", false, [name]);
+          createMemberForm("자매", "성인 여성", true, [name]);
         }
         showToast("구글 시트 연동 실패: 데이터가 비어있습니다. 공유 설정을 확인하세요.");
       } else if (familyRow) {
@@ -3672,8 +3685,12 @@ document.addEventListener("click", (event) => {
           document.querySelector("#newFamilyPhone").value = phone;
         }
 
-        createMemberForm("형제", "성인 남성", false, [brotherName]);
-        createMemberForm("자매", "성인 여성", false, [sisterName]);
+        if (brotherName) {
+          createMemberForm("형제", "성인 남성", true, [brotherName]);
+        }
+        if (sisterName) {
+          createMemberForm("자매", "성인 여성", true, [sisterName]);
+        }
         
         childrenList.forEach((child) => {
           createMemberForm("자녀", child.group, true, [child.name, child.group]);
@@ -3681,11 +3698,9 @@ document.addEventListener("click", (event) => {
         showToast(`${name}님의 가족 정보를 시트에서 불러왔습니다.`);
       } else {
         if (isBrother) {
-          createMemberForm("형제", "성인 남성", false, [name]);
-          createMemberForm("자매", "성인 여성", false, [""]);
+          createMemberForm("형제", "성인 남성", true, [name]);
         } else {
-          createMemberForm("형제", "성인 남성", false, [""]);
-          createMemberForm("자매", "성인 여성", false, [name]);
+          createMemberForm("자매", "성인 여성", true, [name]);
         }
         showToast(`${name}님을 구글 시트에서 찾지 못했습니다.`);
       }
