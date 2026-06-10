@@ -2495,19 +2495,6 @@
             )
           : null,
         h("main", { className: "px-4 pt-3" },
-          !selectedRoom
-            ? h("div", { className: "mb-3 rounded-2xl border border-[#1e5a45]/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(232,241,235,0.92))] p-4 shadow-sm" },
-                h("div", { className: "flex items-start gap-3" },
-                  h("div", { className: "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1e5a45] text-white shadow-sm" },
-                    renderIcon("door-open", "h-5 w-5")
-                  ),
-                  h("div", { className: "min-w-0" },
-                    h("div", { className: "text-sm font-semibold text-slate-950" }, "먼저 배정할 방을 선택하세요"),
-                    h("p", { className: "mt-1 text-xs leading-5 text-slate-600" }, "방 카드를 탭하면 하단에 미배정 가족 목록이 열립니다. 그 다음 가족을 탭하면 바로 배정됩니다.")
-                  )
-                )
-              )
-            : null,
           visibleRooms.map((building) =>
             h("section", { key: `mobile-${building.building}`, className: "mb-6" },
               h("div", { className: "mb-2 flex items-center justify-between" },
