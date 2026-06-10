@@ -2205,12 +2205,13 @@ body.mobile-mode #schoolTimeFilterContainer {
   display: none !important;
 }
 body.mobile-mode .school-cards-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 body.mobile-mode .school-card {
   min-width: 0;
-  padding: 10px 8px;
+  width: 100%;
+  padding: 12px;
   overflow: hidden;
 }
 body.mobile-mode .school-card > div[style*="grid-template-columns"] {
@@ -2224,7 +2225,7 @@ body.mobile-mode .school-member-pill {
   justify-content: flex-start;
 }
 body.mobile-mode .school-member-pill strong {
-  max-width: 42%;
+  max-width: 48%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
