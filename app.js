@@ -1522,8 +1522,9 @@ function renderOrgChart(genderMode) {
   const statsBar = document.querySelector("#orgStatsBar");
   
   const groupFilter = isSister ? "성인 여성" : "성인 남성";
+  const useMobileOrgSummaryCards = false;
 
-  if (document.body.classList.contains("mobile-mode")) {
+  if (useMobileOrgSummaryCards && document.body.classList.contains("mobile-mode")) {
     const allPeople = new Set();
     groupsData.forEach((group) => {
       allPeople.add(group.leader);
@@ -1763,10 +1764,11 @@ function renderOrgChart(genderMode) {
       
     return `
       <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}" style="${displayStyle}">
-        <span style="display: inline-flex; align-items: center; gap: 6px;">
+        <span class="org-node-name">
           <span class="org-status-dot badge-${att.status}"></span>
           <b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}
         </span>
+        <span class="org-badge badge-${att.status} org-node-status-badge">${att.label}</span>
       </div>
     `;
   }

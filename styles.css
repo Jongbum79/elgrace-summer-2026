@@ -1171,6 +1171,22 @@ body.desktop-mode .memo {
   border-color: var(--sage);
   transform: translateY(-1px);
 }
+.org-node-name {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.org-node-name b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.org-node-status-badge {
+  flex: 0 0 auto;
+  margin-left: 6px;
+}
 
 /* 실시간 참석 여부 배지 */
 .org-badge {
@@ -2059,9 +2075,25 @@ body.mobile-mode #familyCardList {
 /* 2-Column Small Group Page Grid */
 body.mobile-mode .org-chart-grid {
   display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
+  grid-template-columns: 1fr !important;
   gap: 12px !important;
-  padding: 10px !important;
+  padding: 10px 0 !important;
+}
+body.mobile-mode .org-group-card {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 16px !important;
+  border-radius: 18px !important;
+}
+body.mobile-mode .org-leader-node,
+body.mobile-mode .org-member-node {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 9px 10px !important;
+}
+body.mobile-mode .org-node-status-badge {
+  min-width: 52px;
+  text-align: center;
 }
 .org-mobile-group-card {
   background: #ffffff;
