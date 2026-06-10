@@ -604,7 +604,8 @@ textarea { width: 100%; padding: 10px; resize: vertical; outline-color: var(--sa
 .attendance-segment.selected + .attendance-segment.selected { border-left-color: rgba(255, 255, 255, .45); }
 .attendance-segment.unavailable { cursor: not-allowed; color: #d0d8d5; background: #eef1f0; text-decoration: line-through; }
 .remove-child { padding: 5px 0; border-radius: 10px; color: #ad756b; background: #fff0ed; font-size: 9px; font-weight: 800; }
-.add-child-button { margin-top: 11px; padding: 8px 11px; border-radius: 7px; color: var(--forest); background: #edf6f1; font-size: 11px; font-weight: 800; }
+.add-child-button { margin-top: 11px; padding: 8px 11px; border-radius: 7px; color: var(--forest); background: #edf6f1; font-size: 11px; font-weight: 800; border: 1px solid transparent; }
+.add-child-button:disabled { color: #94a3b8 !important; background: #f8fafc !important; border: 1px dashed #cbd5e1 !important; cursor: not-allowed !important; }
 .add-member-buttons { display: flex; gap: 8px; margin-top: 11px; }
 .add-member-buttons .add-child-button { margin-top: 0; flex: 1; }
 .memo-label textarea { display: block; margin-top: 6px; }
@@ -1190,6 +1191,41 @@ body.desktop-mode .memo {
 }
 
 /* 모바일 뷰 최적화 */
+body.mobile-mode #participantsView .page-heading {
+  padding-bottom: 12px;
+  width: 100%;
+}
+
+body.mobile-mode #participantsView .heading-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+body.mobile-mode #participantsView .heading-actions .primary-button,
+body.mobile-mode #participantsView .heading-actions .secondary-button {
+  width: 100%;
+  min-height: 46px;
+  justify-content: center;
+  border-radius: 14px;
+  padding: 0 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025), 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+body.mobile-mode #participantsView .heading-actions .primary-button i,
+body.mobile-mode #participantsView .heading-actions .secondary-button i {
+  flex-shrink: 0;
+  margin-right: 6px !important;
+}
+
+body.mobile-mode #participantsView .participants-mode-tabs,
+body.mobile-mode #participantsView .family-section,
+body.mobile-mode #participantsView .org-chart-section,
+body.mobile-mode #participantsView .school-section {
+  width: 100%;
+}
+
 body.mobile-mode .participants-mode-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
