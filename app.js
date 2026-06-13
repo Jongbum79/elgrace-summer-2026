@@ -2459,7 +2459,7 @@ function normalizeExternalMealStates(row) {
     const isBreakfastSelected = breakfast?.classList.contains("selected");
     
     const isValidDinnerPattern = segment.dataset.period === "dinner" &&
-      (isBreakfastSelected || isBreakfastUnavailable) &&
+      (!isBreakfastSelected || isBreakfastUnavailable) &&
       !lunch?.classList.contains("selected");
     if (!isValidDinnerPattern) segment.classList.remove("external-meal");
   });
@@ -2477,7 +2477,7 @@ function cycleAttendanceSegment(segment) {
   const isBreakfastSelected = breakfast?.classList.contains("selected");
   
   const canUseExternalMeal = segment.dataset.period === "dinner" &&
-    (isBreakfastSelected || isBreakfastUnavailable) &&
+    (!isBreakfastSelected || isBreakfastUnavailable) &&
     !lunch?.classList.contains("selected");
   if (segment.classList.contains("external-meal")) {
     setAttendanceSelected(segment, false);
