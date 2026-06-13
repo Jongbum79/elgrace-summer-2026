@@ -2540,7 +2540,64 @@ function updateFullAttendanceLabels() {
     : "✓ 가족 전원 풀참";
 }
 
+function syncExternalMealsMemo() {
+  const memoEl = document.querySelector("#newFamilyMemo");
+  if (!memoEl) return;
+  
+  let memoText = memoEl.value;
+  const rows = [...document.querySelectorAll(".member-form-row")];
+  const currentNames = [];
+  
+  rows.forEach(row => {
+    const nameInput = row.querySelector(".new-member-name");
+    if (!nameInput) return;
+    const name = nameInput.value.trim();
+    if (!name) return;
+    
+    currentNames.push(name);
+    const hasExternalMeal = row.querySelectorAll(".attendance-segment.external-meal").length > 0;
+    const targetPhrase = `[${name}] 저녁 먹고 입소 (입소날 저녁 식사 회비 불포함)`;
+    const containsPhrase = memoText.includes(targetPhrase);
+    
+    if (hasExternalMeal && !containsPhrase) {
+      if (memoText.trim() === "") {
+        memoText = targetPhrase;
+      } else {
+        memoText = memoText.trim() + "\n" + targetPhrase;
+      }
+    } else if (!hasExternalMeal && containsPhrase) {
+      const escapedPhrase = targetPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?:\\r?\\n)?${escapedPhrase}(?:\\r?\\n)?`, 'g');
+      memoText = memoText.replace(regex, '\n').trim();
+    }
+  });
+  
+  // Clean up any old names that no longer exist or were renamed
+  const pattern = /\[([^\]]+)\] 저녁 먹고 입소 \(입소날 저녁 식사 회비 불포함\)/g;
+  let match;
+  const phrasesToRemove = [];
+  while ((match = pattern.exec(memoText)) !== null) {
+    const matchedName = match[1];
+    if (!currentNames.includes(matchedName)) {
+      phrasesToRemove.push(match[0]);
+    }
+  }
+  
+  phrasesToRemove.forEach(phrase => {
+    const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?:\\r?\\n)?${escapedPhrase}(?:\\r?\\n)?`, 'g');
+    memoText = memoText.replace(regex, '\n').trim();
+  });
+  
+  memoText = memoText.replace(/\n{2,}/g, '\n').trim();
+  
+  if (memoEl.value !== memoText) {
+    memoEl.value = memoText;
+  }
+}
+
 function updateEstimatedFee() {
+  syncExternalMealsMemo();
   const rows = [...document.querySelectorAll(".member-form-row")];
   const attendingRows = rows.filter((row) => {
     const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active");
@@ -3907,6 +3964,14 @@ document.querySelector("#driveFileInput")?.addEventListener("change", async (e) 
 document.querySelector("#memberFormList").addEventListener("change", (event) => {
   if (event.target.classList.contains("new-member-group")) {
     updateEstimatedFee();
+  }
+  if (event.target.classList.contains("new-member-name")) {
+    syncExternalMealsMemo();
+  }
+});
+document.querySelector("#memberFormList").addEventListener("input", (event) => {
+  if (event.target.classList.contains("new-member-name")) {
+    syncExternalMealsMemo();
   }
 });
 document.querySelector("#mealDrawerClose").addEventListener("click", closeMealDrawer);
