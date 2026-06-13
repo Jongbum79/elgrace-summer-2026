@@ -390,7 +390,7 @@ window.calculateFamilyFee = function(family, allFamilies) {
     (childBreakfast * 3000 + childLunchDinner * 9000) +
     (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
     
-  const sharedFee = numMembers > 0 ? 10000 : 0;
+  const sharedFee = 0;
   const total = sharedFee + lodgingCost + mealCost + snackCost;
   
   return {
@@ -457,7 +457,7 @@ async function loadFamiliesFromSupabase() {
     const { data, error } = await supabaseClient.from("families").select("*");
     if (error) throw error;
     if (data) {
-      families = data.map((family) => {
+      const parsed = data.map((family) => {
         if (family.members) {
           family.members = family.members.map((member) => {
             if (member[1] === "고등부" || member[1] === "중등부") {
@@ -484,6 +484,13 @@ async function loadFamiliesFromSupabase() {
             console.error("FEE_INFO 파싱 에러:", e);
           }
         }
+        return family;
+      });
+
+      // Second pass: dynamically calculate the correct fee
+      families = parsed.map((family) => {
+        const calcResult = window.calculateFamilyFee(family, parsed);
+        family.fee = calcResult.total;
         return family;
       });
       console.log("Supabase 가족 데이터 로드 완료", families);
@@ -952,6 +959,7 @@ function renderFamilies() {
   
   let adultCount = 0;
   let collegeCount = 0;
+  let youthCount = 0;
   let childCount = 0;
   let kindergartenCount = 0;
   let toddlerCount = 0;
@@ -976,7 +984,9 @@ function renderFamilies() {
           adultCount++;
         } else if (group === "대학부") {
           collegeCount++;
-        } else if (group === "초등부" || group === "유년부" || group === "중고등부") {
+        } else if (group === "중고등부") {
+          youthCount++;
+        } else if (group === "초등부" || group === "유년부") {
           childCount++;
         } else if (group === "유치부") {
           kindergartenCount++;
@@ -988,12 +998,15 @@ function renderFamilies() {
   });
   
   const statsHtml = `
-    <strong><i data-lucide="home" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px; color: var(--forest);"></i>${visibleFamilies.length}가족</strong>
-    <span class="stats-sep">|</span> 장년부 ${adultCount}명
-    <span class="stats-sep">|</span> 대학부 ${collegeCount}명
-    <span class="stats-sep">|</span> 유초등부 ${childCount}명
-    <span class="stats-sep">|</span> 유치부 ${kindergartenCount}명
-    <span class="stats-sep">|</span> 유아부 ${toddlerCount}명
+    <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 800; color: var(--forest);">
+      <i data-lucide="home" style="width: 14px; height: 14px; stroke-width: 2.2px;"></i>${visibleFamilies.length}가족
+    </span>
+    <span class="stats-sep">|</span> <span>장년부 ${adultCount}명</span>
+    <span class="stats-sep">|</span> <span>대학부 ${collegeCount}명</span>
+    <span class="stats-sep">|</span> <span>중고등부 ${youthCount}명</span>
+    <span class="stats-sep">|</span> <span>유초등부 ${childCount}명</span>
+    <span class="stats-sep">|</span> <span>유치부 ${kindergartenCount}명</span>
+    <span class="stats-sep">|</span> <span>유아부 ${toddlerCount}명</span>
     ${undecidedFamiliesCount > 0 ? `
       <span class="stats-sep">|</span> 
       <span style="color: #687873; font-weight: 700;">❓ 미정 ${undecidedFamiliesCount}가족(${undecidedMembersCount}명)</span>
@@ -2524,7 +2537,6 @@ function updateEstimatedFee() {
         <span><i data-lucide="utensils-crossed" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
-        <div>공동부담금: ${sharedFee.toLocaleString()}원</div>
         <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
         <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 마지막날 제외)</div>
         <div>식비 세부내역:</div>
@@ -2537,7 +2549,7 @@ function updateEstimatedFee() {
           식사비 합계: ${mealCost.toLocaleString()}원
         </div>
         <div style="font-weight: 800; border-top: 1px solid #1e5a45; padding-top: 6px; margin-top: 6px; color: #0f172a; font-size: 11.5px; line-height: 1.4;">
-          공동부담금 ${sharedFee.toLocaleString()}원 + 숙박비 ${lodgingCost.toLocaleString()}원 + 식사비 ${mealCost.toLocaleString()}원 + 간식비 ${snackCost.toLocaleString()}원 = 최종 ${totalCost.toLocaleString()}원
+          숙박비 ${lodgingCost.toLocaleString()}원 + 식사비 ${mealCost.toLocaleString()}원 + 간식비 ${snackCost.toLocaleString()}원 = 최종 ${totalCost.toLocaleString()}원
         </div>
       </div>
     `;

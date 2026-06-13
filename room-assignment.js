@@ -2293,7 +2293,14 @@
                   key: `${room.id}-${family._familyId}`,
                   onClick: (event) => {
                     event.stopPropagation();
-                    setActiveTooltip({ family, rect: event.currentTarget.getBoundingClientRect() });
+                    if (window.innerWidth < 1024 || document.body.classList.contains("mobile-mode")) {
+                      if (confirm(`${familyDisplayName(family)}을(를) ${room.label}에서 배정 취소하시겠습니까?`)) {
+                        updateAssignment(family._familyId, "미배정");
+                        showToast(`${familyDisplayName(family)} 배정이 취소되었습니다.`);
+                      }
+                    } else {
+                      setActiveTooltip({ family, rect: event.currentTarget.getBoundingClientRect() });
+                    }
                   },
                   className: "max-w-full rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 whitespace-nowrap truncate text-left cursor-pointer",
                 }, familyDisplayName(family).replace(" 가족", ""))
@@ -2514,7 +2521,7 @@
         ),
         h("aside", {
           className: cx(
-            "fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] rounded-t-2xl border border-slate-200 bg-white shadow-[0_-18px_48px_rgba(15,23,42,0.18)] transition-transform duration-300",
+            "mobile-room-sheet fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] rounded-t-2xl border border-slate-200 bg-white shadow-[0_-18px_48px_rgba(15,23,42,0.18)] transition-transform duration-300",
             familySheetOpen ? "translate-y-0" : "translate-y-[calc(100%-76px)]"
           ),
         },
@@ -2599,13 +2606,16 @@
       );
     }
 
+    const isMobileMode = document.body.classList.contains("mobile-mode") || window.innerWidth < 1024;
+
     return h(
       React.Fragment,
       null,
-      renderMobileExperience(),
-      h(
-      "div",
-      { className: "hidden lg:block mx-auto max-w-[1900px] px-4 py-6 sm:px-6 lg:px-8" },
+      isMobileMode ? renderMobileExperience() : null,
+      !isMobileMode
+        ? h(
+            "div",
+            { className: "mx-auto max-w-[1900px] px-4 py-6 sm:px-6 lg:px-8" },
       h("div", { className: "rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,246,240,0.98))] shadow-[0_18px_60px_rgba(17,24,39,0.08)]" },
         h("div", { className: "border-b border-slate-200/80 px-5 py-5 sm:px-6" },
           h("div", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" },
@@ -2854,7 +2864,8 @@
             )
           )
         )
-      ),
+          )
+        : null,
       autoAssigning
         ? h(
             "div",
