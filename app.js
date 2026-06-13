@@ -4046,20 +4046,40 @@ document.querySelector("#copyShareLinkButton")?.addEventListener("click", () => 
   url.hash = ""; // Clear hash
   const shareUrl = url.toString();
   
-  navigator.clipboard.writeText(shareUrl)
-    .then(() => {
-      showToast("참석자용 전용 페이지 링크가 클립보드에 복사되었습니다.");
-    })
-    .catch((err) => {
-      console.error("클립보드 복사 실패:", err);
-      const tempInput = document.createElement("input");
-      tempInput.value = shareUrl;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      document.execCommand("copy");
-      document.body.removeChild(tempInput);
-      showToast("참석자용 전용 페이지 링크가 복사되었습니다.");
-    });
+  const fallbackCopy = (text) => {
+    try {
+      const tempEl = document.createElement("textarea");
+      tempEl.value = text;
+      tempEl.style.position = "fixed";
+      tempEl.style.opacity = "0";
+      document.body.appendChild(tempEl);
+      tempEl.select();
+      tempEl.setSelectionRange(0, 99999);
+      const successful = document.execCommand("copy");
+      document.body.removeChild(tempEl);
+      if (successful) {
+        showToast("참석자용 전용 페이지 링크가 복사되었습니다.");
+      } else {
+        throw new Error("execCommand copy failed");
+      }
+    } catch (e) {
+      console.error("클립보드 복사 실패:", e);
+      window.prompt("아래 링크를 복사하여 참석자들에게 전달해주세요:", text);
+    }
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        showToast("참석자용 전용 페이지 링크가 클립보드에 복사되었습니다.");
+      })
+      .catch((err) => {
+        console.warn("Clipboard API failed, using fallback:", err);
+        fallbackCopy(shareUrl);
+      });
+  } else {
+    fallbackCopy(shareUrl);
+  }
 });
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
