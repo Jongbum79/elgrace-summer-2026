@@ -49,7 +49,24 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 let families = [];
 let globalRoomLayout = null;
 let currentOrgMode = "family";
-let currentPageView = "attendance";
+// URL 파라미터 또는 해시 감지
+const urlParams = new URLSearchParams(window.location.search);
+const isParticipantsOnly = urlParams.get("view") === "participants_only" || window.location.hash === "#participants-only";
+
+let currentPageView = isParticipantsOnly ? "participants" : "attendance";
+
+if (isParticipantsOnly) {
+  document.body.classList.add("participants-only-mode");
+  // Toggle active class on views
+  document.querySelectorAll(".page-view").forEach((page) => {
+    page.classList.toggle("active", page.id === "participantsView");
+  });
+  // Toggle active class on nav items
+  document.querySelectorAll("[data-view]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.view === "participants");
+  });
+}
+
 let orgActiveFilter = "all";
 let selectedOrgTimeSlot = null;
 let selectedSchoolTimeSlot = null;
@@ -4023,6 +4040,27 @@ document.querySelector("#modalUndecided").addEventListener("click", async () => 
   showToast(`${family.name}이 전체 미정으로 등록되었습니다.`);
 });
 document.querySelector("#downloadButton").addEventListener("click", downloadList);
+document.querySelector("#copyShareLinkButton")?.addEventListener("click", () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set("view", "participants_only");
+  url.hash = ""; // Clear hash
+  const shareUrl = url.toString();
+  
+  navigator.clipboard.writeText(shareUrl)
+    .then(() => {
+      showToast("참석자용 전용 페이지 링크가 클립보드에 복사되었습니다.");
+    })
+    .catch((err) => {
+      console.error("클립보드 복사 실패:", err);
+      const tempInput = document.createElement("input");
+      tempInput.value = shareUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand("copy");
+      document.body.removeChild(tempInput);
+      showToast("참석자용 전용 페이지 링크가 복사되었습니다.");
+    });
+});
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
 document.querySelector("#mealDownloadButton").addEventListener("click", () => showToast("식사별 명단 다운로드를 준비했습니다."));

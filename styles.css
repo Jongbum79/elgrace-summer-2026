@@ -2771,3 +2771,22 @@ body.mobile-mode .topbar h1 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 참석자 전용 페이지 모드 (participants-only-mode) */
+body.participants-only-mode .sidebar,
+body.participants-only-mode .mobile-bottom-nav,
+body.participants-only-mode .topbar,
+body.participants-only-mode #downloadButton,
+body.participants-only-mode #copyShareLinkButton {
+  display: none !important;
+}
+
+body.participants-only-mode .main-content {
+  width: 100% !important;
+  margin-left: 0 !important;
+  padding: 32px 24px 48px !important;
+}
+
+body.participants-only-mode.mobile-mode .main-content {
+  padding: 24px 16px 32px !important;
+}
