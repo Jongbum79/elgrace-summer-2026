@@ -706,25 +706,6 @@ body.mobile-mode .family-schedule-groups {
   width: 100%;
   min-width: 0;
 }
-body.mobile-mode .family-schedule-group {
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: flex-start;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-}
-body.mobile-mode .family-day-squares {
-  width: 100%;
-  max-width: none;
-  justify-content: flex-start;
-}
-body.mobile-mode .family-schedule-names {
-  width: 100%;
-  min-height: 0;
-  padding-top: 0;
-  flex: none;
-}
 body.mobile-mode .table-row-action { display: block; padding: 0; }
 body.mobile-mode .table-row-action::before { display: none; }
 body.mobile-mode .table-row-action .row-menu { position: absolute; top: 8px; right: 10px; }
