@@ -2864,8 +2864,9 @@
             )
           )
         )
-          )
-        : null,
+      )
+    )
+  : null,
       autoAssigning
         ? h(
             "div",
@@ -2913,7 +2914,7 @@
           )
         : null,
       renderTooltip()
-    ));
+    );
   }
 
   function mountRoomAssignment() {

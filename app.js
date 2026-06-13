@@ -1778,7 +1778,6 @@ function renderOrgChart(genderMode) {
     return `
       <div class="org-${isLeader ? "leader" : "member"}-node ${btnClass} ${isLeader} ${regClass}" data-name="${name}" style="${displayStyle}">
         <span class="org-node-name">
-          <span class="org-status-dot badge-${att.status}"></span>
           <b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}
         </span>
         <span class="org-badge badge-${att.status} org-node-status-badge">${att.label}</span>
@@ -2010,7 +2009,6 @@ function openGroupDetailDrawer(groupId, genderMode) {
     return `
       <div class="org-${isLeader ? "leader" : "member"}-node ${btnClassPrefix}-member-btn ${isLeader} ${regClass}" data-name="${name}" style="width: 100%; max-width: 100%;">
         <span style="display: inline-flex; align-items: center; gap: 6px;">
-          <span class="org-status-dot badge-${att.status}"></span>
           <b>${name}</b>${showLabel ? ` <small style="font-size:9.5px;color:var(--muted);font-weight:normal;">(${roleLabel})</small>` : ""}
         </span>
       </div>

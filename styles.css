@@ -1081,12 +1081,12 @@ body.desktop-mode .memo {
 }
 .org-chart-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
   padding-bottom: 30px;
 }
 .org-group-card {
-  max-width: 200px;
+  max-width: none;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 24px;
