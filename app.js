@@ -1068,6 +1068,41 @@ function renderFamilies() {
         return `<span class="member-pill child ${sClass}">${member[0]}${nameSuffix}</span>`;
       }).join("");
 
+      const feeResult = window.calculateFamilyFee(family, families);
+      const totalCost = feeResult.total;
+      const lodgingCost = feeResult.lodgingCost;
+      const mealCost = feeResult.mealCost;
+      const snackCost = feeResult.snackCost;
+      const roomLabel = feeResult.roomLabel;
+      const roomRate = feeResult.roomRate;
+      const nights = feeResult.nights;
+      
+      const adultBreakfast = feeResult.details.adultBreakfast;
+      const adultLunchDinner = feeResult.details.adultLunchDinner;
+      const childBreakfast = feeResult.details.childBreakfast;
+      const childLunchDinner = feeResult.details.childLunchDinner;
+      const preschoolBreakfast = feeResult.details.preschoolBreakfast;
+      const preschoolLunchDinner = feeResult.details.preschoolLunchDinner;
+
+      const breakfastCount = adultBreakfast + childBreakfast + preschoolBreakfast;
+
+      let lunchCount = 0;
+      let dinnerCount = 0;
+      family.members.forEach((m) => {
+        if (m[7] === "undecided") return;
+        const periods = getMemberAttendancePeriods(m);
+        const externalMeals = getMemberExternalMealPeriods(m);
+        periods.forEach((p) => {
+          const isExternal = externalMeals.includes(p);
+          const period = p.split("-")[1];
+          if (period === "lunch" && !isExternal) lunchCount++;
+          if (period === "dinner" && !isExternal) dinnerCount++;
+        });
+      });
+
+      const isLodgingShared = lodgingCost < (nights * roomRate);
+      const sharingNotice = isLodgingShared ? `<span style="color: #ef4444; font-weight: 700; margin-left: 8px;">(방나누기 할인 적용됨)</span>` : "";
+
       return `
         <div class="family-card status-border-${actualStatus}" data-family-id="${family.id}">
           <div class="family-card-header">
@@ -1105,6 +1140,33 @@ function renderFamilies() {
                   <span class="fee-badge ${family.feeStatus || 'pending'}" style="margin:0;">${family.feeStatus === 'paid' ? '완납' : '납부 예정'}</span>
                   <strong>${(family.fee || 0).toLocaleString()}원</strong>
                 </span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <span class="section-label">회비 산정 상세 내역</span>
+              <div style="background: #f4f7f5; border: 1px solid #dfe7e3; border-radius: 12px; padding: 12px 14px; font-size: 11px; color: #40534c; line-height: 1.6;">
+                <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
+                  <span>🛏️ 총 숙박수: ${nights}박</span>
+                  <span style="color: #cbd5e1;">|</span>
+                  <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
+                  <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 마지막날 제외)</div>
+                  <div>식비 세부내역:</div>
+                  <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
+                    • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
+                    • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
+                    • 미취학 아동: 아침 ${preschoolBreakfast}회 x 3,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 3000 + preschoolLunchDinner * 7000).toLocaleString()}원
+                  </div>
+                  <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
+                    식사비 합계: ${mealCost.toLocaleString()}원
+                  </div>
+                  <div style="font-weight: 800; border-top: 1px solid #1e5a45; padding-top: 6px; margin-top: 6px; color: #0f172a; font-size: 11.5px; line-height: 1.4;">
+                    숙박비 ${lodgingCost.toLocaleString()}원 + 식사비 ${mealCost.toLocaleString()}원 + 간식비 ${snackCost.toLocaleString()}원 = 최종 ${totalCost.toLocaleString()}원
+                  </div>
+                </div>
               </div>
             </div>
 
