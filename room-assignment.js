@@ -377,13 +377,22 @@
     if (!query) return true;
     const needle = normalizeText(query);
     const roomValue = normalizeText(family?.room || "");
+    const draftRoomValue = normalizeText(family?._roomValue || "");
     return [
       family?.name,
       family?.leader,
       roomValue,
+      draftRoomValue,
       String(family?.id || ""),
       family?.phone,
     ].some((value) => normalizeText(value).includes(needle));
+  }
+
+  function isRoomQueryMatch(room, familiesInRoom, query) {
+    if (!query) return true;
+    const needle = normalizeText(query);
+    if (normalizeText(room.label || "").includes(needle)) return true;
+    return familiesInRoom.some((f) => familyMatchesQuery(f, query));
   }
 
   function familySortRank(family, roomValue, roomExists) {
@@ -990,36 +999,39 @@
           if (["absent", "undecided"].includes(family.status)) return false;
           if (getFamilyStayNights(family).length === 0) return false;
           if (!family._queryMatch) return false;
-          if (statusFilter !== "all" && family.status !== statusFilter) return false;
-          if (familyStateFilter === "unassigned" && family._roomExists) return false;
-          if (queueSizeFilter !== "all") {
-            const size = family._size;
-            if (queueSizeFilter === "1") {
-              if (size !== 1) return false;
-            } else if (queueSizeFilter === "2") {
-              if (size !== 2) return false;
-            } else if (queueSizeFilter === "3-4") {
-              if (size < 3 || size > 4) return false;
-            } else if (queueSizeFilter === "5+") {
-              if (size < 5) return false;
+          
+          if (!query) {
+            if (statusFilter !== "all" && family.status !== statusFilter) return false;
+            if (familyStateFilter === "unassigned" && family._roomExists) return false;
+            if (queueSizeFilter !== "all") {
+              const size = family._size;
+              if (queueSizeFilter === "1") {
+                if (size !== 1) return false;
+              } else if (queueSizeFilter === "2") {
+                if (size !== 2) return false;
+              } else if (queueSizeFilter === "3-4") {
+                if (size < 3 || size > 4) return false;
+              } else if (queueSizeFilter === "5+") {
+                if (size < 5) return false;
+              }
             }
-          }
-          if (familyStateFilter === "assigned" && !family._roomExists) return false;
-          if (familyStateFilter === "orphaned" && family._roomExists) return false;
-          if (buildingFilter !== "all" && family._roomExists) {
-            if (!layoutState.data) return false;
-            const room = resolveRoom(layoutState.data, family._roomValue);
-            if (!room || room.building !== buildingFilter) return false;
-          }
-          if (floorFilter !== "all" && family._roomExists) {
-            if (!layoutState.data) return false;
-            const room = resolveRoom(layoutState.data, family._roomValue);
-            if (!room || String(room.floor) !== floorFilter) return false;
-          }
-          if (roomTypeFilter !== "all" && family._roomExists) {
-            if (!layoutState.data) return false;
-            const room = resolveRoom(layoutState.data, family._roomValue);
-            if (!room || room.room_type !== roomTypeFilter) return false;
+            if (familyStateFilter === "assigned" && !family._roomExists) return false;
+            if (familyStateFilter === "orphaned" && family._roomExists) return false;
+            if (buildingFilter !== "all" && family._roomExists) {
+              if (!layoutState.data) return false;
+              const room = resolveRoom(layoutState.data, family._roomValue);
+              if (!room || room.building !== buildingFilter) return false;
+            }
+            if (floorFilter !== "all" && family._roomExists) {
+              if (!layoutState.data) return false;
+              const room = resolveRoom(layoutState.data, family._roomValue);
+              if (!room || String(room.floor) !== floorFilter) return false;
+            }
+            if (roomTypeFilter !== "all" && family._roomExists) {
+              if (!layoutState.data) return false;
+              const room = resolveRoom(layoutState.data, family._roomValue);
+              if (!room || room.room_type !== roomTypeFilter) return false;
+            }
           }
           return true;
         })
@@ -1036,10 +1048,13 @@
 
     const mobileUnassignedFamilies = useMemo(() => {
       return filteredFamilies
-        .filter((family) => !family._roomExists)
+        .filter((family) => {
+          if (!query && family._roomExists) return false;
+          return true;
+        })
         .filter((family) => !["absent", "undecided"].includes(family.status))
         .slice(0, 80);
-    }, [filteredFamilies]);
+    }, [filteredFamilies, query]);
 
     const visibleRooms = useMemo(() => {
       if (!layoutState.data) return [];
@@ -1907,6 +1922,7 @@
       const compact = density === "compact";
       const canAssign = !room.unavailable && room.capacity > 0;
       const showOccupancy = shouldShowOccupancyDetails(room);
+      const isQueryMatch = isRoomQueryMatch(room, familiesInRoom, query);
 
       return h(
         "div",
@@ -1917,7 +1933,8 @@
             "group relative flex flex-col rounded-2xl border text-left shadow-sm transition-all duration-200",
             compact ? "min-h-[94px] p-3" : "min-h-[96px] p-3",
             roomToneClass(status, selected, dragTarget),
-            canAssign ? "hover:-translate-y-0.5 hover:shadow-lg" : "cursor-not-allowed"
+            canAssign ? "hover:-translate-y-0.5 hover:shadow-lg" : "cursor-not-allowed",
+            !isQueryMatch && "opacity-20 pointer-events-none"
           ),
           title: `${room.label} · ${toRoomBadge(room)} · ${room.cell || ""}`,
         },
@@ -2249,6 +2266,7 @@
       const remaining = Math.max(room.capacity - maxOccupancy, 0);
       const canAssign = !room.unavailable && room.capacity > 0;
       const showOccupancy = shouldShowOccupancyDetails(room);
+      const isQueryMatch = isRoomQueryMatch(room, familiesInRoom, query);
 
       return h(
         "div",
@@ -2264,7 +2282,8 @@
           },
           className: cx(
             "min-h-[112px] w-full rounded-lg border p-3 text-left shadow-sm transition active:scale-[0.98] cursor-pointer",
-            roomToneClass(status, selected, dragTarget)
+            roomToneClass(status, selected, dragTarget),
+            !isQueryMatch && "opacity-20 pointer-events-none"
           ),
         },
         h("div", { className: "flex items-start justify-between gap-2" },
@@ -2534,7 +2553,7 @@
               h("div", { className: "mx-auto mb-2 h-1 w-10 rounded-full bg-slate-300" }),
               h("div", { className: "flex items-center gap-2 text-sm font-semibold text-slate-950" },
                 renderIcon("users", "h-4 w-4 text-[#1e5a45]"),
-                `미배정 가족 ${mobileUnassignedFamilies.length}`
+                query ? `검색 결과 ${mobileUnassignedFamilies.length}` : `미배정 가족 ${mobileUnassignedFamilies.length}`
               ),
               h("div", { className: "mt-1 text-xs font-medium text-slate-500" },
                 selectedRoom ? `${selectedRoom.label}에 배정할 가족을 선택하세요.` : "방을 먼저 선택하면 가족을 배정할 수 있습니다."
@@ -2556,7 +2575,7 @@
           h("div", { className: "max-h-[52vh] overflow-y-auto overscroll-contain pb-24" },
             mobileUnassignedFamilies.length
               ? mobileUnassignedFamilies.map((family) => renderMobileFamilyRow(family))
-              : h("div", { className: "px-4 py-8 text-center text-sm text-slate-500" }, "미배정 가족이 없습니다.")
+              : h("div", { className: "px-4 py-8 text-center text-sm text-slate-500" }, query ? "검색 결과가 없습니다." : "미배정 가족이 없습니다.")
           )
         )
       );

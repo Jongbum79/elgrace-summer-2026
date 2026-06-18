@@ -816,7 +816,7 @@ function getFilteredFamilies() {
   const keyword = document.querySelector("#searchInput").value.trim().toLowerCase();
   return families.filter((family) => {
     if (family.status === "absent") return false;
-    const isUndecidedFamily = family.status === "undecided" || family.members.some(member => member[7] === "undecided");
+    const isUndecidedFamily = family.status === "undecided";
     const status = getFamilyAttendanceStatus(family);
     
     let filterMatches = false;
@@ -984,7 +984,7 @@ function renderFamilies() {
   let undecidedMembersCount = 0;
   
   visibleFamilies.forEach((family) => {
-    const isUndecidedFamily = family.status === "undecided" || family.members.some(m => m[7] === "undecided");
+    const isUndecidedFamily = family.status === "undecided";
     if (isUndecidedFamily) {
       undecidedFamiliesCount++;
     }
@@ -2603,6 +2603,12 @@ function updateEstimatedFee() {
     const isUndecided = row.querySelector(".member-undecided-attendance")?.classList.contains("active");
     return !isUndecided && row.querySelectorAll(".attendance-segment.selected").length > 0;
   });
+  
+  const statusEl = document.querySelector("#newFamilyStatus");
+  if (statusEl && statusEl.value === "undecided" && attendingRows.length > 0) {
+    statusEl.value = "late";
+  }
+
   const numMembers = attendingRows.length;
   
   const roomValue = document.querySelector("#newFamilyRoomLabel")?.textContent.trim() || "미배정";
