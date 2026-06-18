@@ -399,13 +399,13 @@ window.calculateFamilyFee = function(family, allFamilies) {
       return parts.length > 0 ? dateLabels.indexOf(parts[0]) : -1;
     }))];
     const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
-    snackCost += snackDays * 3000;
+    // snackCost is free (간식비 면제)
   });
   
   const mealCost = 
     (adultBreakfast * 3000 + adultLunchDinner * 10000) +
     (childBreakfast * 3000 + childLunchDinner * 9000) +
-    (preschoolBreakfast * 3000 + preschoolLunchDinner * 7000);
+    0; // preschool/toddler meals are free (유아부 식사비 제외)
     
   const sharedFee = 0;
   const total = sharedFee + lodgingCost + mealCost + snackCost;
@@ -1153,12 +1153,12 @@ function renderFamilies() {
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
-                  <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 마지막날 제외)</div>
+                  <div>간식비: 0원 (면제)</div>
                   <div>식비 세부내역:</div>
                   <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
                     • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
                     • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
-                    • 미취학 아동: 아침 ${preschoolBreakfast}회 x 3,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 3000 + preschoolLunchDinner * 7000).toLocaleString()}원
+                    • 미취학 아동: 아침 ${preschoolBreakfast}회, 중/석식 ${preschoolLunchDinner}회 = 0원 (무료)
                   </div>
                   <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
                     식사비 합계: ${mealCost.toLocaleString()}원
@@ -2678,12 +2678,12 @@ function updateEstimatedFee() {
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
-        <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 마지막날 제외)</div>
+        <div>간식비: 0원 (면제)</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
           • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
           • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
-          • 미취학 아동: 아침 ${preschoolBreakfast}회 x 3,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 3000 + preschoolLunchDinner * 7000).toLocaleString()}원
+          • 미취학 아동: 아침 ${preschoolBreakfast}회, 중/석식 ${preschoolLunchDinner}회 = 0원 (무료)
         </div>
         <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
           식사비 합계: ${mealCost.toLocaleString()}원
