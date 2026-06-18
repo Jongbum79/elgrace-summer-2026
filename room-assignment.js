@@ -125,12 +125,9 @@
     const nightHeads = [0, 0, 0];
     (familiesInRoom || []).forEach((family) => {
       const familySize = getFamilyHeadcount(family);
-      const stayNights = getFamilyStayNights(family);
-      stayNights.forEach((nightIdx) => {
-        if (nightIdx >= 0 && nightIdx < 3) {
-          nightHeads[nightIdx] += familySize;
-        }
-      });
+      for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
+        nightHeads[nightIdx] += familySize;
+      }
     });
     return nightHeads;
   }
@@ -143,30 +140,18 @@
   function canFamilyFitInRoom(family, room, familiesInRoom) {
     if (!room || room.unavailable || room.capacity <= 0) return false;
     const familySize = getFamilyHeadcount(family);
-    const familyNights = getFamilyStayNights(family);
     
-    const nightHeads = [0, 0, 0];
+    let currentOccupancy = 0;
     (familiesInRoom || []).forEach((f) => {
       const fId = f._familyId || f.id || f.name;
       const targetId = family._familyId || family.id || family.name;
       if (fId === targetId) return;
       
-      const fSize = getFamilyHeadcount(f);
-      const fNights = getFamilyStayNights(f);
-      fNights.forEach((n) => {
-        if (n >= 0 && n < 3) {
-          nightHeads[n] += fSize;
-        }
-      });
+      currentOccupancy += getFamilyHeadcount(f);
     });
-
+    
     const limit = getRoomAssignmentLimit(room);
-    for (const n of familyNights) {
-      if (nightHeads[n] + familySize > limit) {
-        return false;
-      }
-    }
-    return true;
+    return (currentOccupancy + familySize) <= limit;
   }
 
   function getFamilyComposition(family) {
@@ -427,7 +412,7 @@
     return h("div", { className: "mt-2.5 flex gap-1 w-full" },
       [0, 1, 2].map(nightIdx => {
         const nightHead = nightHeads[nightIdx];
-        const familiesOnNight = (familiesInRoom || []).filter(f => getFamilyStayNights(f).includes(nightIdx));
+        const familiesOnNight = familiesInRoom || [];
         
         const segments = familiesOnNight.map(family => {
           const famIdx = (familiesInRoom || []).findIndex(f => (f._familyId || f.id) === (family._familyId || family.id));
@@ -591,12 +576,11 @@
     const nightHeads = [0, 0, 0];
     (roomBucket.families || []).forEach((f) => {
       const fSize = getFamilyHeadcount(f);
-      const fNights = getFamilyStayNights(f);
-      fNights.forEach((n) => {
-        if (n >= 0 && n < 3) nightHeads[n] += fSize;
-      });
+      for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
+        nightHeads[nightIdx] += fSize;
+      }
     });
-    const nights = familyNights && familyNights.length > 0 ? familyNights : [0, 1, 2];
+    const nights = [0, 1, 2];
     const maxOccupiedBefore = Math.max(...nights.map((n) => nightHeads[n] || 0));
     const limit = getRoomAssignmentLimit(roomBucket.room);
     const available = limit - maxOccupiedBefore;
