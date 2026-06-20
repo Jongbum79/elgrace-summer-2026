@@ -394,12 +394,14 @@ window.calculateFamilyFee = function(family, allFamilies) {
       }
     });
     
-    const selectedDays = [...new Set(segs.map(seg => {
-      const parts = seg.split("-");
-      return parts.length > 0 ? dateLabels.indexOf(parts[0]) : -1;
-    }))];
-    const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
-    // snackCost is free (간식비 면제)
+    if (type !== "preschool") {
+      const selectedDays = [...new Set(segs.map(seg => {
+        const parts = seg.split("-");
+        return parts.length > 0 ? dateLabels.indexOf(parts[0]) : -1;
+      }))];
+      const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
+      snackCost += snackDays * 3000;
+    }
   });
   
   const mealCost = 
@@ -1153,7 +1155,7 @@ function renderFamilies() {
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
-                  <div>간식비: 0원 (면제)</div>
+                  <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 미취학 아동 및 마지막날 제외)</div>
                   <div>식비 세부내역:</div>
                   <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
                     • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
@@ -2678,7 +2680,7 @@ function updateEstimatedFee() {
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
-        <div>간식비: 0원 (면제)</div>
+        <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 미취학 아동 및 마지막날 제외)</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
           • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
