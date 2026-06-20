@@ -405,8 +405,8 @@ window.calculateFamilyFee = function(family, allFamilies) {
   });
   
   const mealCost = 
-    (adultBreakfast * 3000 + adultLunchDinner * 10000) +
-    (childBreakfast * 3000 + childLunchDinner * 9000) +
+    (adultBreakfast * 2000 + adultLunchDinner * 10000) +
+    (childBreakfast * 2000 + childLunchDinner * 9000) +
     0; // preschool/toddler meals are free (유아부 식사비 제외)
     
   const sharedFee = 0;
@@ -1158,8 +1158,8 @@ function renderFamilies() {
                   <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 미취학 아동 및 마지막날 제외)</div>
                   <div>식비 세부내역:</div>
                   <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
-                    • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
-                    • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
+                    • 성인/청소년: 아침 ${adultBreakfast}회 x 2,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 2000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
+                    • 어린이(초등/유년): 아침 ${childBreakfast}회 x 2,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 2000 + childLunchDinner * 9000).toLocaleString()}원<br/>
                     • 미취학 아동: 아침 ${preschoolBreakfast}회, 중/석식 ${preschoolLunchDinner}회 = 0원 (무료)
                   </div>
                   <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
@@ -2683,8 +2683,8 @@ function updateEstimatedFee() {
         <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 미취학 아동 및 마지막날 제외)</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
-          • 성인/청소년: 아침 ${adultBreakfast}회 x 3,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 3000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
-          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 3,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 3000 + childLunchDinner * 9000).toLocaleString()}원<br/>
+          • 성인/청소년: 아침 ${adultBreakfast}회 x 2,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 2000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
+          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 2,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 2000 + childLunchDinner * 9000).toLocaleString()}원<br/>
           • 미취학 아동: 아침 ${preschoolBreakfast}회, 중/석식 ${preschoolLunchDinner}회 = 0원 (무료)
         </div>
         <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
