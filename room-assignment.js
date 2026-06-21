@@ -149,7 +149,7 @@
     (familiesInRoom || []).forEach((f) => {
       const fId = f._familyId || f.id || f.name;
       const targetId = family._familyId || family.id || family.name;
-      if (fId === targetId) return;
+      if (String(fId) === String(targetId)) return;
       
       const fSize = getFamilyHeadcount(f);
       const fNights = getFamilyStayNights(f);
@@ -2962,7 +2962,7 @@
       if (!room) return true;
       
       const otherFamilies = (allFamilies || []).filter((f) => {
-        if (f.id === familyId) return false;
+        if (String(f.id) === String(familyId)) return false;
         if (f.status === "absent" || f.status === "undecided") return false;
         return normalizeRoomValue(f.room) === normalizeRoomValue(roomValue);
       });

@@ -275,7 +275,12 @@ window.calculateFamilyFee = function(family, allFamilies) {
         preschoolBreakfast: 0,
         preschoolLunchDinner: 0,
         toddlerBreakfast: 0,
-        toddlerLunchDinner: 0
+        toddlerLunchDinner: 0,
+        adultNames: [],
+        childNames: [],
+        preschoolNames: [],
+        toddlerNames: [],
+        snackMembers: []
       }
     };
   }
@@ -368,15 +373,26 @@ window.calculateFamilyFee = function(family, allFamilies) {
   let toddlerLunchDinner = 0;
   let snackCost = 0;
   
+  const adultNames = [];
+  const childNames = [];
+  const preschoolNames = [];
+  const toddlerNames = [];
+  const snackMembers = [];
+  
   attendingMembers.forEach(m => {
     const group = m[1];
     let type = "adult";
     if (group === "유치부") {
       type = "preschool";
+      preschoolNames.push(m[0]);
     } else if (group === "유아") {
       type = "toddler";
+      toddlerNames.push(m[0]);
     } else if (["초등부", "유년부"].includes(group)) {
       type = "child";
+      childNames.push(m[0]);
+    } else {
+      adultNames.push(m[0]);
     }
     
     const segs = m[5] || [];
@@ -410,6 +426,9 @@ window.calculateFamilyFee = function(family, allFamilies) {
       }))];
       const snackDays = selectedDays.filter(day => day >= 0 && day <= 2).length;
       snackCost += snackDays * 3000;
+      if (snackDays > 0) {
+        snackMembers.push({ name: m[0], days: snackDays });
+      }
     }
   });
   
@@ -439,7 +458,12 @@ window.calculateFamilyFee = function(family, allFamilies) {
       preschoolBreakfast,
       preschoolLunchDinner,
       toddlerBreakfast,
-      toddlerLunchDinner
+      toddlerLunchDinner,
+      adultNames,
+      childNames,
+      preschoolNames,
+      toddlerNames,
+      snackMembers
     }
   };
 };
@@ -1099,8 +1123,28 @@ function renderFamilies() {
       const preschoolLunchDinner = feeResult.details.preschoolLunchDinner;
       const toddlerBreakfast = feeResult.details.toddlerBreakfast || 0;
       const toddlerLunchDinner = feeResult.details.toddlerLunchDinner || 0;
+      const adultNames = feeResult.details.adultNames || [];
+      const childNames = feeResult.details.childNames || [];
+      const preschoolNames = feeResult.details.preschoolNames || [];
+      const toddlerNames = feeResult.details.toddlerNames || [];
+      const snackMembers = feeResult.details.snackMembers || [];
 
       const breakfastCount = adultBreakfast + childBreakfast + preschoolBreakfast + toddlerBreakfast;
+      
+      let snackFormula = "";
+      if (snackMembers.length > 0) {
+        const firstDays = snackMembers[0].days;
+        const allSameDays = snackMembers.every(m => m.days === firstDays);
+        const names = snackMembers.map(m => m.name).join(", ");
+        if (allSameDays) {
+          snackFormula = `${snackCost.toLocaleString()}원 = ${snackMembers.length}인 x ${firstDays}일 x 3,000원 (과금대상: ${names})`;
+        } else {
+          const terms = snackMembers.map(m => `${m.name} ${m.days}일`).join(" + ");
+          snackFormula = `${snackCost.toLocaleString()}원 = (${terms}) x 3,000원 (과금대상: ${names})`;
+        }
+      } else {
+        snackFormula = `0원 (과금대상: 없음)`;
+      }
 
       let lunchCount = 0;
       let dinnerCount = 0;
@@ -1162,20 +1206,23 @@ function renderFamilies() {
             <div class="detail-section">
               <span class="section-label">회비 산정 상세 내역</span>
               <div style="background: #f4f7f5; border: 1px solid #dfe7e3; border-radius: 12px; padding: 12px 14px; font-size: 11px; color: #40534c; line-height: 1.6;">
-                <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
-                  <span>🛏️ 총 숙박수: ${nights}박</span>
-                  <span style="color: #cbd5e1;">|</span>
-                  <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
+                <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
+                  <div style="display: flex; gap: 8px 12px; align-items: center;">
+                    <span>🛏️ 총 숙박수: ${nights}박</span>
+                    <span style="color: #cbd5e1;">|</span>
+                    <span>🍚 총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
+                  </div>
+                  <span style="font-size: 9.5px; color: #8fa097; font-weight: normal;">* 간식비: 1일 3,000원 (유아부 및 마지막날 제외)</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
-                  <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 유아부 아동 및 마지막날 제외)</div>
+                  <div>간식비: ${snackFormula}</div>
                   <div>식비 세부내역:</div>
                   <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
-                    • 성인/청소년: 아침 ${adultBreakfast}회 x 2,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 2000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
-                    • 어린이(초등/유년): 아침 ${childBreakfast}회 x 2,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 2000 + childLunchDinner * 9000).toLocaleString()}원<br/>
-                    • 유치부 아동: 아침 ${preschoolBreakfast}회 x 2,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 2000 + preschoolLunchDinner * 7000).toLocaleString()}원<br/>
-                    • 유아부 아동: 아침 ${toddlerBreakfast}회, 중/석식 ${toddlerLunchDinner}회 = 0원 (무료)
+                    • 성인/청소년: 아침 ${adultBreakfast}회 x 2,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 2000 + adultLunchDinner * 10000).toLocaleString()}원 (대상: ${adultNames.join(", ") || "없음"})<br/>
+                    • 어린이(초등/유년): 아침 ${childBreakfast}회 x 2,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 2000 + childLunchDinner * 9000).toLocaleString()}원 (대상: ${childNames.join(", ") || "없음"})<br/>
+                    • 유치부 아동: 아침 ${preschoolBreakfast}회 x 2,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 2000 + preschoolLunchDinner * 7000).toLocaleString()}원 (대상: ${preschoolNames.join(", ") || "없음"})<br/>
+                    • 유아부 아동: 아침 ${toddlerBreakfast}회, 중/석식 ${toddlerLunchDinner}회 = 0원 (무료) (대상: ${toddlerNames.join(", ") || "없음"})
                   </div>
                   <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
                     식사비 합계: ${mealCost.toLocaleString()}원
@@ -2677,12 +2724,32 @@ function updateEstimatedFee() {
   const preschoolLunchDinner = feeResult.details.preschoolLunchDinner;
   const toddlerBreakfast = feeResult.details.toddlerBreakfast || 0;
   const toddlerLunchDinner = feeResult.details.toddlerLunchDinner || 0;
+  const adultNames = feeResult.details.adultNames || [];
+  const childNames = feeResult.details.childNames || [];
+  const preschoolNames = feeResult.details.preschoolNames || [];
+  const toddlerNames = feeResult.details.toddlerNames || [];
+  const snackMembers = feeResult.details.snackMembers || [];
   
   const label = document.querySelector("#estimatedFeeLabel");
   const detail = document.querySelector("#estimatedFeeDetail");
   if (label) label.textContent = `${totalCost.toLocaleString()}원`;
   if (detail) {
     const breakfastCount = adultBreakfast + childBreakfast + preschoolBreakfast + toddlerBreakfast;
+    
+    let snackFormula = "";
+    if (snackMembers.length > 0) {
+      const firstDays = snackMembers[0].days;
+      const allSameDays = snackMembers.every(m => m.days === firstDays);
+      const names = snackMembers.map(m => m.name).join(", ");
+      if (allSameDays) {
+        snackFormula = `${snackCost.toLocaleString()}원 = ${snackMembers.length}인 x ${firstDays}일 x 3,000원 (과금대상: ${names})`;
+      } else {
+        const terms = snackMembers.map(m => `${m.name} ${m.days}일`).join(" + ");
+        snackFormula = `${snackCost.toLocaleString()}원 = (${terms}) x 3,000원 (과금대상: ${names})`;
+      }
+    } else {
+      snackFormula = `0원 (과금대상: 없음)`;
+    }
     const lunchCount = attendingRows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "lunch" && !seg.classList.contains("external-meal")).length, 0);
     const dinnerCount = attendingRows.reduce((sum, row) => sum + [...row.querySelectorAll(".attendance-segment.selected")].filter(seg => seg.dataset.period === "dinner" && !seg.classList.contains("external-meal")).length, 0);
     
@@ -2690,20 +2757,23 @@ function updateEstimatedFee() {
     const sharingNotice = isLodgingShared ? `<span style="color: #ef4444; font-weight: 700; margin-left: 8px;">(방나누기 할인 적용됨)</span>` : "";
 
     detail.innerHTML = `
-      <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
-        <span>🛏️ 총 숙박수: ${nights}박</span>
-        <span style="color: #cbd5e1;">|</span>
-        <span><i data-lucide="utensils-crossed" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
+      <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
+        <div style="display: flex; gap: 8px 12px; align-items: center;">
+          <span>🛏️ 총 숙박수: ${nights}박</span>
+          <span style="color: #cbd5e1;">|</span>
+          <span><i data-lucide="utensils-crossed" style="width: 14px; height: 14px; stroke-width: 2px; vertical-align: middle; margin-right: 4px;"></i>총 식사: 아침 ${breakfastCount}번, 점심 ${lunchCount}번, 저녁 ${dinnerCount}번</span>
+        </div>
+        <span style="font-size: 9.5px; color: #8fa097; font-weight: normal;">* 간식비: 1일 3,000원 (유아부 및 마지막날 제외)</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
-        <div>간식비: ${snackCost.toLocaleString()}원 (인당 1일 3,000원, 유아부 아동 및 마지막날 제외)</div>
+        <div>간식비: ${snackFormula}</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
-          • 성인/청소년: 아침 ${adultBreakfast}회 x 2,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 2000 + adultLunchDinner * 10000).toLocaleString()}원<br/>
-          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 2,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 2000 + childLunchDinner * 9000).toLocaleString()}원<br/>
-          • 유치부 아동: 아침 ${preschoolBreakfast}회 x 2,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 2000 + preschoolLunchDinner * 7000).toLocaleString()}원<br/>
-          • 유아부 아동: 아침 ${toddlerBreakfast}회, 중/석식 ${toddlerLunchDinner}회 = 0원 (무료)
+          • 성인/청소년: 아침 ${adultBreakfast}회 x 2,000원 + 중/석식 ${adultLunchDinner}회 x 10,000원 = ${(adultBreakfast * 2000 + adultLunchDinner * 10000).toLocaleString()}원 (대상: ${adultNames.join(", ") || "없음"})<br/>
+          • 어린이(초등/유년): 아침 ${childBreakfast}회 x 2,000원 + 중/석식 ${childLunchDinner}회 x 9,000원 = ${(childBreakfast * 2000 + childLunchDinner * 9000).toLocaleString()}원 (대상: ${childNames.join(", ") || "없음"})<br/>
+          • 유치부 아동: 아침 ${preschoolBreakfast}회 x 2,000원 + 중/석식 ${preschoolLunchDinner}회 x 7,000원 = ${(preschoolBreakfast * 2000 + preschoolLunchDinner * 7000).toLocaleString()}원 (대상: ${preschoolNames.join(", ") || "없음"})<br/>
+          • 유아부 아동: 아침 ${toddlerBreakfast}회, 중/석식 ${toddlerLunchDinner}회 = 0원 (무료) (대상: ${toddlerNames.join(", ") || "없음"})
         </div>
         <div style="font-weight: 700; border-top: 1px dotted #cdd9d4; padding-top: 4px; margin-top: 2px; color: #1e293b;">
           식사비 합계: ${mealCost.toLocaleString()}원
