@@ -1548,6 +1548,7 @@ function getMealPeople(meal) {
     .flatMap((family) => family.members
       .filter((member) => {
         if (member[7] === "undecided") return false;
+        if (member[1] === "유아") return false;
         if (member[5]) {
           return getMemberChargeableMealPeriods(member).includes(`${mealDate}-${mealPeriod}`);
         }
@@ -1557,7 +1558,7 @@ function getMealPeople(meal) {
       .map((member) => {
         const group = member[1];
         let type = "adult";
-        if (["유치부", "유아"].includes(group)) {
+        if (group === "유치부") {
           type = "preschool";
         } else if (["초등부", "유년부"].includes(group)) {
           type = "child";
@@ -1586,9 +1587,9 @@ function renderMeals() {
   document.querySelector("#mealCountBadge").textContent = `총 ${mealSchedule.length}회 식사`;
   document.querySelector("#mealSummaryNumbers").innerHTML = `
     <div class="meal-summary-number"><span>전체 식수</span><b>${totalServings}명분</b></div>
-    <div class="meal-summary-number"><span>성인(중고등포함)</span><b>${adultServings}명분</b></div>
+    <div class="meal-summary-number"><span>성인/청소년</span><b>${adultServings}명분</b></div>
     <div class="meal-summary-number"><span>어린이(초등/유년)</span><b>${childServings}명분</b></div>
-    <div class="meal-summary-number"><span>미취학 아동</span><b>${preschoolServings}명분</b></div>`;
+    <div class="meal-summary-number"><span>유치부 아동</span><b>${preschoolServings}명분</b></div>`;
   renderMealBarChart();
   document.querySelector("#mealDays").innerHTML = Object.entries(mealsByDate).map(([date, meals]) => {
     const dateInfo = retreatDates.find((item) => item.shortLabel === `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`);
@@ -1647,13 +1648,13 @@ function renderMealCard(meal) {
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="all"><span>총 인원</span><b>${people.length}명</b></button>
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="adult"><span>성인/청소년</span><b>${adultCount}명</b></button>
         <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="child"><span>어린이</span><b>${childCount}명</b></button>
-        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="preschool"><span>미취학</span><b>${preschoolCount}명</b></button>
+        <button class="meal-group-button" data-meal-id="${meal.id}" data-meal-group="preschool"><span>유치부</span><b>${preschoolCount}명</b></button>
       </div>
     </div>`;
 }
 
 function openMealDrawer(meal, group) {
-  const labels = { all: "총 인원", adult: "성인/청소년", child: "어린이(초등/유년)", preschool: "미취학" };
+  const labels = { all: "총 인원", adult: "성인/청소년", child: "어린이(초등/유년)", preschool: "유치부" };
   const people = getMealPeople(meal).filter((person) => group === "all" || person.type === group);
   document.querySelector("#mealDrawerTitle").textContent = `${meal.label} · ${labels[group]}`;
   document.querySelector("#mealDrawerSubtitle").textContent = `${meal.time.slice(11, 16)} 기준 ${people.length}명 · 구성원별 입퇴소 일정 반영`;
