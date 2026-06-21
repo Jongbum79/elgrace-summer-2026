@@ -929,8 +929,37 @@ function renderTimeSelector() {
 }
 
 function renderBreakdown() {
-  const record = currentRecord();
-  const count = total(record);
+  let record;
+  let count = 0;
+  if (selectedDate === "all") {
+    record = { adult: 0, youth: 0, elementary: 0, preschool: 0, time: "수련회 전체" };
+    if (families && families.length) {
+      families.forEach((family) => {
+        if (family.status === "absent" || family.status === "undecided") return;
+        family.members.forEach((member) => {
+          if (member[7] === "undecided") return;
+          const arrivalStr = member[2];
+          const departureStr = member[3];
+          if (!arrivalStr || !departureStr) return;
+          const arrival = parseMemberDate(arrivalStr);
+          const departure = parseMemberDate(departureStr);
+          if (arrival.getTime() === 0 || departure.getTime() === 0) return;
+          const periods = getMemberAttendancePeriods(member);
+          if (periods.length === 0) return;
+          
+          const catKey = getCategoryKey(member[1]);
+          if (record[catKey] !== undefined) {
+            record[catKey]++;
+          }
+        });
+      });
+    }
+    count = record.adult + record.youth + record.elementary + record.preschool;
+  } else {
+    record = currentRecord();
+    count = total(record);
+  }
+
   let offset = 0;
   const softColors = {
     adult: "#184E3A",       // Deep Forest
@@ -946,7 +975,12 @@ function renderBreakdown() {
   });
   document.querySelector("#donutChart").style.background = `conic-gradient(${gradients.join(",")})`;
   document.querySelector("#donutTotal").textContent = count;
-  document.querySelector("#breakdownTime").textContent = `${retreatDates.find((date) => date.key === selectedDate).label.replace("요일", "")} ${record.time} 기준`;
+  
+  const timeLabel = selectedDate === "all" 
+    ? "수련회 전체 누적 기준" 
+    : `${retreatDates.find((date) => date.key === selectedDate).label.replace("요일", "")} ${record.time} 기준`;
+  document.querySelector("#breakdownTime").textContent = timeLabel;
+  
   document.querySelector("#breakdownList").innerHTML = categories.map((category) => {
     const color = softColors[category.key] || category.color;
     return `<div class="breakdown-item"><i style="background:${color}"></i><span>${category.label}</span><b>${record[category.key]}명</b></div>`;
@@ -1156,19 +1190,48 @@ function renderFamilies() {
   });
   
   const statsHtml = `
-    <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 800; color: var(--forest);">
-      <i data-lucide="home" style="width: 14px; height: 14px; stroke-width: 2.2px;"></i>${visibleFamilies.length}가족
-    </span>
-    <span class="stats-sep">|</span> <span>장년부 ${adultCount}명</span>
-    <span class="stats-sep">|</span> <span>대학부 ${collegeCount}명</span>
-    <span class="stats-sep">|</span> <span>중고등부 ${youthCount}명</span>
-    <span class="stats-sep">|</span> <span>유초등부 ${childCount}명</span>
-    <span class="stats-sep">|</span> <span>유치부 ${kindergartenCount}명</span>
-    <span class="stats-sep">|</span> <span>유아부 ${toddlerCount}명</span>
-    ${undecidedFamiliesCount > 0 ? `
-      <span class="stats-sep">|</span> 
-      <span style="color: #687873; font-weight: 700;">❓ 미정 ${undecidedFamiliesCount}가족(${undecidedMembersCount}명)</span>
-    ` : ""}
+    <div class="stats-container">
+      <div class="stats-main-badge">
+        <i data-lucide="home" style="width: 14px; height: 14px; stroke-width: 2.2px;"></i>${visibleFamilies.length}가족
+      </div>
+      <div class="stats-grid-wrapper">
+        <div class="stats-grid-cell" data-dept="adult">
+          <span class="dept-name">장년부</span>
+          <span class="dept-val">${adultCount}</span>
+          <span class="dept-unit">명</span>
+        </div>
+        <div class="stats-grid-cell" data-dept="college">
+          <span class="dept-name">대학부</span>
+          <span class="dept-val">${collegeCount}</span>
+          <span class="dept-unit">명</span>
+        </div>
+        <div class="stats-grid-cell" data-dept="youth">
+          <span class="dept-name">중고등부</span>
+          <span class="dept-val">${youthCount}</span>
+          <span class="dept-unit">명</span>
+        </div>
+        <div class="stats-grid-cell" data-dept="child">
+          <span class="dept-name">유초등부</span>
+          <span class="dept-val">${childCount}</span>
+          <span class="dept-unit">명</span>
+        </div>
+        <div class="stats-grid-cell" data-dept="kinder">
+          <span class="dept-name">유치부</span>
+          <span class="dept-val">${kindergartenCount}</span>
+          <span class="dept-unit">명</span>
+        </div>
+        <div class="stats-grid-cell" data-dept="toddler">
+          <span class="dept-name">유아부</span>
+          <span class="dept-val">${toddlerCount}</span>
+          <span class="dept-unit">명</span>
+        </div>
+      </div>
+      ${undecidedFamiliesCount > 0 ? `
+        <div class="stats-undecided-badge">
+          ❓ 미정 ${undecidedFamiliesCount}가족(${undecidedMembersCount}명)
+        </div>
+      ` : ""}
+    </div>
   `;
   document.querySelector("#familyCount").innerHTML = statsHtml;
   if (document.body.classList.contains("mobile-mode")) {
@@ -2508,15 +2571,23 @@ function renderAll() {
   renderStats();
   
   const dashboardGrid = document.querySelector(".dashboard-grid");
+  const attendanceFlowCard = document.querySelector(".attendance-flow");
   if (dashboardGrid) {
-    dashboardGrid.style.display = isAll ? "none" : "grid";
+    dashboardGrid.style.display = "grid";
+    if (isAll) {
+      dashboardGrid.style.gridTemplateColumns = "1fr";
+      if (attendanceFlowCard) attendanceFlowCard.style.display = "none";
+    } else {
+      dashboardGrid.style.gridTemplateColumns = ""; // restore default CSS
+      if (attendanceFlowCard) attendanceFlowCard.style.display = ""; // restore default CSS
+    }
   }
   
   if (!isAll) {
     renderFlowChart();
     renderTimeSelector();
-    renderBreakdown();
   }
+  renderBreakdown();
   
   renderFamilies();
   renderMeals();
