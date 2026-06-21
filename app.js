@@ -990,21 +990,23 @@ function renderBreakdown() {
 function getFilteredFamilies() {
   const keyword = document.querySelector("#searchInput").value.trim().toLowerCase();
   return families.filter((family) => {
-    if (family.status === "absent") return false;
     const isUndecidedFamily = family.status === "undecided";
+    const isAbsentFamily = family.status === "absent";
     const status = getFamilyAttendanceStatus(family);
     
     let filterMatches = false;
     if (activeFilter === "all") {
       filterMatches = true;
     } else if (activeFilter === "attending") {
-      filterMatches = (status === "full" || status === "partial") && !isUndecidedFamily;
+      filterMatches = (status === "full" || status === "partial") && !isUndecidedFamily && !isAbsentFamily;
     } else if (activeFilter === "full") {
-      filterMatches = (status === "full") && !isUndecidedFamily;
+      filterMatches = (status === "full") && !isUndecidedFamily && !isAbsentFamily;
     } else if (activeFilter === "partial") {
-      filterMatches = (status === "partial") && !isUndecidedFamily;
+      filterMatches = (status === "partial") && !isUndecidedFamily && !isAbsentFamily;
     } else if (activeFilter === "undecided") {
       filterMatches = isUndecidedFamily;
+    } else if (activeFilter === "absent") {
+      filterMatches = isAbsentFamily || status === "absent";
     }
     
     const keywordMatches = !keyword || [family.name, family.leader, family.memo, ...family.members.flat()].join(" ").toLowerCase().includes(keyword);
@@ -1114,6 +1116,7 @@ function renderFamilyAttendance(family) {
   let statusLabel = "부분참석";
   if (status === "full") statusLabel = "풀참";
   else if (status === "undecided") statusLabel = "미정";
+  else if (status === "absent") statusLabel = "불참";
 
   const attendingMembers = family.members.filter(member => 
     member[7] !== "undecided" && getMemberAttendancePeriods(member).length > 0
