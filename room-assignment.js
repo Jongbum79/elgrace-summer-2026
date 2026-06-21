@@ -100,7 +100,7 @@
 
   function getFamilyHeadcount(family) {
     if (!family || !Array.isArray(family.members)) return 0;
-    return family.members.filter((member) => getMemberName(member)).length || 0;
+    return family.members.filter((member) => getMemberName(member) && isMemberAttending(member)).length || 0;
   }
 
   function getFamilyStayNights(family) {
