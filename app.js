@@ -288,7 +288,17 @@ window.calculateFamilyFee = function(family, allFamilies) {
   const roomValue = family.room || "미배정";
   const normalizedRoom = normalizeRoomValue(roomValue);
   const roomMeta = normalizedRoom ? getRoomMetadata(normalizedRoom) : null;
-  const capacity = roomMeta ? roomMeta.capacity : numMembers;
+  
+  let capacity = numMembers;
+  if (roomMeta && roomMeta.capacity > 0) {
+    capacity = roomMeta.capacity;
+  } else {
+    if (numMembers === 1) capacity = 1;
+    else if (numMembers === 2) capacity = 2;
+    else if (numMembers >= 3 && numMembers <= 4) capacity = 4;
+    else if (numMembers >= 5 && numMembers <= 6) capacity = 6;
+    else if (numMembers >= 7) capacity = 12;
+  }
   
   let roomLabel = "없음";
   let baseRoomRate = 88000;
@@ -305,16 +315,12 @@ window.calculateFamilyFee = function(family, allFamilies) {
     roomLabel = "12인실";
     baseRoomRate = 200000;
   } else {
-    roomLabel = `${capacity}인실`;
-  }
-  
-  if (!normalizedRoom) {
-    // Unassigned, use base rate based on family size (default room mapping)
-    if (numMembers === 1) roomLabel = "1인실";
-    else if (numMembers === 2) roomLabel = "2인실";
-    else if (numMembers >= 3 && numMembers <= 4) roomLabel = "4인실";
-    else if (numMembers >= 5 && numMembers <= 6) roomLabel = "6인실";
-    else if (numMembers >= 7) roomLabel = "12인실";
+    if (capacity === 5) {
+      roomLabel = "6인실";
+      baseRoomRate = 98000;
+    } else {
+      roomLabel = `${capacity}인실`;
+    }
   }
   
   let lodgingCost = 0;
@@ -1331,6 +1337,8 @@ function renderFamilies() {
 
       const isLodgingShared = lodgingCost < (nights * roomRate);
       const sharingNotice = isLodgingShared ? `<span style="color: #ef4444; font-weight: 700; margin-left: 8px;">(방나누기 할인 적용됨)</span>` : "";
+      const normalizedRoom = normalizeRoomValue(family.room || "미배정");
+      const unassignedNotice = !normalizedRoom ? `<div style="color: #ef4444; font-size: 10px; margin-top: 4px; font-weight: 600;">⚠️ 방이 미배정 상태여서 예상 가격이며, 실제 배정되면 정확한 가격이 표시됩니다.</div>` : "";
 
       return `
         <div class="family-card status-border-${actualStatus}" data-family-id="${family.id}">
@@ -1384,7 +1392,7 @@ function renderFamilies() {
                   <span style="font-size: 9.5px; color: #8fa097; font-weight: normal;">* 간식비: 1일 3,000원 (유아부 및 마지막날 제외)</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
+                  <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}${unassignedNotice}</div>
                   <div>간식비: ${snackFormula}</div>
                   <div>식비 세부내역:</div>
                   <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
@@ -2968,6 +2976,8 @@ function updateEstimatedFee() {
     
     const isLodgingShared = lodgingCost < (nights * roomRate);
     const sharingNotice = isLodgingShared ? `<span style="color: #ef4444; font-weight: 700; margin-left: 8px;">(방나누기 할인 적용됨)</span>` : "";
+    const normalizedRoom = normalizeRoomValue(roomValue);
+    const unassignedNotice = !normalizedRoom ? `<div style="color: #ef4444; font-size: 10px; margin-top: 4px; font-weight: 600;">⚠️ 방이 미배정 상태여서 예상 가격이며, 실제 배정되면 정확한 가격이 표시됩니다.</div>` : "";
 
     detail.innerHTML = `
       <div style="font-weight: 700; color: #1e5a45; font-size: 11px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding-bottom: 8px; border-bottom: 1px dashed #dfe7e3; margin-bottom: 8px;">
@@ -2979,7 +2989,7 @@ function updateEstimatedFee() {
         <span style="font-size: 9.5px; color: #8fa097; font-weight: normal;">* 간식비: 1일 3,000원 (유아부 및 마지막날 제외)</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
-        <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}</div>
+        <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomLabel}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}${unassignedNotice}</div>
         <div>간식비: ${snackFormula}</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
