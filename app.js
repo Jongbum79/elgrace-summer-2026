@@ -122,7 +122,7 @@ const brotherGroupsData = [
   { id: "11조", leader: "김보근", members: ["박은총", "조재화", "안동영", "변해균", "박현재"] },
   { id: "12조", leader: "김세원", members: ["김윤수", "정현석", "박상현", "최정호"] },
   { id: "13조", leader: "최준희", members: ["김용진", "조원기", "김동철", "이찬우"] },
-  { id: "14조", leader: "이재호", members: ["윤정훈", "정연수", "김성일", "이조아"] },
+  { id: "14조", leader: "이재호", members: ["윤정훈", "정연수", "김성일"] },
   { id: "15조", leader: "이상혁", members: ["김호균", "김태수", "이상민", "여인설", "구완준"] },
   { id: "16조", leader: "이우근", members: ["김범준", "박동현", "이주호", "유제현"] },
   { id: "17조", leader: "장두상", members: ["권성대", "전만기", "선우강"] },
@@ -2572,14 +2572,33 @@ function renderAll() {
   
   const dashboardGrid = document.querySelector(".dashboard-grid");
   const attendanceFlowCard = document.querySelector(".attendance-flow");
+  const quickActionsSection = document.querySelector(".quick-actions-section");
+  const attendanceView = document.querySelector("#attendanceView");
+  
   if (dashboardGrid) {
     dashboardGrid.style.display = "grid";
     if (isAll) {
-      dashboardGrid.style.gridTemplateColumns = "1fr";
+      if (quickActionsSection) {
+        quickActionsSection.style.marginTop = "0";
+        if (quickActionsSection.parentElement !== dashboardGrid) {
+          dashboardGrid.appendChild(quickActionsSection);
+        }
+      }
+      if (!document.body.classList.contains("mobile-mode")) {
+        dashboardGrid.style.gridTemplateColumns = "285px 1fr";
+      } else {
+        dashboardGrid.style.gridTemplateColumns = "1fr";
+      }
       if (attendanceFlowCard) attendanceFlowCard.style.display = "none";
     } else {
       dashboardGrid.style.gridTemplateColumns = ""; // restore default CSS
       if (attendanceFlowCard) attendanceFlowCard.style.display = ""; // restore default CSS
+      if (quickActionsSection) {
+        quickActionsSection.style.marginTop = "";
+        if (attendanceView && quickActionsSection.parentElement !== attendanceView) {
+          attendanceView.appendChild(quickActionsSection);
+        }
+      }
     }
   }
   
