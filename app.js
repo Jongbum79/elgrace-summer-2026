@@ -580,13 +580,115 @@ const total = (record) => categories.reduce((sum, category) => sum + record[cate
 const currentRecord = () => attendance[selectedDate][selectedSlot];
 
 function renderDateTabs() {
-  document.querySelector("#dateTabs").innerHTML = retreatDates.map((date) => `
+  const tabsContainer = document.querySelector("#dateTabs");
+  if (!tabsContainer) return;
+  
+  const allTab = `
+    <button class="date-tab ${selectedDate === "all" ? "active" : ""}" data-date="all">
+      <span>수련회</span><b>전체</b>
+    </button>
+  `;
+  
+  tabsContainer.innerHTML = allTab + retreatDates.map((date) => `
     <button class="date-tab ${date.key === selectedDate ? "active" : ""}" data-date="${date.key}">
       <span>${date.day}요일</span><b>${date.date}</b>
     </button>`).join("");
 }
 
 function renderStats() {
+  if (selectedDate === "all") {
+    let totalConfirmed = 0;
+    let adultAttending = 0;
+    let schoolAttending = 0;
+    let toddlerAttending = 0;
+
+    if (families && families.length) {
+      families.forEach((family) => {
+        if (family.status === "absent" || family.status === "undecided") return;
+
+        family.members.forEach((member) => {
+          if (member[7] === "undecided") return;
+
+          const arrivalStr = member[2];
+          const departureStr = member[3];
+          if (!arrivalStr || !departureStr) return;
+
+          const arrival = parseMemberDate(arrivalStr);
+          const departure = parseMemberDate(departureStr);
+          if (arrival.getTime() === 0 || departure.getTime() === 0) return;
+
+          const periods = getMemberAttendancePeriods(member);
+          if (periods.length === 0) return;
+
+          totalConfirmed++;
+
+          const group = member[1];
+          if (group === "성인 남성" || group === "성인 여성" || group.startsWith("성인") || group === "대학부" || group === "대학") {
+            adultAttending++;
+          } else if (["중고등부", "초등부", "유년부", "유치부"].includes(group)) {
+            schoolAttending++;
+          } else if (group === "유아") {
+            toddlerAttending++;
+          }
+        });
+      });
+    }
+
+    const stats = [
+      {
+        label: "전체 참석 인원",
+        value: totalConfirmed,
+        unit: "명",
+        caption: "수련회 기간 중 1일 이상 참석 확정자",
+        icon: "users",
+        isRatio: false
+      },
+      {
+        label: "장년부 참석 인원",
+        value: adultAttending,
+        unit: "명",
+        caption: "장년부 소속 확정자",
+        icon: "user",
+        isRatio: false
+      },
+      {
+        label: "교회학교 참석 인원",
+        value: schoolAttending,
+        unit: "명",
+        caption: "중고등·초등·유년·유치부 확정자",
+        icon: "graduation-cap",
+        isRatio: false
+      },
+      {
+        label: "유아부 참석 인원",
+        value: toddlerAttending,
+        unit: "명",
+        caption: "유아부 소속 확정자",
+        icon: "baby",
+        isRatio: false
+      }
+    ];
+
+    const statsHtml = stats.map((item) => `
+      <article class="stat-card">
+        <div class="stat-top">
+          <span>${item.label}</span>
+          <span class="stat-icon"><i data-lucide="${item.icon}"></i></span>
+        </div>
+        <div>
+          <div class="stat-value">
+            <span style="font-weight: 800; color: var(--ink);">${item.value}</span><small style="font-size: ${document.body.classList.contains("mobile-mode") ? "12px" : "14px"}; font-weight: 500; color: var(--muted); margin-left: 2px;">${item.unit}</small>
+          </div>
+          <span class="stat-caption">${item.caption}</span>
+        </div>
+      </article>
+    `).join("");
+
+    document.querySelector("#statsGrid").innerHTML = statsHtml;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
   const data = attendance[selectedDate];
   const record = currentRecord();
   const peak = Math.max(...data.map(total));
@@ -609,9 +711,10 @@ function renderStats() {
   
   if (families && families.length) {
     families.forEach((family) => {
-      if (family.status === "absent") return;
+      if (family.status === "absent" || family.status === "undecided") return;
       
       family.members.forEach((member) => {
+        if (member[7] === "undecided") return;
         if (!member[2] || !member[3]) return;
         const arrival = parseMemberDate(member[2]);
         const departure = parseMemberDate(member[3]);
@@ -1366,9 +1469,10 @@ function getMealPeople(meal) {
   const mealPeriod = meal.id.split("-").at(-1);
   const mealDate = `${Number(meal.time.slice(5, 7))}/${Number(meal.time.slice(8, 10))}`;
   return families
-    .filter((family) => family.status !== "absent")
+    .filter((family) => family.status !== "absent" && family.status !== "undecided")
     .flatMap((family) => family.members
       .filter((member) => {
+        if (member[7] === "undecided") return false;
         if (member[5]) {
           return getMemberChargeableMealPeriods(member).includes(`${mealDate}-${mealPeriod}`);
         }
@@ -2369,9 +2473,10 @@ function updateAttendanceFromFamilies() {
         const slotDateTime = parseMemberDate(`${date.shortLabel} ${slotTime}`);
         
         families.forEach((family) => {
-          if (family.status === "absent") return;
+          if (family.status === "absent" || family.status === "undecided") return;
           
           family.members.forEach((member) => {
+            if (member[7] === "undecided") return;
             if (!member[2] || !member[3]) return;
             const arrival = parseMemberDate(member[2]);
             const departure = parseMemberDate(member[3]);
@@ -2393,11 +2498,26 @@ function renderAll() {
   if (!retreatDates || retreatDates.length === 0 || !selectedDate) return;
   updateAttendanceFromFamilies();
   renderDateTabs();
-  document.querySelector("#selectedDateLabel").textContent = retreatDates.find((date) => date.key === selectedDate).label;
+  
+  const isAll = selectedDate === "all";
+  const selectedLabelEl = document.querySelector("#selectedDateLabel");
+  if (selectedLabelEl) {
+    selectedLabelEl.textContent = isAll ? "수련회 전체" : (retreatDates.find((date) => date.key === selectedDate)?.label || selectedDate);
+  }
+  
   renderStats();
-  renderFlowChart();
-  renderTimeSelector();
-  renderBreakdown();
+  
+  const dashboardGrid = document.querySelector(".dashboard-grid");
+  if (dashboardGrid) {
+    dashboardGrid.style.display = isAll ? "none" : "grid";
+  }
+  
+  if (!isAll) {
+    renderFlowChart();
+    renderTimeSelector();
+    renderBreakdown();
+  }
+  
   renderFamilies();
   renderMeals();
   if (currentOrgMode && currentOrgMode !== "family") {
