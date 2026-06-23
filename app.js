@@ -325,6 +325,7 @@ window.calculateFamilyFee = function(family, allFamilies) {
   
   let lodgingCost = 0;
   let totalNights = 0;
+  const lodgingDetails = [];
   
   for (let d = 0; d < dateLabels.length - 1; d++) {
     const dayLabel = dateLabels[d];
@@ -344,6 +345,7 @@ window.calculateFamilyFee = function(family, allFamilies) {
         if (numMembers >= 5 && numMembers <= 6) unassignedRate = 98000;
         else if (numMembers >= 7) unassignedRate = 200000;
         lodgingCost += unassignedRate;
+        lodgingDetails.push({ date: dayLabel, rate: unassignedRate, sharingCount: 1, cost: unassignedRate });
       } else {
         // Assigned to room, check sharing count
         let sharingCount = 1;
@@ -364,7 +366,9 @@ window.calculateFamilyFee = function(family, allFamilies) {
           }
         });
         
-        lodgingCost += baseRoomRate / sharingCount;
+        const nightCost = baseRoomRate / sharingCount;
+        lodgingCost += nightCost;
+        lodgingDetails.push({ date: dayLabel, rate: baseRoomRate, sharingCount: sharingCount, cost: nightCost });
       }
     }
   }
@@ -469,7 +473,8 @@ window.calculateFamilyFee = function(family, allFamilies) {
       childNames,
       preschoolNames,
       toddlerNames,
-      snackMembers
+      snackMembers,
+      lodgingDetails
     }
   };
 };
@@ -1394,6 +1399,14 @@ function renderFamilies() {
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomTypeDisplay}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}${unassignedNotice}</div>
+                  ${feeResult.details.lodgingDetails && feeResult.details.lodgingDetails.length > 0 ? `
+                    <div style="padding-left: 8px; color: #5f746b; font-size: 10px; line-height: 1.5; margin-top: -2px; margin-bottom: 2px;">
+                      ${feeResult.details.lodgingDetails.map(item => {
+                        const sharingText = item.sharingCount > 1 ? ` (방나누기 ${item.sharingCount}가족 공동 사용: ${item.rate.toLocaleString()}원 ÷ ${item.sharingCount})` : "";
+                        return `• ${item.date} 숙박: ${item.cost.toLocaleString()}원${sharingText}`;
+                      }).join("<br/>")}
+                    </div>
+                  ` : ""}
                   <div>간식비: ${snackFormula}</div>
                   <div>식비 세부내역:</div>
                   <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
@@ -3009,6 +3022,14 @@ function updateEstimatedFee() {
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #40534c;">
         <div>숙박비: ${lodgingCost.toLocaleString()}원 (${roomTypeDisplay}, 기준 단가 ${roomRate.toLocaleString()}원/박)${sharingNotice}${unassignedNotice}</div>
+        ${feeResult.details.lodgingDetails && feeResult.details.lodgingDetails.length > 0 ? `
+          <div style="padding-left: 8px; color: #5f746b; font-size: 10px; line-height: 1.5; margin-top: -2px; margin-bottom: 2px;">
+            ${feeResult.details.lodgingDetails.map(item => {
+              const sharingText = item.sharingCount > 1 ? ` (방나누기 ${item.sharingCount}가족 공동 사용: ${item.rate.toLocaleString()}원 ÷ ${item.sharingCount})` : "";
+              return `• ${item.date} 숙박: ${item.cost.toLocaleString()}원${sharingText}`;
+            }).join("<br/>")}
+          </div>
+        ` : ""}
         <div>간식비: ${snackFormula}</div>
         <div>식비 세부내역:</div>
         <div style="padding-left: 8px; color: #5f746b; line-height: 1.5;">
