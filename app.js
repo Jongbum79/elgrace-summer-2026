@@ -225,17 +225,23 @@ async function loadRoomLayout() {
           building.floors.forEach(floor => {
             if (Array.isArray(floor.rooms)) {
               floor.rooms.forEach(room => {
-                const plainLabel = normalizeRoomValue(room.room_label);
-                const prefixedLabel = normalizeRoomValue(`${room.building} ${room.room_label}`);
-                const numberLabel = normalizeRoomValue(`${room.building} ${room.room_number}`);
-                const numberLabelHo = normalizeRoomValue(`${room.building} ${room.room_number}호`);
+                const roomWithMeta = {
+                  ...room,
+                  building: building.building,
+                  floor: floor.floor,
+                  floorLabel: floor.label || `${floor.floor}층`
+                };
+                const plainLabel = normalizeRoomValue(roomWithMeta.room_label);
+                const prefixedLabel = normalizeRoomValue(`${roomWithMeta.building} ${roomWithMeta.room_label}`);
+                const numberLabel = normalizeRoomValue(`${roomWithMeta.building} ${roomWithMeta.room_number}`);
+                const numberLabelHo = normalizeRoomValue(`${roomWithMeta.building} ${roomWithMeta.room_number}호`);
                 
-                roomByLabel.set(prefixedLabel, room);
+                roomByLabel.set(prefixedLabel, roomWithMeta);
                 if (!roomByLabel.has(plainLabel)) {
-                  roomByLabel.set(plainLabel, room);
+                  roomByLabel.set(plainLabel, roomWithMeta);
                 }
-                roomByLabel.set(numberLabel, room);
-                roomByLabel.set(numberLabelHo, room);
+                roomByLabel.set(numberLabel, roomWithMeta);
+                roomByLabel.set(numberLabelHo, roomWithMeta);
               });
             }
           });
