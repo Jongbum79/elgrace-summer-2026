@@ -103,7 +103,7 @@ const sisterStaffData = {
     { name: "장세연", role: "장년 1부 코디" },
     { name: "김상배", role: "장년 2-3부 코디" },
   ],
-  otherGroups: ["신영화", "김경원", "조은미", "차윤", "유키", "김미현", "윤영경"],
+  otherGroups: ["신영화", "김경원", "조은미", "차윤", "유키", "김미현", "윤영경", "이찬미"],
 };
 
 const brotherGroupsData = [
@@ -138,7 +138,7 @@ const brotherStaffData = {
   coordinators: [
     { name: "나진정", role: "대학부 부장" },
   ],
-  otherGroups: ["강우석", "박태곤", "장현빈", "남정완", "최민택", "김태원", "정연수"],
+  otherGroups: ["강우석", "박태곤", "장현빈", "남정완", "최민택", "김태원", "정연수", "김태형"],
 };
 
 const statusMap = {
