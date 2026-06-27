@@ -138,7 +138,7 @@ const brotherStaffData = {
   coordinators: [
     { name: "나진정", role: "대학부 부장" },
   ],
-  otherGroups: ["강우석", "박태곤", "장현빈", "남정완", "최민택", "김태원", "정연수", "김태형"],
+  otherGroups: ["강우석", "박태곤", "장현빈", "남정완", "최민택", "김태원", "정연수", "김태영"],
 };
 
 const statusMap = {
