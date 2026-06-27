@@ -108,7 +108,7 @@ const sisterStaffData = {
 
 const brotherGroupsData = [
   { id: "1조", leader: "백승지", members: ["장세명", "서지영", "한대연"] },
-  { id: "2조", leader: "이충희", members: ["김준표", "박긍훌", "이석호"] },
+  { id: "2조", leader: "이충희", members: ["김준표", "박긍휼", "이석호"] },
   { id: "3조", leader: "이재민", members: ["김진영", "최재혁", "윤민혁"] },
   { id: "4조", leader: "정민규", members: ["김현준", "곽건탁", "황동훈", "남동우"] },
   { id: "5조", leader: "강현민", members: ["백성민", "권혁용", "송종률"] },
