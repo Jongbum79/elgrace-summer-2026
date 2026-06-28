@@ -103,18 +103,28 @@
     return family.members.filter((member) => getMemberName(member) && isMemberAttending(member)).length || 0;
   }
 
+  function isMemberStayingOvernightOnNight(member, nightIdx) {
+    if (!member) return false;
+    if (member[7] === "undecided") return false;
+    const dateLabels = ["7/27", "7/28", "7/29", "7/30"];
+    const dayLabel = dateLabels[nightIdx];
+    const nextDayLabel = dateLabels[nightIdx + 1];
+    const periods = typeof getMemberAttendancePeriods === "function" ? getMemberAttendancePeriods(member) : [];
+    return periods.includes(`${dayLabel}-dinner`) && periods.includes(`${nextDayLabel}-breakfast`);
+  }
+
+  function getFamilyStayHeadcountOnNight(family, nightIdx) {
+    if (!family || !Array.isArray(family.members)) return 0;
+    return family.members.filter((member) => {
+      return getMemberName(member) && isMemberStayingOvernightOnNight(member, nightIdx);
+    }).length || 0;
+  }
+
   function getFamilyStayNights(family) {
     if (!family || !Array.isArray(family.members)) return [];
     const nights = [];
-    const dateLabels = ["7/27", "7/28", "7/29", "7/30"];
     for (let d = 0; d < 3; d++) {
-      const dayLabel = dateLabels[d];
-      const nextDayLabel = dateLabels[d + 1];
-      const hasOvernight = family.members.some((member) => {
-        const periods = typeof getMemberAttendancePeriods === "function" ? getMemberAttendancePeriods(member) : [];
-        return periods.includes(`${dayLabel}-dinner`) && periods.includes(`${nextDayLabel}-breakfast`);
-      });
-      if (hasOvernight) {
+      if (getFamilyStayHeadcountOnNight(family, d) > 0) {
         nights.push(d);
       }
     }
@@ -124,13 +134,9 @@
   function getRoomOccupancyByNight(room, familiesInRoom) {
     const nightHeads = [0, 0, 0];
     (familiesInRoom || []).forEach((family) => {
-      const familySize = getFamilyHeadcount(family);
-      const stayNights = getFamilyStayNights(family);
-      stayNights.forEach((nightIdx) => {
-        if (nightIdx >= 0 && nightIdx < 3) {
-          nightHeads[nightIdx] += familySize;
-        }
-      });
+      for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
+        nightHeads[nightIdx] += getFamilyStayHeadcountOnNight(family, nightIdx);
+      }
     });
     return nightHeads;
   }
@@ -142,8 +148,6 @@
 
   function canFamilyFitInRoom(family, room, familiesInRoom) {
     if (!room || room.unavailable || room.capacity <= 0) return false;
-    const familySize = getFamilyHeadcount(family);
-    const familyNights = getFamilyStayNights(family);
     
     const nightHeads = [0, 0, 0];
     (familiesInRoom || []).forEach((f) => {
@@ -151,18 +155,15 @@
       const targetId = family._familyId || family.id || family.name;
       if (String(fId) === String(targetId)) return;
       
-      const fSize = getFamilyHeadcount(f);
-      const fNights = getFamilyStayNights(f);
-      fNights.forEach((n) => {
-        if (n >= 0 && n < 3) {
-          nightHeads[n] += fSize;
-        }
-      });
+      for (let n = 0; n < 3; n++) {
+        nightHeads[n] += getFamilyStayHeadcountOnNight(f, n);
+      }
     });
 
     const limit = getRoomAssignmentLimit(room);
-    for (const n of familyNights) {
-      if (nightHeads[n] + familySize > limit) {
+    for (let n = 0; n < 3; n++) {
+      const familyNightSize = getFamilyStayHeadcountOnNight(family, n);
+      if (nightHeads[n] + familyNightSize > limit) {
         return false;
       }
     }
@@ -432,7 +433,7 @@
         const segments = familiesOnNight.map(family => {
           const famIdx = (familiesInRoom || []).findIndex(f => (f._familyId || f.id) === (family._familyId || family.id));
           const colorClass = FAMILY_COLORS[famIdx >= 0 ? famIdx % FAMILY_COLORS.length : 0];
-          const fSize = getFamilyHeadcount(family);
+          const fSize = getFamilyStayHeadcountOnNight(family, nightIdx);
           const widthPercent = room.capacity > 0 ? (fSize / room.capacity) * 100 : 0;
           return h("div", {
             key: family._familyId || family.id,
@@ -564,10 +565,8 @@
         _roomValue: roomValue,
         _size: familySize,
       });
-      bucket.headcount += familySize;
     });
 
-    // Sort families in each bucket chronologically by stay nights and earliest arrival time
     byRoom.forEach((bucket) => {
       bucket.families.sort((a, b) => {
         const nightsA = getFamilyStayNights(a);
@@ -582,6 +581,8 @@
 
         return a.name.localeCompare(b.name);
       });
+      // Compute headcount as maximum overnight occupancy
+      bucket.headcount = getRoomMaxOccupancy(bucket.room, bucket.families);
     });
 
     return { byRoom, orphaned };
@@ -590,11 +591,9 @@
   function scoreRoomForFamily(roomBucket, familySize, familyNights = [0, 1, 2]) {
     const nightHeads = [0, 0, 0];
     (roomBucket.families || []).forEach((f) => {
-      const fSize = getFamilyHeadcount(f);
-      const fNights = getFamilyStayNights(f);
-      fNights.forEach((n) => {
-        if (n >= 0 && n < 3) nightHeads[n] += fSize;
-      });
+      for (let n = 0; n < 3; n++) {
+        nightHeads[n] += getFamilyStayHeadcountOnNight(f, n);
+      }
     });
     const nights = familyNights && familyNights.length > 0 ? familyNights : [0, 1, 2];
     const maxOccupiedBefore = Math.max(...nights.map((n) => nightHeads[n] || 0));
