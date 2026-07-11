@@ -434,7 +434,8 @@
           const famIdx = (familiesInRoom || []).findIndex(f => (f._familyId || f.id) === (family._familyId || family.id));
           const colorClass = FAMILY_COLORS[famIdx >= 0 ? famIdx % FAMILY_COLORS.length : 0];
           const fSize = getFamilyStayHeadcountOnNight(family, nightIdx);
-          const widthPercent = room.capacity > 0 ? (fSize / room.capacity) * 100 : 0;
+          const limitOrCapacity = Math.max(room.capacity, getRoomAssignmentLimit(room));
+          const widthPercent = limitOrCapacity > 0 ? (fSize / limitOrCapacity) * 100 : 0;
           return h("div", {
             key: family._familyId || family.id,
             className: cx("h-full transition-all duration-300 first:rounded-l-full last:rounded-r-full", colorClass),
@@ -456,6 +457,7 @@
 
   function getRoomAssignmentLimit(room) {
     if (!room || room.unavailable || room.capacity <= 0) return 0;
+    if (room.capacity === 4) return 5;
     return room.capacity;
   }
 
