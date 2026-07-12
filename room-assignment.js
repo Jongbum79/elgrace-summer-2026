@@ -980,6 +980,68 @@
       };
     }, [layoutState.data, roomBundle, draftToken, refreshKey]);
 
+    const dailyUsageData = useMemo(() => {
+      if (!layoutState.data) return null;
+      
+      const activeRooms = layoutState.data.rooms.filter(r => !r.unavailable && r.capacity > 0);
+      const roomTypes = ["1인실", "2인실", "4인실 온돌", "6인실", "12인실"];
+      
+      const totalByType = {};
+      roomTypes.forEach(t => {
+        totalByType[t] = 0;
+      });
+      
+      activeRooms.forEach(r => {
+        const t = r.room_type_label || `${r.capacity}인실`;
+        if (roomTypes.includes(t)) {
+          totalByType[t] = (totalByType[t] || 0) + 1;
+        }
+      });
+      
+      const roomOccupancy = {};
+      activeRooms.forEach(r => {
+        roomOccupancy[r.id] = [0, 0, 0];
+      });
+      
+      familiesList.forEach((family, idx) => {
+        if (["absent", "undecided"].includes(family.status)) return;
+        
+        const familyId = getFamilyId(family, idx);
+        const roomValue = getFamilyRoomValue({ ...family, id: familyId }, draftAssignments);
+        const resolved = resolveRoom(layoutState.data, roomValue);
+        if (!resolved || resolved.unavailable || resolved.capacity <= 0) return;
+        
+        for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
+          const headcount = getFamilyStayHeadcountOnNight(family, nightIdx);
+          if (roomOccupancy[resolved.id]) {
+            roomOccupancy[resolved.id][nightIdx] += headcount;
+          }
+        }
+      });
+      
+      const occupiedByType = {};
+      roomTypes.forEach(t => {
+        occupiedByType[t] = [0, 0, 0];
+      });
+      
+      activeRooms.forEach(r => {
+        const t = r.room_type_label || `${r.capacity}인실`;
+        if (!roomTypes.includes(t)) return;
+        const occ = roomOccupancy[r.id] || [0, 0, 0];
+        for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
+          if (occ[nightIdx] > 0) {
+            occupiedByType[t][nightIdx] += 1;
+          }
+        }
+      });
+      
+      return {
+        roomTypes,
+        totalByType,
+        occupiedByType
+      };
+    }, [layoutState.data, familiesList, draftAssignments]);
+
     const filteredFamilies = useMemo(() => {
       return familiesList
         .map((family, index) => {
@@ -1614,6 +1676,87 @@
         }),
         h("div", { className: "mt-2 pt-2 border-t border-slate-100 text-xs font-semibold text-slate-500 text-center" },
           `형제 ${comp.brother}명 | 자매 ${comp.sister}명 | 자녀 ${comp.child}명 | 총 ${comp.total}명`
+        )
+      );
+    }
+
+    function renderDailyUsageTable() {
+      if (!dailyUsageData) return null;
+      
+      const { roomTypes, totalByType, occupiedByType } = dailyUsageData;
+      
+      const totalRoomsAll = Object.values(totalByType).reduce((a, b) => a + b, 0);
+      const occupiedAll = [0, 0, 0];
+      roomTypes.forEach(t => {
+        const occ = occupiedByType[t] || [0, 0, 0];
+        for (let i = 0; i < 3; i++) {
+          occupiedAll[i] += occ[i];
+        }
+      });
+      
+      const dates = [
+        { label: "7/27 (1일차)", index: 0 },
+        { label: "7/28 (2일차)", index: 1 },
+        { label: "7/29 (3일차)", index: 2 }
+      ];
+      
+      return h("div", { className: "mt-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm overflow-hidden" },
+        h("div", { className: "flex items-center justify-between mb-4" },
+          h("div", null,
+            h("div", { className: "flex items-center gap-2" },
+              renderIcon("calendar", "h-5 w-5 text-[#1e5a45]"),
+              h("h3", { className: "text-lg font-semibold text-slate-900" }, "날짜별 방 사용 현황 (가동률)")
+            ),
+            h("p", { className: "text-xs text-slate-500 mt-1 pl-7" }, "해당 날짜에 최소 1명 이상 숙박하는 방 / 배정 가능한 총 방 수")
+          )
+        ),
+        h("div", { className: "overflow-x-auto" },
+          h("table", { className: "w-full border-collapse text-left text-sm text-slate-600" },
+            h("thead", null,
+              h("tr", { className: "border-b border-slate-100 bg-slate-50/50" },
+                h("th", { className: "px-4 py-3 font-semibold text-slate-700" }, "방 타입"),
+                dates.map(d => h("th", { key: d.index, className: "px-4 py-3 font-semibold text-slate-700 text-center" }, d.label))
+              )
+            ),
+            h("tbody", null,
+              roomTypes.map(t => {
+                const total = totalByType[t] || 0;
+                const occ = occupiedByType[t] || [0, 0, 0];
+                return h("tr", { key: t, className: "border-b border-slate-100/70 hover:bg-slate-50/30 transition-colors" },
+                  h("td", { className: "px-4 py-3 font-medium text-slate-800" }, t),
+                  [0, 1, 2].map(i => {
+                    const used = occ[i];
+                    const percent = total > 0 ? Math.round((used / total) * 100) : 0;
+                    return h("td", { key: i, className: "px-4 py-3 text-center" },
+                      h("div", { className: "flex flex-col items-center" },
+                        h("span", { className: "font-semibold text-slate-900" }, `${used}/${total}`),
+                        h("span", { className: cx("text-[10px] mt-0.5 px-1.5 py-0.5 rounded font-medium", 
+                          percent === 0 ? "bg-slate-100 text-slate-400" :
+                          percent === 100 ? "bg-emerald-100 text-emerald-800" : "bg-emerald-50 text-emerald-700"
+                        ) }, `${percent}%`)
+                      )
+                    );
+                  })
+                );
+              }),
+              h("tr", { className: "bg-slate-50/70 font-semibold" },
+                h("td", { className: "px-4 py-3.5 text-slate-900" }, "합계 (총 방 수)"),
+                [0, 1, 2].map(i => {
+                  const used = occupiedAll[i];
+                  const percent = totalRoomsAll > 0 ? Math.round((used / totalRoomsAll) * 100) : 0;
+                  return h("td", { key: i, className: "px-4 py-3.5 text-center text-slate-900" },
+                    h("div", { className: "flex flex-col items-center" },
+                      h("span", { className: "text-base font-bold" }, `${used}/${totalRoomsAll}`),
+                      h("span", { className: cx("text-[10px] mt-0.5 px-2 py-0.5 rounded font-bold", 
+                        percent === 0 ? "bg-slate-100 text-slate-400" :
+                        percent === 100 ? "bg-[#1e5a45] text-white" : "bg-[#1e5a45]/10 text-[#1e5a45]"
+                      ) }, `${percent}%`)
+                    )
+                  );
+                })
+              )
+            )
+          )
         )
       );
     }
@@ -2727,6 +2870,7 @@
             renderSummaryChip("triangle-alert", "객실 나눔 배정", `${roomStats.overRooms}개`, "text-slate-900"),
             renderSummaryChip("layout-dashboard", "배정률", `${roomStats.utilization}%`, "text-slate-900")
           ),
+          renderDailyUsageTable(),
           h("div", { className: "mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" },
             h("div", { className: "flex flex-wrap items-center gap-2" },
               [
