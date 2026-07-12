@@ -1705,13 +1705,13 @@
           h("div", null,
             h("div", { className: "flex items-center gap-2" },
               renderIcon("calendar", "h-4 w-4 sm:h-5 sm:w-5 text-[#1e5a45]"),
-              h("h3", { className: "text-base sm:text-lg font-semibold text-slate-900" }, "날짜별 방 사용 현황 (가동률)")
+              h("h3", { className: "text-base sm:text-lg font-semibold text-slate-900" }, "날짜별 방 사용 현황")
             ),
             h("p", { className: "text-[10px] sm:text-xs text-slate-500 mt-1 pl-6 sm:pl-7" }, "해당 날짜에 최소 1명 이상 숙박하는 방 / 배정 가능한 총 방 수")
           )
         ),
         h("div", { className: "overflow-x-auto" },
-          h("table", { className: "w-full border-collapse text-left text-xs sm:text-sm text-slate-600" },
+          h("table", { className: "daily-usage-table w-full border-collapse text-left text-xs sm:text-sm text-slate-600" },
             h("thead", null,
               h("tr", { className: "border-b border-slate-100 bg-slate-50/50" },
                 h("th", { className: "px-2 sm:px-4 py-2 sm:py-3 font-semibold text-slate-700" }, "방 타입"),
@@ -1726,16 +1726,7 @@
                   h("td", { className: "px-2 sm:px-4 py-2 sm:py-3 font-medium text-slate-800" }, t),
                   [0, 1, 2].map(i => {
                     const used = occ[i];
-                    const percent = total > 0 ? Math.round((used / total) * 100) : 0;
-                    return h("td", { key: i, className: "px-2 sm:px-4 py-2 sm:py-3 text-center" },
-                      h("div", { className: "flex flex-col items-center" },
-                        h("span", { className: "font-semibold text-slate-900" }, `${used}/${total}`),
-                        h("span", { className: cx("text-[9px] sm:text-[10px] mt-0.5 px-1.5 py-0.5 rounded font-medium", 
-                          percent === 0 ? "bg-slate-100 text-slate-400" :
-                          percent === 100 ? "bg-emerald-100 text-emerald-800" : "bg-emerald-50 text-emerald-700"
-                        ) }, `${percent}%`)
-                      )
-                    );
+                    return h("td", { key: i, className: "px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-900 font-semibold" }, `${used}/${total}`);
                   })
                 );
               }),
@@ -1743,16 +1734,7 @@
                 h("td", { className: "px-2 sm:px-4 py-3 sm:py-3.5 text-slate-900" }, "합계 (총 방 수)"),
                 [0, 1, 2].map(i => {
                   const used = occupiedAll[i];
-                  const percent = totalRoomsAll > 0 ? Math.round((used / totalRoomsAll) * 100) : 0;
-                  return h("td", { key: i, className: "px-2 sm:px-4 py-3 sm:py-3.5 text-center text-slate-900" },
-                    h("div", { className: "flex flex-col items-center" },
-                      h("span", { className: "text-sm sm:text-base font-bold" }, `${used}/${totalRoomsAll}`),
-                      h("span", { className: cx("text-[9px] sm:text-[10px] mt-0.5 px-2 py-0.5 rounded font-bold", 
-                        percent === 0 ? "bg-slate-100 text-slate-400" :
-                        percent === 100 ? "bg-[#1e5a45] text-white" : "bg-[#1e5a45]/10 text-[#1e5a45]"
-                      ) }, `${percent}%`)
-                    )
-                  );
+                  return h("td", { key: i, className: "px-2 sm:px-4 py-3 sm:py-3.5 text-center text-slate-900 font-bold text-sm sm:text-base" }, `${used}/${totalRoomsAll}`);
                 })
               )
             )

@@ -2844,3 +2844,61 @@ body.participants-only-mode .main-content {
 body.participants-only-mode.mobile-mode .main-content {
   padding: 24px 16px 32px !important;
 }
+
+/* Daily Usage Table Mobile Override (preserve standard table layout on mobile) */
+body.mobile-mode table.daily-usage-table,
+body.mobile-mode table.daily-usage-table tbody,
+body.mobile-mode table.daily-usage-table tr,
+body.mobile-mode table.daily-usage-table td,
+body.mobile-mode table.daily-usage-table th {
+  display: revert !important;
+  width: auto !important;
+}
+
+body.mobile-mode table.daily-usage-table {
+  display: table !important;
+  width: 100% !important;
+}
+
+body.mobile-mode table.daily-usage-table thead {
+  display: table-header-group !important;
+}
+
+body.mobile-mode table.daily-usage-table tbody {
+  display: table-row-group !important;
+  background: transparent !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body.mobile-mode table.daily-usage-table tr {
+  display: table-row !important;
+  position: static !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+body.mobile-mode table.daily-usage-table tr:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+body.mobile-mode table.daily-usage-table td,
+body.mobile-mode table.daily-usage-table th {
+  display: table-cell !important;
+  padding: 8px 4px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+body.mobile-mode table.daily-usage-table td:first-child,
+body.mobile-mode table.daily-usage-table th:first-child {
+  text-align: left !important;
+  padding-left: 8px !important;
+}
+
+body.mobile-mode table.daily-usage-table td::before {
+  display: none !important;
+}
