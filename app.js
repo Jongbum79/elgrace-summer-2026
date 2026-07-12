@@ -352,26 +352,16 @@ window.calculateFamilyFee = function(family, allFamilies) {
         lodgingCost += unassignedRate;
         lodgingDetails.push({ date: dayLabel, rate: unassignedRate, sharingCount: 1, cost: unassignedRate });
       } else {
-        // Assigned to room, check sharing count
+        // Assigned to room, check sharing count (total active families sharing this room)
         let sharingCount = 1;
         (allFamilies || []).forEach(f => {
           if (f.id === family.id) return;
           if (f.status === "absent" || f.status === "undecided") return;
           if (normalizeRoomValue(f.room) !== normalizedRoom) return;
-          
-          const fOvernight = f.members && f.members.some(m => {
-            const isUndecided = m[7] === "undecided";
-            if (isUndecided) return false;
-            const segs = m[5] || [];
-            return segs.includes(`${dayLabel}-dinner`) && segs.includes(`${nextDayLabel}-breakfast`);
-          });
-          
-          if (fOvernight) {
-            sharingCount++;
-          }
+          sharingCount++;
         });
         
-        const nightCost = baseRoomRate / sharingCount;
+        const nightCost = Math.round(baseRoomRate / sharingCount);
         lodgingCost += nightCost;
         lodgingDetails.push({ date: dayLabel, rate: baseRoomRate, sharingCount: sharingCount, cost: nightCost });
       }
