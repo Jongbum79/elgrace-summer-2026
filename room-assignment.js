@@ -984,7 +984,7 @@
       if (!layoutState.data) return null;
       
       const activeRooms = layoutState.data.rooms.filter(r => !r.unavailable && r.capacity > 0);
-      const roomTypes = ["1인실", "2인실", "4인실 온돌", "6인실", "12인실"];
+      const roomTypes = ["1인실", "2인실", "4인실", "6인실", "12인실"];
       
       const totalByType = {};
       roomTypes.forEach(t => {
@@ -992,7 +992,8 @@
       });
       
       activeRooms.forEach(r => {
-        const t = r.room_type_label || `${r.capacity}인실`;
+        let t = r.room_type_label || `${r.capacity}인실`;
+        if (t === "4인실 온돌") t = "4인실";
         if (roomTypes.includes(t)) {
           totalByType[t] = (totalByType[t] || 0) + 1;
         }
@@ -1025,7 +1026,8 @@
       });
       
       activeRooms.forEach(r => {
-        const t = r.room_type_label || `${r.capacity}인실`;
+        let t = r.room_type_label || `${r.capacity}인실`;
+        if (t === "4인실 온돌") t = "4인실";
         if (!roomTypes.includes(t)) return;
         const occ = roomOccupancy[r.id] || [0, 0, 0];
         for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
@@ -1731,7 +1733,7 @@
                 );
               }),
               h("tr", { className: "bg-slate-50/70 font-semibold" },
-                h("td", { className: "px-2 sm:px-4 py-3 sm:py-3.5 text-slate-900" }, "합계 (총 방 수)"),
+                h("td", { className: "px-2 sm:px-4 py-3 sm:py-3.5 text-slate-900" }, "합계"),
                 [0, 1, 2].map(i => {
                   const used = occupiedAll[i];
                   return h("td", { key: i, className: "px-2 sm:px-4 py-3 sm:py-3.5 text-center text-slate-900 font-bold text-sm sm:text-base" }, `${used}/${totalRoomsAll}`);
