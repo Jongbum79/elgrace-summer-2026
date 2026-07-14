@@ -361,7 +361,7 @@ window.calculateFamilyFee = function(family, allFamilies) {
           sharingCount++;
         });
         
-        const nightCost = Math.round(baseRoomRate / sharingCount);
+        const nightCost = Math.ceil(baseRoomRate / sharingCount);
         lodgingCost += nightCost;
         lodgingDetails.push({ date: dayLabel, rate: baseRoomRate, sharingCount: sharingCount, cost: nightCost });
       }
