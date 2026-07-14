@@ -4564,7 +4564,7 @@ document.querySelector("#copyShareLinkButton")?.addEventListener("click", () => 
 });
 document.querySelector("#loadMoreButton").addEventListener("click", () => showToast("등록된 가족 명단을 모두 불러왔습니다."));
 document.querySelector("#filterButton").addEventListener("click", () => showToast("상단 필터에서 참석 상태를 선택하세요."));
-document.querySelector("#mealDownloadButton").addEventListener("click", () => showToast("식사별 명단 다운로드를 준비했습니다."));
+document.querySelector("#mealDownloadButton").addEventListener("click", downloadMealList);
 
 
 // ==========================================
@@ -6065,6 +6065,67 @@ function downloadOrgList(genderMode) {
     return { wch: maxLen + 2 };
   });
   
+  XLSX.writeFile(workbook, fileName);
+  showToast(`${fileName} 파일이 다운로드되었습니다.`);
+}
+
+function downloadMealList() {
+  const workbook = XLSX.utils.book_new();
+  let hasData = false;
+  
+  mealSchedule.forEach((meal) => {
+    const people = getMealPeople(meal);
+    if (people.length === 0) return;
+    
+    hasData = true;
+    
+    // Sort people: adults first, children second, preschoolers third; then by name
+    const typeOrder = { adult: 1, child: 2, preschool: 3 };
+    people.sort((a, b) => {
+      const typeDiff = typeOrder[a.type] - typeOrder[b.type];
+      if (typeDiff !== 0) return typeDiff;
+      return a.name.localeCompare(b.name, "ko");
+    });
+    
+    const data = people.map((person, idx) => {
+      const familyObj = families.find(f => f.name === person.family);
+      const room = familyObj ? (familyObj.room || "미배정") : "미배정";
+      const typeLabel = { adult: "성인/청소년", child: "어린이", preschool: "유치부" }[person.type] || person.type;
+      
+      return {
+        "번호": idx + 1,
+        "이름": person.name,
+        "구분": typeLabel,
+        "소속 부서": person.group,
+        "가족명": person.family,
+        "방 배정": room
+      };
+    });
+    
+    const parts = meal.label.split(" ");
+    const shortSheetName = parts.length >= 3 ? `${parts[0].replace("월","")}-${parts[1].replace("일","")} ${parts[2]}` : meal.label;
+    
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(workbook, worksheet, shortSheetName);
+    
+    const maxProps = ["번호", "이름", "구분", "소속 부서", "가족명", "방 배정"];
+    worksheet["!cols"] = maxProps.map(prop => {
+      let maxLen = prop.length * 2;
+      data.forEach(item => {
+        const val = String(item[prop] || "");
+        const valLen = val.split("").reduce((acc, char) => acc + (char.charCodeAt(0) > 127 ? 2 : 1), 0);
+        if (valLen > maxLen) maxLen = valLen;
+      });
+      return { wch: maxLen + 2 };
+    });
+  });
+  
+  if (!hasData) {
+    showToast("다운로드할 식사 명단 데이터가 없습니다.");
+    return;
+  }
+  
+  const fileName = `수련회_식사별_준비명단.xlsx`;
   XLSX.writeFile(workbook, fileName);
   showToast(`${fileName} 파일이 다운로드되었습니다.`);
 }
