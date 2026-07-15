@@ -2902,3 +2902,35 @@ body.mobile-mode table.daily-usage-table th:first-child {
 body.mobile-mode table.daily-usage-table td::before {
   display: none !important;
 }
+
+/* ==========================================
+   MANITO DRAWING VIEW STYLES
+   ========================================== */
+.manito-overlay.active {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+}
+
+.manito-name-text {
+  font-size: clamp(16px, 5.2cqw, 30px);
+  font-weight: 800;
+  text-align: center;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.9);
+  max-width: 65%;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.manito-play-circle:hover {
+  transform: scale(1.08);
+}
+
+.manito-play-circle:active {
+  transform: scale(0.96);
+}
+
+/* Mobile responsive layout overrides */
+body.mobile-mode .manito-layout {
+  grid-template-columns: 1fr !important;
+}
