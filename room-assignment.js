@@ -1697,6 +1697,11 @@
                   
                   master.value = { richText: richTextRuns };
                   
+                  // Explicitly set the cell-level font size to prevent cell style overriding richText sizes
+                  const hasAnyDate = roomOccupants[key].some(fam => !!fam.nights_label);
+                  const baseSize = numFamilies === 1 ? 16 : (hasAnyDate ? (origFont.size || 20) - 4 : (origFont.size || 20) - 2);
+                  master.font = Object.assign({}, origFont, { size: baseSize });
+                  
                   // Track maximum lines in this row for height adjustment
                   maxLinesInRow[master.row] = Math.max(maxLinesInRow[master.row] || 0, lineCount);
                   
