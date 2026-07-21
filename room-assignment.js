@@ -1618,15 +1618,40 @@
                   }
                   origVal = origVal ? String(origVal) : "";
                   
-                  const separator = origVal ? "\n" : "";
-                  master.value = `${origVal}${separator}${occupantsText}`;
-                  
-                  // Adjust font size: 2 steps smaller normally, 4 steps smaller if date is included
-                  const hasDate = occupantsText.includes("(");
                   const origFont = master.font || {};
-                  const origSize = origFont.size || 20;
-                  const newSize = hasDate ? (origSize - 4) : (origSize - 2);
-                  master.font = Object.assign({}, origFont, { size: newSize });
+                  const richTextRuns = [];
+                  
+                  if (origVal) {
+                    richTextRuns.push({
+                      text: origVal + "\n",
+                      font: Object.assign({}, origFont)
+                    });
+                  }
+                  
+                  const colors = [
+                    { argb: 'FF1E5A45' }, // Green (1st)
+                    { argb: 'FF0066CC' }, // Blue (2nd)
+                    { argb: 'FFE67E22' }, // Orange (3rd)
+                    { argb: 'FF000000' }  // Black (4th)
+                  ];
+                  
+                  roomOccupants[key].forEach((occupantText, idx) => {
+                    const color = colors[idx % colors.length];
+                    const hasDate = occupantText.includes("(");
+                    const origSize = origFont.size || 20;
+                    const newSize = hasDate ? (origSize - 4) : (origSize - 2);
+                    
+                    const runText = occupantText + (idx < roomOccupants[key].length - 1 ? "\n" : "");
+                    richTextRuns.push({
+                      text: runText,
+                      font: Object.assign({}, origFont, {
+                        size: newSize,
+                        color: color
+                      })
+                    });
+                  });
+                  
+                  master.value = { richText: richTextRuns };
                   
                   // Ensure text wrapping is enabled for the master cell so newlines render correctly
                   master.alignment = Object.assign({}, master.alignment, { wrapText: true });
