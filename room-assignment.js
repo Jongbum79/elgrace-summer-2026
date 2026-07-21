@@ -1476,8 +1476,8 @@
           throw new Error("ExcelJS 라이브러리가 로드되지 않았습니다.");
         }
 
-        // Fetch template
-        const response = await fetch('./Room_Reservation.xlsx');
+        // Fetch template with cache busting
+        const response = await fetch('./Room_Reservation.xlsx?v=20260721_2340');
         if (!response.ok) {
           throw new Error("템플릿 파일을 찾을 수 없습니다.");
         }
