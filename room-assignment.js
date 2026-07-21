@@ -1472,8 +1472,24 @@
     async function exportRoomingList() {
       showToast("명단 다운로드를 준비 중입니다...");
       try {
-        const processedFamilies = familiesList.map((family, index) => {
-          const familyId = getFamilyId(family, index);
+        if (typeof XLSX === "undefined") {
+          throw new Error("XLSX 라이브러리가 로드되지 않았습니다.");
+        }
+
+        // Fetch template
+        const response = await fetch('./Room_Reservation.xlsx');
+        if (!response.ok) {
+          throw new Error("템플릿 파일을 찾을 수 없습니다.");
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheetName = workbook.SheetNames[0];
+        const ws = workbook.Sheets[sheetName];
+
+        const familyMap = {};
+        familiesList.forEach((family, index) => {
+          const fId = getFamilyId(family, index);
           
           const nights = getFamilyStayNights(family);
           let nightsLabel = "";
@@ -1494,31 +1510,141 @@
             nightsLabel = "무박";
           }
 
-          return {
-            id: familyId,
+          familyMap[fId] = {
             name: familyDisplayName(family),
             nights_label: nightsLabel
           };
         });
 
-        const payload = {
-          assignments: draftAssignments,
-          families: processedFamilies
-        };
+        const roomOccupants = {};
 
-        const response = await fetch("/api/export-room-reservation", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
+        function parseRoomVal(roomVal) {
+          if (!roomVal || roomVal === "미배정") return null;
+          let bName = null;
+          if (roomVal.includes("휴락동")) bName = "휴락동";
+          else if (roomVal.includes("동락홀")) bName = "동락홀";
 
-        if (!response.ok) {
-          throw new Error(`서버 응답 오류 (${response.status})`);
+          const match = roomVal.match(/(\d{3})/);
+          if (match) {
+            return { building: bName, roomNumber: parseInt(match[1], 10) };
+          }
+          return null;
         }
 
-        const blob = await response.blob();
+        Object.entries(draftAssignments).forEach(([fId, roomVal]) => {
+          const roomInfo = parseRoomVal(roomVal);
+          if (!roomInfo) return;
+
+          const fam = familyMap[fId];
+          if (!fam) return;
+
+          const famName = fam.name || "이름 없음";
+          const nightsLabel = fam.nights_label || "";
+          let label = famName;
+          if (nightsLabel) {
+            label += ` (${nightsLabel})`;
+          }
+
+          const key = `${roomInfo.building}_${roomInfo.roomNumber}`;
+          if (!roomOccupants[key]) {
+            roomOccupants[key] = [];
+          }
+          roomOccupants[key].push(label);
+        });
+
+        function getCellValue(r, c) {
+          const addr = XLSX.utils.encode_cell({ r: r, c: c });
+          return ws[addr] ? ws[addr].v : null;
+        }
+
+        function setCellValue(r, c, val) {
+          const addr = XLSX.utils.encode_cell({ r: r, c: c });
+          if (!ws[addr]) {
+            ws[addr] = { t: 's', v: '' };
+          }
+          ws[addr].v = val;
+          ws[addr].t = 's';
+        }
+
+        function getMergedTopLeft(r, c) {
+          const merges = ws['!merges'] || [];
+          for (const m of merges) {
+            if (r >= m.s.r && r <= m.e.r && c >= m.s.c && c <= m.e.c) {
+              return { r: m.s.r, c: m.s.c };
+            }
+          }
+          return null;
+        }
+
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        // Scan sections
+        const SECTION_RE = /.*?(휴락동|동락홀|.+?)(\d)층/;
+        const sections = [];
+        for (let r = range.s.r; r <= range.e.r; r++) {
+          const val = getCellValue(r, 1);
+          if (!val) continue;
+          const normalized = String(val).replace(/\s+/g, "");
+          const match = SECTION_RE.exec(normalized);
+          if (match) {
+            const bName = match[1].replace("▶", "").trim();
+            const fNum = parseInt(match[2], 10);
+            sections.push({ row: r, building: bName, floor: fNum });
+          }
+        }
+
+        function getBuildingForRow(rowIdx) {
+          let currentB = null;
+          for (const sec of sections) {
+            if (rowIdx >= sec.row) {
+              currentB = sec.building;
+            } else {
+              break;
+            }
+          }
+          return currentB;
+        }
+
+        const ROOM_RE = /^(\d{3})호/;
+        const processedMergedCells = new Set();
+
+        for (let r = range.s.r; r <= range.e.r; r++) {
+          const building = getBuildingForRow(r);
+          if (!building) continue;
+
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const val = getCellValue(r, c);
+            if (!val) continue;
+
+            const normalizedVal = String(val).replace(/\s+/g, "");
+            const roomMatch = ROOM_RE.exec(normalizedVal);
+            if (roomMatch) {
+              const roomNumber = parseInt(roomMatch[1], 10);
+              const key = `${building}_${roomNumber}`;
+
+              if (roomOccupants[key]) {
+                const occupantsText = roomOccupants[key].join("\n");
+                const targetRow = r + 1;
+
+                const targetMerged = getMergedTopLeft(targetRow, c);
+                if (targetMerged) {
+                  const mKey = `${targetMerged.r}_${targetMerged.c}`;
+                  if (!processedMergedCells.has(mKey)) {
+                    const origVal = getCellValue(targetMerged.r, targetMerged.c) || "";
+                    const separator = origVal ? "\n" : "";
+                    setCellValue(targetMerged.r, targetMerged.c, `${origVal}${separator}${occupantsText}`);
+                    processedMergedCells.add(mKey);
+                  }
+                } else {
+                  setCellValue(targetRow, c, occupantsText);
+                }
+              }
+            }
+          }
+        }
+
+        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -1531,7 +1657,7 @@
         showToast("명단 다운로드가 완료되었습니다.");
       } catch (error) {
         console.error("명단 다운로드 실패:", error);
-        showToast("명단 다운로드에 실패했습니다.");
+        showToast("명단 다운로드에 실패했습니다: " + error.message);
       }
     }
 
