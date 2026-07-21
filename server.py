@@ -195,6 +195,149 @@ class RetreatHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}, ensure_ascii=False).encode('utf-8'))
             return
             
+        elif self.path == '/api/export-room-reservation':
+            try:
+                import openpyxl
+                import re
+                
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length)
+                req_data = json.loads(body.decode('utf-8'))
+                
+                assignments = req_data.get("assignments", {}) # { familyId: roomValue }
+                families = req_data.get("families", [])       # list of family dicts
+                
+                # Create a map for quick family lookup
+                family_map = {str(f.get("id")): f for f in families}
+                
+                # Group family display texts by normalized room name
+                room_occupants = {}
+                
+                # Helpers to extract building & room number from roomValue string
+                def parse_room_val(room_val):
+                    if not room_val or room_val == "미배정":
+                        return None
+                    b_name = None
+                    if "휴락동" in room_val:
+                        b_name = "휴락동"
+                    elif "동락홀" in room_val:
+                        b_name = "동락홀"
+                    
+                    r_match = re.search(r"(\d{3})", room_val)
+                    if r_match:
+                        return (b_name, int(r_match.group(1)))
+                    return None
+
+                for f_id, room_val in assignments.items():
+                    room_info = parse_room_val(room_val)
+                    if not room_info:
+                        continue
+                    
+                    fam = family_map.get(str(f_id))
+                    if not fam:
+                        continue
+                    
+                    fam_name = fam.get("name", "이름 없음")
+                    nights_label = fam.get("nights_label", "")
+                    
+                    label = fam_name
+                    if nights_label:
+                        label += f" ({nights_label})"
+                    
+                    if room_info not in room_occupants:
+                        room_occupants[room_info] = []
+                    room_occupants[room_info].append(label)
+
+                # Load original template workbook
+                excel_path = ROOT / "Room_Reservation.xlsx"
+                if not excel_path.exists():
+                    raise FileNotFoundError(f"Template Room_Reservation.xlsx not found at {excel_path}")
+                
+                wb = openpyxl.load_workbook(excel_path)
+                sheet = wb[wb.sheetnames[0]]
+                
+                # Scan sections to determine building/floor context for each cell
+                SECTION_RE = re.compile(r".*?(?P<building>휴락동|동락홀|.+?)(?P<floor>\d)층")
+                sections = []
+                for row in range(1, sheet.max_row + 1):
+                    val = sheet.cell(row, 2).value
+                    if not val:
+                        continue
+                    normalized = re.sub(r"\s+", "", str(val))
+                    match = SECTION_RE.match(normalized)
+                    if match:
+                        b_name = match.group("building").replace("▶", "").strip()
+                        f_num = int(match.group("floor"))
+                        sections.append((row, b_name, f_num))
+                
+                # Function to get building for a given row
+                def get_building_for_row(row_idx):
+                    current_b = None
+                    for r, b, f in sections:
+                        if row_idx >= r:
+                            current_b = b
+                        else:
+                            break
+                    return current_b
+
+                # Helper to check if a cell is in a merged range and return top-left
+                def get_merged_top_left(r, c):
+                    for m_range in sheet.merged_cells.ranges:
+                        if r >= m_range.min_row and r <= m_range.max_row and c >= m_range.min_col and c <= m_range.max_col:
+                            return m_range.min_row, m_range.min_col
+                    return None
+
+                ROOM_RE = re.compile(r"^(\d{3})호")
+                processed_merged_cells = set()
+
+                for row in range(1, sheet.max_row + 1):
+                    building = get_building_for_row(row)
+                    if not building:
+                        continue
+                        
+                    for col in range(1, sheet.max_column + 1):
+                        val = sheet.cell(row, col).value
+                        if not val:
+                            continue
+                        
+                        normalized_val = re.sub(r"\s+", "", str(val))
+                        room_match = ROOM_RE.match(normalized_val)
+                        if room_match:
+                            room_number = int(room_match.group(1))
+                            key = (building, room_number)
+                            
+                            if key in room_occupants:
+                                occupants_text = "\n".join(room_occupants[key])
+                                
+                                target_row = row + 1
+                                target_merged = get_merged_top_left(target_row, col)
+                                if target_merged:
+                                    t_r, t_c = target_merged
+                                    if (t_r, t_c) not in processed_merged_cells:
+                                        orig_val = sheet.cell(t_r, t_c).value or ""
+                                        separator = "\n" if orig_val else ""
+                                        sheet.cell(t_r, t_c).value = f"{orig_val}{separator}{occupants_text}"
+                                        processed_merged_cells.add((t_r, t_c))
+                                else:
+                                    sheet.cell(target_row, col).value = occupants_text
+
+                output = io.BytesIO()
+                wb.save(output)
+                output.seek(0)
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                self.send_header('Content-Disposition', 'attachment; filename=Room_Reservation_assigned.xlsx')
+                self.end_headers()
+                self.wfile.write(output.read())
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}, ensure_ascii=False).encode('utf-8'))
+                return
+            
         self.send_response(404)
         self.end_headers()
 

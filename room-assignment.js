@@ -1469,6 +1469,72 @@
       }
     }
 
+    async function exportRoomingList() {
+      showToast("명단 다운로드를 준비 중입니다...");
+      try {
+        const processedFamilies = familiesList.map((family, index) => {
+          const familyId = getFamilyId(family, index);
+          
+          const nights = getFamilyStayNights(family);
+          let nightsLabel = "";
+          if (nights.length > 0 && nights.length < 3) {
+            const dateLabels = {
+              0: "7/27",
+              1: "7/28",
+              2: "7/29"
+            };
+            if (nights.length === 2 && nights[0] === 0 && nights[1] === 1) {
+              nightsLabel = "7/27-28";
+            } else if (nights.length === 2 && nights[0] === 1 && nights[1] === 2) {
+              nightsLabel = "7/28-29";
+            } else {
+              nightsLabel = nights.map(n => dateLabels[n]).join(", ");
+            }
+          } else if (nights.length === 0) {
+            nightsLabel = "무박";
+          }
+
+          return {
+            id: familyId,
+            name: familyDisplayName(family),
+            nights_label: nightsLabel
+          };
+        });
+
+        const payload = {
+          assignments: draftAssignments,
+          families: processedFamilies
+        };
+
+        const response = await fetch("/api/export-room-reservation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`서버 응답 오류 (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Room_Reservation_배정완료_${new Date().toISOString().slice(0,10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast("명단 다운로드가 완료되었습니다.");
+      } catch (error) {
+        console.error("명단 다운로드 실패:", error);
+        showToast("명단 다운로드에 실패했습니다.");
+      }
+    }
+
     async function autoAssignRooms() {
       if (!layoutState.data || autoAssigning) return;
       setAutoAssigning(true);
@@ -2542,6 +2608,15 @@
                 ),
                 title: "자동 배정",
               }, autoAssigning ? renderIcon("loader-circle", "h-5 w-5 animate-spin") : renderIcon("wand-sparkles", "h-5 w-5")),
+              h("button", {
+                type: "button",
+                onClick: exportRoomingList,
+                disabled: autoAssigning,
+                className: cx(
+                  "flex h-11 w-11 items-center justify-center rounded-lg border shadow-sm active:scale-95 border-slate-200 bg-white text-slate-600"
+                ),
+                title: "명단 다운로드",
+              }, renderIcon("download", "h-5 w-5")),
               h("button", {
                 type: "button",
                 onClick: saveChanges,
