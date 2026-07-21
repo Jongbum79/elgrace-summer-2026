@@ -1541,16 +1541,16 @@
 
           const famName = fam.name || "이름 없음";
           const nightsLabel = fam.nights_label || "";
-          let label = famName;
-          if (nightsLabel) {
-            label += ` (${nightsLabel})`;
-          }
 
           const key = `${roomInfo.building}_${roomInfo.roomNumber}`;
           if (!roomOccupants[key]) {
             roomOccupants[key] = [];
           }
-          roomOccupants[key].push(label);
+          // Store object containing name and nights_label
+          roomOccupants[key].push({
+            name: famName,
+            nights_label: nightsLabel
+          });
         });
 
         function getCellValue(r, c) {
@@ -1587,6 +1587,7 @@
 
         const ROOM_RE = /^(\d{3})호/;
         const processedMergedCells = new Set();
+        const maxLinesInRow = {};
 
         for (let r = 1; r <= ws.rowCount; r++) {
           const building = getBuildingForRow(r);
@@ -1603,7 +1604,6 @@
               const key = `${building}_${roomNumber}`;
 
               if (roomOccupants[key]) {
-                const occupantsText = roomOccupants[key].join("\n");
                 const targetRow = r + 1;
                 const targetCell = ws.getCell(targetRow, c);
                 
@@ -1635,23 +1635,70 @@
                     { argb: 'FF000000' }  // Black (4th)
                   ];
                   
-                  roomOccupants[key].forEach((occupantText, idx) => {
-                    const color = colors[idx % colors.length];
-                    const hasDate = occupantText.includes("(");
-                    const origSize = origFont.size || 20;
-                    const newSize = hasDate ? (origSize - 4) : (origSize - 2);
+                  const numFamilies = roomOccupants[key].length;
+                  let lineCount = numFamilies;
+                  
+                  if (numFamilies === 1) {
+                    const fam = roomOccupants[key][0];
+                    const name = fam.name;
+                    const nightsLabel = fam.nights_label;
                     
-                    const runText = occupantText + (idx < roomOccupants[key].length - 1 ? "\n" : "");
-                    richTextRuns.push({
-                      text: runText,
-                      font: Object.assign({}, origFont, {
-                        size: newSize,
-                        color: color
-                      })
+                    if (nightsLabel) {
+                      richTextRuns.push({
+                        text: name + "\n",
+                        font: Object.assign({}, origFont, {
+                          size: 16,
+                          color: colors[0]
+                        })
+                      });
+                      richTextRuns.push({
+                        text: `(${nightsLabel})`,
+                        font: Object.assign({}, origFont, {
+                          size: 16,
+                          color: colors[0]
+                        })
+                      });
+                      lineCount = 2;
+                    } else {
+                      richTextRuns.push({
+                        text: name,
+                        font: Object.assign({}, origFont, {
+                          size: 16,
+                          color: colors[0]
+                        })
+                      });
+                      lineCount = 1;
+                    }
+                  } else {
+                    roomOccupants[key].forEach((fam, idx) => {
+                      const color = colors[idx % colors.length];
+                      const name = fam.name;
+                      const nightsLabel = fam.nights_label;
+                      
+                      let textLine = name;
+                      if (nightsLabel) {
+                        textLine += ` (${nightsLabel})`;
+                      }
+                      
+                      const hasDate = !!nightsLabel;
+                      const origSize = origFont.size || 20;
+                      const newSize = hasDate ? (origSize - 4) : (origSize - 2);
+                      
+                      const runText = textLine + (idx < numFamilies - 1 ? "\n" : "");
+                      richTextRuns.push({
+                        text: runText,
+                        font: Object.assign({}, origFont, {
+                          size: newSize,
+                          color: color
+                        })
+                      });
                     });
-                  });
+                  }
                   
                   master.value = { richText: richTextRuns };
+                  
+                  // Track maximum lines in this row for height adjustment
+                  maxLinesInRow[master.row] = Math.max(maxLinesInRow[master.row] || 0, lineCount);
                   
                   // Ensure text wrapping is enabled for the master cell so newlines render correctly
                   master.alignment = Object.assign({}, master.alignment, { wrapText: true });
