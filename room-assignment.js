@@ -1619,12 +1619,21 @@
                   origVal = origVal ? String(origVal) : "";
                   
                   const origFont = master.font || {};
+                  const origFontName = origFont.name || '맑은 고딕';
+                  const origFontBold = origFont.bold !== undefined ? origFont.bold : true;
+                  const origFontSize = origFont.size || 20;
+
                   const richTextRuns = [];
                   
                   if (origVal) {
                     richTextRuns.push({
                       text: origVal + "\n",
-                      font: Object.assign({}, origFont)
+                      font: {
+                        name: origFontName,
+                        size: origFontSize,
+                        bold: origFontBold,
+                        color: origFont.color || { argb: 'FF000000' }
+                      }
                     });
                   }
                   
@@ -1648,26 +1657,30 @@
                     if (numFamilies === 1) {
                       runSize = 16;
                     } else {
-                      runSize = hasDate ? (origFont.size || 20) - 4 : (origFont.size || 20) - 2;
+                      runSize = hasDate ? origFontSize - 4 : origFontSize - 2;
                     }
                     
                     if (nightsLabel) {
                       // Name on its own line, (Date) on next line
                       richTextRuns.push({
                         text: name + "\n",
-                        font: Object.assign({}, origFont, {
+                        font: {
+                          name: origFontName,
                           size: runSize,
+                          bold: origFontBold,
                           color: color
-                        })
+                        }
                       });
                       
                       const isLastFamily = (idx === numFamilies - 1);
                       richTextRuns.push({
                         text: `(${nightsLabel})` + (isLastFamily ? "" : "\n"),
-                        font: Object.assign({}, origFont, {
+                        font: {
+                          name: origFontName,
                           size: runSize,
+                          bold: origFontBold,
                           color: color
-                        })
+                        }
                       });
                       lineCount += 2;
                     } else {
@@ -1675,10 +1688,12 @@
                       const isLastFamily = (idx === numFamilies - 1);
                       richTextRuns.push({
                         text: name + (isLastFamily ? "" : "\n"),
-                        font: Object.assign({}, origFont, {
+                        font: {
+                          name: origFontName,
                           size: runSize,
+                          bold: origFontBold,
                           color: color
-                        })
+                        }
                       });
                       lineCount += 1;
                     }
@@ -1686,10 +1701,15 @@
                   
                   master.value = { richText: richTextRuns };
                   
-                  // Explicitly set the cell-level font size to prevent cell style overriding richText sizes
+                  // Explicitly set cell-level font with only standard properties to prevent overrides or internal pollution
                   const hasAnyDate = roomOccupants[key].some(fam => !!fam.nights_label);
-                  const baseSize = numFamilies === 1 ? 16 : (hasAnyDate ? (origFont.size || 20) - 4 : (origFont.size || 20) - 2);
-                  master.font = Object.assign({}, origFont, { size: baseSize });
+                  const baseSize = numFamilies === 1 ? 16 : (hasAnyDate ? origFontSize - 4 : origFontSize - 2);
+                  master.font = {
+                    name: origFontName,
+                    size: baseSize,
+                    bold: origFontBold,
+                    color: colors[0]
+                  };
                   
                   // Track maximum lines in this row for height adjustment
                   maxLinesInRow[master.row] = Math.max(maxLinesInRow[master.row] || 0, lineCount);
