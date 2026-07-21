@@ -1636,64 +1636,53 @@
                   ];
                   
                   const numFamilies = roomOccupants[key].length;
-                  let lineCount = numFamilies;
+                  let lineCount = 0;
                   
-                  if (numFamilies === 1) {
-                    const fam = roomOccupants[key][0];
+                  roomOccupants[key].forEach((fam, idx) => {
+                    const color = colors[idx % colors.length];
                     const name = fam.name;
                     const nightsLabel = fam.nights_label;
                     
+                    const hasDate = !!nightsLabel;
+                    let runSize;
+                    if (numFamilies === 1) {
+                      runSize = 16;
+                    } else {
+                      runSize = hasDate ? (origFont.size || 20) - 4 : (origFont.size || 20) - 2;
+                    }
+                    
                     if (nightsLabel) {
+                      // Name on its own line, (Date) on next line
                       richTextRuns.push({
                         text: name + "\n",
                         font: Object.assign({}, origFont, {
-                          size: 16,
-                          color: colors[0]
-                        })
-                      });
-                      richTextRuns.push({
-                        text: `(${nightsLabel})`,
-                        font: Object.assign({}, origFont, {
-                          size: 16,
-                          color: colors[0]
-                        })
-                      });
-                      lineCount = 2;
-                    } else {
-                      richTextRuns.push({
-                        text: name,
-                        font: Object.assign({}, origFont, {
-                          size: 16,
-                          color: colors[0]
-                        })
-                      });
-                      lineCount = 1;
-                    }
-                  } else {
-                    roomOccupants[key].forEach((fam, idx) => {
-                      const color = colors[idx % colors.length];
-                      const name = fam.name;
-                      const nightsLabel = fam.nights_label;
-                      
-                      let textLine = name;
-                      if (nightsLabel) {
-                        textLine += ` (${nightsLabel})`;
-                      }
-                      
-                      const hasDate = !!nightsLabel;
-                      const origSize = origFont.size || 20;
-                      const newSize = hasDate ? (origSize - 4) : (origSize - 2);
-                      
-                      const runText = textLine + (idx < numFamilies - 1 ? "\n" : "");
-                      richTextRuns.push({
-                        text: runText,
-                        font: Object.assign({}, origFont, {
-                          size: newSize,
+                          size: runSize,
                           color: color
                         })
                       });
-                    });
-                  }
+                      
+                      const isLastFamily = (idx === numFamilies - 1);
+                      richTextRuns.push({
+                        text: `(${nightsLabel})` + (isLastFamily ? "" : "\n"),
+                        font: Object.assign({}, origFont, {
+                          size: runSize,
+                          color: color
+                        })
+                      });
+                      lineCount += 2;
+                    } else {
+                      // Name on its own line
+                      const isLastFamily = (idx === numFamilies - 1);
+                      richTextRuns.push({
+                        text: name + (isLastFamily ? "" : "\n"),
+                        font: Object.assign({}, origFont, {
+                          size: runSize,
+                          color: color
+                        })
+                      });
+                      lineCount += 1;
+                    }
+                  });
                   
                   master.value = { richText: richTextRuns };
                   
