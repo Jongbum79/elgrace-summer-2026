@@ -1657,7 +1657,7 @@
                     if (numFamilies === 1) {
                       runSize = 16;
                     } else {
-                      runSize = hasDate ? origFontSize - 4 : origFontSize - 2;
+                      runSize = hasDate ? 16 : 18;
                     }
                     
                     if (nightsLabel) {
@@ -1703,7 +1703,7 @@
                   
                   // Explicitly set cell-level font with only standard properties to prevent overrides or internal pollution
                   const hasAnyDate = roomOccupants[key].some(fam => !!fam.nights_label);
-                  const baseSize = numFamilies === 1 ? 16 : (hasAnyDate ? origFontSize - 4 : origFontSize - 2);
+                  const baseSize = numFamilies === 1 ? 16 : (hasAnyDate ? 16 : 18);
                   master.font = {
                     name: origFontName,
                     size: baseSize,
