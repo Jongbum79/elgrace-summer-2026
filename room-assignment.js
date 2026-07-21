@@ -1510,8 +1510,9 @@
             nightsLabel = "무박";
           }
 
+          const cleanName = familyDisplayName(family).replace(/\s*가족$/, "").trim();
           familyMap[fId] = {
-            name: familyDisplayName(family),
+            name: cleanName,
             nights_label: nightsLabel
           };
         });
@@ -1619,6 +1620,13 @@
                   
                   const separator = origVal ? "\n" : "";
                   master.value = `${origVal}${separator}${occupantsText}`;
+                  
+                  // Adjust font size: 2 steps smaller normally, 4 steps smaller if date is included
+                  const hasDate = occupantsText.includes("(");
+                  const origFont = master.font || {};
+                  const origSize = origFont.size || 20;
+                  const newSize = hasDate ? (origSize - 4) : (origSize - 2);
+                  master.font = Object.assign({}, origFont, { size: newSize });
                   
                   // Ensure text wrapping is enabled for the master cell so newlines render correctly
                   master.alignment = Object.assign({}, master.alignment, { wrapText: true });
