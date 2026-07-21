@@ -1472,8 +1472,8 @@
     async function exportRoomingList() {
       showToast("명단 다운로드를 준비 중입니다...");
       try {
-        if (typeof XLSX === "undefined") {
-          throw new Error("XLSX 라이브러리가 로드되지 않았습니다.");
+        if (typeof ExcelJS === "undefined") {
+          throw new Error("ExcelJS 라이브러리가 로드되지 않았습니다.");
         }
 
         // Fetch template
@@ -1482,10 +1482,10 @@
           throw new Error("템플릿 파일을 찾을 수 없습니다.");
         }
         const arrayBuffer = await response.arrayBuffer();
-        const data = new Uint8Array(arrayBuffer);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const sheetName = workbook.SheetNames[0];
-        const ws = workbook.Sheets[sheetName];
+        
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+        const ws = workbook.worksheets[0];
 
         const familyMap = {};
         familiesList.forEach((family, index) => {
@@ -1553,36 +1553,15 @@
         });
 
         function getCellValue(r, c) {
-          const addr = XLSX.utils.encode_cell({ r: r, c: c });
-          return ws[addr] ? ws[addr].v : null;
+          const cell = ws.getCell(r, c);
+          return cell ? cell.value : null;
         }
 
-        function setCellValue(r, c, val) {
-          const addr = XLSX.utils.encode_cell({ r: r, c: c });
-          if (!ws[addr]) {
-            ws[addr] = { t: 's', v: '' };
-          }
-          ws[addr].v = val;
-          ws[addr].t = 's';
-        }
-
-        function getMergedTopLeft(r, c) {
-          const merges = ws['!merges'] || [];
-          for (const m of merges) {
-            if (r >= m.s.r && r <= m.e.r && c >= m.s.c && c <= m.e.c) {
-              return { r: m.s.r, c: m.s.c };
-            }
-          }
-          return null;
-        }
-
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        
-        // Scan sections
+        // Scan sections - Column B (index 2)
         const SECTION_RE = /.*?(휴락동|동락홀|.+?)(\d)층/;
         const sections = [];
-        for (let r = range.s.r; r <= range.e.r; r++) {
-          const val = getCellValue(r, 1);
+        for (let r = 1; r <= ws.rowCount; r++) {
+          const val = getCellValue(r, 2);
           if (!val) continue;
           const normalized = String(val).replace(/\s+/g, "");
           const match = SECTION_RE.exec(normalized);
@@ -1608,11 +1587,11 @@
         const ROOM_RE = /^(\d{3})호/;
         const processedMergedCells = new Set();
 
-        for (let r = range.s.r; r <= range.e.r; r++) {
+        for (let r = 1; r <= ws.rowCount; r++) {
           const building = getBuildingForRow(r);
           if (!building) continue;
 
-          for (let c = range.s.c; c <= range.e.c; c++) {
+          for (let c = 1; c <= ws.columnCount; c++) {
             const val = getCellValue(r, c);
             if (!val) continue;
 
@@ -1625,26 +1604,34 @@
               if (roomOccupants[key]) {
                 const occupantsText = roomOccupants[key].join("\n");
                 const targetRow = r + 1;
-
-                const targetMerged = getMergedTopLeft(targetRow, c);
-                if (targetMerged) {
-                  const mKey = `${targetMerged.r}_${targetMerged.c}`;
-                  if (!processedMergedCells.has(mKey)) {
-                    const origVal = getCellValue(targetMerged.r, targetMerged.c) || "";
-                    const separator = origVal ? "\n" : "";
-                    setCellValue(targetMerged.r, targetMerged.c, `${origVal}${separator}${occupantsText}`);
-                    processedMergedCells.add(mKey);
+                const targetCell = ws.getCell(targetRow, c);
+                
+                // Get the master cell of the target cell (if merged)
+                const master = targetCell.master;
+                const mKey = `${master.row}_${master.col}`;
+                
+                if (!processedMergedCells.has(mKey)) {
+                  let origVal = master.value;
+                  if (origVal && typeof origVal === "object") {
+                    origVal = origVal.richText ? origVal.richText.map(t => t.text).join("") : String(origVal.result || "");
                   }
-                } else {
-                  setCellValue(targetRow, c, occupantsText);
+                  origVal = origVal ? String(origVal) : "";
+                  
+                  const separator = origVal ? "\n" : "";
+                  master.value = `${origVal}${separator}${occupantsText}`;
+                  
+                  // Ensure text wrapping is enabled for the master cell so newlines render correctly
+                  master.alignment = Object.assign({}, master.alignment, { wrapText: true });
+                  
+                  processedMergedCells.add(mKey);
                 }
               }
             }
           }
         }
 
-        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
