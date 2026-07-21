@@ -2995,6 +2995,15 @@
               }, autoAssigning ? renderIcon("loader-circle", "h-4 w-4 animate-spin") : renderIcon("wand-sparkles", "h-4 w-4"), autoAssigning ? "배정 중" : "자동 배정"),
               h("button", {
                 type: "button",
+                onClick: exportRoomingList,
+                disabled: autoAssigning,
+                className: cx(
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition",
+                  "border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                ),
+              }, renderIcon("download", "h-4 w-4"), "명단 다운로드"),
+              h("button", {
+                type: "button",
                 onClick: saveChanges,
                 disabled: saving || !isDirty || autoAssigning,
                 className: cx(
