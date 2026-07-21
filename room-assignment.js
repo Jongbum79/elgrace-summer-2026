@@ -1714,6 +1714,23 @@
             }
           }
         }
+        
+        // Ensure sheet views are defined so custom heights are respected by Excel
+        ws.views = ws.views || [{}];
+
+        // Adjust row heights based on maximum lines written to any cell in the row
+        Object.entries(maxLinesInRow).forEach(([rowIdxStr, lines]) => {
+          const rowIdx = parseInt(rowIdxStr, 10);
+          const rowObj = ws.getRow(rowIdx);
+          
+          if (lines >= 3) {
+            // Safe height calculation: 25pt per line + 15pt padding (e.g. 4 lines = 115pt)
+            const requiredHeight = lines * 25 + 15;
+            if (!rowObj.height || rowObj.height < requiredHeight) {
+              rowObj.height = requiredHeight;
+            }
+          }
+        });
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
