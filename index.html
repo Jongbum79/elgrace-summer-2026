@@ -63,9 +63,7 @@
           <a class="nav-item" href="#" data-view="docs">
             <i data-lucide="folder" class="nav-icon"></i><span>문서 자료실</span>
           </a>
-          <a class="nav-item" href="#" data-view="manito">
-            <i data-lucide="gift" class="nav-icon"></i><span>마니또 추첨</span>
-          </a>
+
         </nav>
 
         <div class="sidebar-bottom">
@@ -576,79 +574,6 @@
           </div>
         </div>
 
-        <!-- 마니또 추첨 화면 -->
-        <div class="page-view" id="manitoView">
-          <section class="page-heading">
-            <div>
-              <div class="title-line">
-                <h2>마니또 추첨</h2>
-                <span class="demo-badge" style="background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; font-weight: 700; font-size: 11px;">가정 단위 추첨</span>
-              </div>
-              <p>수련회 마니또(가정 단위)를 추첨합니다. 추첨 결과를 영상 속 예수님의 구슬 안에서 확인해 보세요.</p>
-            </div>
-          </section>
-
-          <section class="manito-layout" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; margin-top: 20px; align-items: start;">
-            <!-- 설정 카드 -->
-            <article class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="border-bottom: 1px solid var(--line); padding-bottom: 14px;">
-                <h3 style="margin: 0; font-size: 15px; font-weight: 800; color: var(--forest); display: flex; align-items: center; gap: 6px;">
-                  <i data-lucide="settings" style="width: 18px; height: 18px;"></i>추첨 설정
-                </h3>
-                <p style="margin: 4px 0 0; font-size: 12px; color: var(--muted);">추첨할 대상 가족을 입력하거나 선택해 주세요.</p>
-              </div>
-
-              <!-- 입력 폼 -->
-              <div style="display: grid; gap: 14px;">
-                <label style="display: grid; gap: 6px; font-size: 12.5px; font-weight: 800; color: var(--ink);">
-                  표시할 이름 직접 입력
-                  <input id="manitoInputName" type="text" value="최종범, 조봄이와 가정" placeholder="예: 최종범, 조봄이와 가정" style="width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; font-weight: 700; outline: none; background: #fafafa; transition: border-color 0.2s;" />
-                </label>
-
-                <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: flex-end;">
-                  <label style="display: grid; gap: 6px; font-size: 12.5px; font-weight: 800; color: var(--ink);">
-                    등록된 참석 가족 선택
-                    <select id="manitoFamilySelect" style="width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; outline: none; background: white; height: 42px;"></select>
-                  </label>
-                  <button id="btnManitoRandom" class="secondary-button" style="height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; border-radius: 8px;" title="랜덤 선택"><i data-lucide="shuffle" style="width: 14px; height: 14px;"></i>랜덤</button>
-                </div>
-              </div>
-
-              <!-- 추첨 시작 버튼 -->
-              <button class="primary-button" id="btnManitoStart" style="width: 100%; height: 48px; background: var(--forest); color: white; border: none; border-radius: 10px; font-size: 14.5px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.2s; margin-top: 10px;">
-                <i data-lucide="sparkles" style="width: 18px; height: 18px; fill: white;"></i>추첨 영상 재생
-              </button>
-
-              <div style="background: var(--mint); border-radius: 10px; padding: 14px 16px; border: 1px solid var(--line); margin-top: 8px;">
-                <h4 style="margin: 0 0 6px; font-size: 12.5px; font-weight: 800; color: var(--forest);">💡 작동 안내</h4>
-                <ul style="margin: 0; padding-left: 18px; font-size: 11.5px; color: var(--muted); line-height: 1.6; display: grid; gap: 4px;">
-                  <li>가족 이름을 직접 입력하거나 데이터베이스의 참석 가족 목록에서 선택할 수 있습니다.</li>
-                  <li>[추첨 영상 재생] 버튼을 누르면 예수님이 주머니에서 구슬을 꺼내 보여줍니다.</li>
-                  <li>영상이 진행되어 <strong>구슬이 클로즈업(약 7.5초 이후)</strong>되면 구슬 안에 입력하신 가족 이름이 서서히 나타납니다.</li>
-                </ul>
-              </div>
-            </article>
-
-            <!-- 비디오 플레이어 카드 -->
-            <article class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
-              <div class="manito-video-container" style="position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; background: #0c0d0e; box-shadow: 0 10px 30px rgba(0,0,0,0.18); container-type: inline-size; width: 100%;">
-                <video id="manitoVideo" src="./assets/jesus_manito.mp4" style="width: 100%; height: 100%; object-fit: contain;" playsinline></video>
-                
-                <div id="manitoOverlay" class="manito-overlay">
-                  <div id="manitoNameText" class="manito-name-text">최종범, 조봄이와 가정</div>
-                </div>
-
-                <!-- 재생 오버레이 -->
-                <div id="manitoVideoPlayOverlay" class="manito-video-play-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.3s ease; z-index: 11;">
-                  <button class="manito-play-circle" style="background: var(--forest); border: none; width: 68px; height: 68px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.3); transition: transform 0.2s; margin-bottom: 12px;">
-                    <i data-lucide="play" style="width: 28px; height: 28px; fill: white; stroke-width: 1.5px; margin-left: 4px;"></i>
-                  </button>
-                  <span style="color: white; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">추첨 영상 재생하기</span>
-                </div>
-              </div>
-            </article>
-          </section>
-        </div>
       </div>
     </div>
 
@@ -755,10 +680,7 @@
           <div class="more-menu-icon"><i data-lucide="folder"></i></div>
           <span>문서 자료실</span>
         </a>
-        <a class="more-menu-item" href="#" data-view="manito">
-          <div class="more-menu-icon"><i data-lucide="gift"></i></div>
-          <span>마니또 추첨</span>
-        </a>
+
         <a class="more-menu-item" href="#" data-view="help">
           <div class="more-menu-icon"><i data-lucide="circle-help"></i></div>
           <span>도움말 및 문의</span>
@@ -867,7 +789,7 @@
     </section>
 
     <div class="toast" id="toast"></div>
-    <script src="./app.js?v=20260721_2333"></script>
-    <script src="./room-assignment.js?v=20260721_2333"></script>
+    <script src="./app.js?v=20260721_2340"></script>
+    <script src="./room-assignment.js?v=20260721_2340"></script>
   </body>
 </html>

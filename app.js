@@ -3749,7 +3749,7 @@ async function refreshParticipantsData() {
 
 
 function openPage(view) {
-  if (!["attendance", "participants", "rooms", "meals", "chatbot", "docs", "manito"].includes(view)) {
+  if (!["attendance", "participants", "rooms", "meals", "chatbot", "docs"].includes(view)) {
     showToast("이 메뉴는 다음 단계에서 연결합니다.");
     return;
   }
@@ -3766,9 +3766,6 @@ function openPage(view) {
   if (view === "docs") {
     driveFolderHistory = [{ id: "1WVtAhmSZ5OTZ9DOX0_afVPlegznir5KS", name: "여름수련회_공유폴더" }];
     renderDriveView();
-  }
-  if (view === "manito") {
-    initManitoPage();
   }
   if (view === "rooms" && window.RoomAssignmentPage?.sync) {
     window.RoomAssignmentPage.sync();
@@ -6133,113 +6130,4 @@ function downloadMealList() {
   showToast(`${fileName} 파일이 다운로드되었습니다.`);
 }
 
-let isManitoInitialized = false;
 
-function initManitoPage() {
-  if (isManitoInitialized) return;
-  isManitoInitialized = true;
-  
-  // Populate family dropdown
-  const dropdown = document.querySelector("#manitoFamilySelect");
-  if (dropdown) {
-    dropdown.innerHTML = '<option value="">-- 가족 선택 (선택 시 자동 입력) --</option>';
-    
-    // Filter out absent / undecided families and sort them
-    const attendingFamilies = (families || [])
-      .filter(f => f.status !== "absent" && f.status !== "undecided")
-      .map(f => f.name)
-      .sort((a, b) => a.localeCompare(b, "ko"));
-      
-    attendingFamilies.forEach(name => {
-      const option = document.createElement("option");
-      option.value = name;
-      option.textContent = name;
-      dropdown.appendChild(option);
-    });
-    
-    dropdown.addEventListener("change", (e) => {
-      if (e.target.value) {
-        document.querySelector("#manitoInputName").value = e.target.value;
-      }
-    });
-  }
-  
-  // Handle random select button
-  const randomBtn = document.querySelector("#btnManitoRandom");
-  if (randomBtn) {
-    randomBtn.addEventListener("click", () => {
-      const attending = (families || []).filter(f => f.status !== "absent" && f.status !== "undecided");
-      if (attending.length === 0) {
-        showToast("참석 대상 가족이 없습니다.");
-        return;
-      }
-      const randomFamily = attending[Math.floor(Math.random() * attending.length)];
-      document.querySelector("#manitoInputName").value = randomFamily.name;
-      if (dropdown) dropdown.value = randomFamily.name;
-      showToast(`랜덤으로 '${randomFamily.name}'이(가) 선택되었습니다.`);
-    });
-  }
-  
-  // Handle video drawing process
-  const video = document.querySelector("#manitoVideo");
-  const playOverlay = document.querySelector("#manitoVideoPlayOverlay");
-  const overlay = document.querySelector("#manitoOverlay");
-  const nameText = document.querySelector("#manitoNameText");
-  const startBtn = document.querySelector("#btnManitoStart");
-  
-  function startDraw() {
-    const nameVal = document.querySelector("#manitoInputName").value.trim();
-    if (!nameVal) {
-      showToast("화면에 표시할 가족 이름을 입력해 주세요.");
-      return;
-    }
-    
-    nameText.textContent = nameVal;
-    
-    // Hide play overlay
-    playOverlay.style.opacity = "0";
-    playOverlay.style.pointerEvents = "none";
-    
-    // Reset name overlay
-    overlay.classList.remove("active");
-    
-    video.currentTime = 0;
-    video.play().catch(err => {
-      console.error("Video play failed:", err);
-      showToast("비디오 재생에 실패했습니다. 사용자가 비디오 재생 동작을 허용해야 합니다.");
-      playOverlay.style.opacity = "1";
-      playOverlay.style.pointerEvents = "auto";
-    });
-  }
-  
-  if (startBtn) {
-    startBtn.addEventListener("click", startDraw);
-  }
-  
-  if (playOverlay) {
-    playOverlay.addEventListener("click", startDraw);
-  }
-  
-  if (video) {
-    video.addEventListener("timeupdate", () => {
-      // The bead is close-up starting from t = 7.5s
-      if (video.currentTime >= 7.5) {
-        overlay.classList.add("active");
-      } else {
-        overlay.classList.remove("active");
-      }
-    });
-    
-    video.addEventListener("ended", () => {
-      playOverlay.style.opacity = "1";
-      playOverlay.style.pointerEvents = "auto";
-      const icon = playOverlay.querySelector("i");
-      if (icon) {
-        icon.setAttribute("data-lucide", "rotate-ccw");
-        if (window.lucide) window.lucide.createIcons();
-      }
-      const label = playOverlay.querySelector("span");
-      if (label) label.textContent = "다시 추첨하기";
-    });
-  }
-}
