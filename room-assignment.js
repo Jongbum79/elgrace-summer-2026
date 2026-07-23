@@ -457,6 +457,7 @@
 
   function getRoomAssignmentLimit(room) {
     if (!room || room.unavailable || room.capacity <= 0) return 0;
+    if (room.capacity === 2) return 4;
     if (room.capacity === 4) return 5;
     return room.capacity;
   }
@@ -1002,21 +1003,15 @@
       const roomOccupancy = {};
       activeRooms.forEach(r => {
         roomOccupancy[r.id] = [0, 0, 0];
-      });
-      
-      familiesList.forEach((family, idx) => {
-        if (["absent", "undecided"].includes(family.status)) return;
         
-        const familyId = getFamilyId(family, idx);
-        const roomValue = getFamilyRoomValue({ ...family, id: familyId }, draftAssignments);
-        const resolved = resolveRoom(layoutState.data, roomValue);
-        if (!resolved || resolved.unavailable || resolved.capacity <= 0) return;
-        
-        for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
-          const headcount = getFamilyStayHeadcountOnNight(family, nightIdx);
-          if (roomOccupancy[resolved.id]) {
-            roomOccupancy[resolved.id][nightIdx] += headcount;
-          }
+        const bucket = roomBundle.byRoom.get(r.id);
+        if (bucket && bucket.families) {
+          bucket.families.forEach(family => {
+            for (let nightIdx = 0; nightIdx < 3; nightIdx++) {
+              const headcount = getFamilyStayHeadcountOnNight(family, nightIdx);
+              roomOccupancy[r.id][nightIdx] += headcount;
+            }
+          });
         }
       });
       
@@ -1042,7 +1037,7 @@
         totalByType,
         occupiedByType
       };
-    }, [layoutState.data, familiesList, draftAssignments]);
+    }, [layoutState.data, roomBundle]);
 
     const filteredFamilies = useMemo(() => {
       return familiesList
